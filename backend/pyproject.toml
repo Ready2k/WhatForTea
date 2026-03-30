@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "whatsfortea"
+version = "0.1.0"
+description = "Locally-hosted recipe manager and kitchen assistant"
+authors = []
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115"
+uvicorn = {extras = ["standard"], version = "^0.34"}
+sqlalchemy = {extras = ["asyncio"], version = "^2.0"}
+asyncpg = "^0.30"
+greenlet = "^3.1"
+alembic = "^1.14"
+pydantic-settings = "^2.7"
+python-jose = {extras = ["cryptography"], version = "^3.3"}
+passlib = {extras = ["bcrypt"], version = "^1.7"}
+python-multipart = "^0.0.20"
+redis = "^5.2"
+arq = "^0.26"
+boto3 = "^1.36"
+rapidfuzz = "^3.12"
+jinja2 = "^3.1"
+pyyaml = "^6.0"
+apscheduler = "^3.11"
+python-json-logger = "^3.2"
+prometheus-fastapi-instrumentator = "^7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-asyncio = "^0.25"
+httpx = "^0.28"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

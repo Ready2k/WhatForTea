@@ -1,0 +1,22 @@
+# LLM agent configuration for WhatsForTea
+# Edit this file to tune model behaviour without touching Python code.
+# The API server reads this file at startup (and on each LLM call).
+
+# ── Model ─────────────────────────────────────────────────────────────────────
+model_id: anthropic.claude-3-5-sonnet-20241022-v2:0
+temperature: 0.2
+max_tokens: 4096
+
+# ── Rate limiting ─────────────────────────────────────────────────────────────
+# Maximum LLM calls allowed per hour across all users.
+# Returns HTTP 429 with Retry-After header when exceeded.
+llm_rate_limit_per_hour: 20
+
+# ── Retry policy ──────────────────────────────────────────────────────────────
+retry_attempts: 2
+retry_delay_seconds: 5
+
+# ── Normaliser settings ───────────────────────────────────────────────────────
+# Fuzzy match score below which the LLM assist is triggered (0.0–1.0)
+fuzzy_threshold_auto_accept: 0.85
+fuzzy_threshold_llm_assist: 0.60

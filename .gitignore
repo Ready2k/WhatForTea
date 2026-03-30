@@ -7,3 +7,21 @@ build/
 .cache/
 *.log
 .gemini/
+
+# Runtime data (created by `make init-dirs`)
+data/db/
+data/redis/
+data/recipes/
+data/backups/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# Poetry
+backend/.venv/
+
+# Alembic (don't ignore versions — migrations are source-controlled)

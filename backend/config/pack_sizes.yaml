@@ -1,0 +1,44 @@
+# Shopping list smart rounding — pack sizes per ingredient.
+#
+# The rounding algorithm picks the SMALLEST pack size >= the required quantity.
+# Quantities are in grams (g), millilitres (ml), or count (for unit items).
+# Add or edit entries here without touching any Python code.
+#
+# Format:
+#   ingredient_canonical_name: [size1, size2, ...]   # ascending order
+#   Fallback keys: default_g, default_ml, default_count
+
+# ── Meat & Fish ───────────────────────────────────────────────────────────────
+mince:            [250, 500, 750, 1000]
+chicken breast:   [300, 600]
+salmon fillet:    [130, 260]
+bacon:            [200, 400]
+
+# ── Dairy ─────────────────────────────────────────────────────────────────────
+butter:           [125, 250]
+sour cream:       [150, 300]
+cream:            [150, 300, 600]
+cheddar:          [200, 400]
+parmesan:         [50, 100]
+cream cheese:     [150, 300]
+
+# ── Produce (count) ───────────────────────────────────────────────────────────
+onion:            [1, 2, 4]
+shallot:          [1, 2, 4]
+garlic:           [1, 2, 4]           # bulbs
+lemon:            [1, 2]
+lime:             [1, 2]
+
+# ── Produce (g) ──────────────────────────────────────────────────────────────
+tomato:           [200, 400, 600]
+potato:           [250, 500, 1000]
+spinach:          [100, 200]
+
+# ── Pantry ────────────────────────────────────────────────────────────────────
+pasta:            [250, 500]
+rice:             [250, 500, 1000]
+
+# ── Fallback defaults ─────────────────────────────────────────────────────────
+default_g:        [100, 250, 500, 750, 1000]
+default_ml:       [100, 200, 500, 1000]
+default_count:    [1, 2, 4, 6]

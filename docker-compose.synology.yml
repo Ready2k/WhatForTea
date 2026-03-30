@@ -1,0 +1,66 @@
+# Production compose file for Synology NAS (192.168.4.2)
+#
+# Usage:
+#   docker-compose -f docker-compose.synology.yml pull
+#   docker-compose -f docker-compose.synology.yml up -d
+#
+# Prerequisites:
+#   1. Copy .env.example → .env and populate all values
+#   2. Push images: ./scripts/push-images.sh --prod
+#   3. SSH into NAS: pull images, then run docker-compose up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-whatsfortea}
+      POSTGRES_USER: ${POSTGRES_USER:-whatsfortea}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /volume1/docker/whatsfortea/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whatsfortea}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - /volume1/docker/whatsfortea/redis:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    image: ready2k/whatsfortea-api:latest
+    volumes:
+      - /volume1/docker/whatsfortea/recipes:/data/recipes
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-whatsfortea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-whatsfortea}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ready2k/whatsfortea-frontend:latest
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      # Internal Docker network URL — frontend proxies /api/* to this
+      API_URL: http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped

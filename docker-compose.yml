@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16-alpine
+    platform: linux/arm64
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-whatsfortea}
+      POSTGRES_USER: ${POSTGRES_USER:-whatsfortea}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-whatsfortea}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/arm64
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      target: development
+    volumes:
+      - ./backend:/app
+      # Persist the Poetry venv across container restarts (outside the bind-mounted /app)
+      - api_venv:/opt/poetry-venvs
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-whatsfortea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-whatsfortea}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      # Used by Next.js server-side proxy rewrites to reach the API container
+      API_URL: http://api:8000
+      WATCHPACK_POLLING: "true"
+    depends_on:
+      - api
+
+volumes:
+  frontend_node_modules:
+  api_venv:
