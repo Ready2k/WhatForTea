@@ -1,0 +1,293 @@
+"""
+LLM Ingestion Pipeline — orchestrates the full recipe card ingestion flow.
+
+Flow (happy path):
+  1. API handler: save images → create IngestJob(QUEUED) → enqueue arq task → return job_id
+  2. arq worker : run_ingestion() → PROCESSING → rate-limit check → LLM call
+                  → validate → normalise ingredients → store LlmOutput → REVIEW
+  3. API handler: confirm_recipe() → insert Recipe → COMPLETE
+
+All errors in run_ingestion are caught and persisted as status=FAILED so the
+caller can surface them via the status endpoint without needing arq internals.
+"""
+import logging
+import uuid
+from pathlib import Path
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.ingest import IngestJob, IngestStatus, LlmOutput
+from app.models.recipe import Recipe, RecipeIngredient, Step
+from app.schemas.recipe import RecipeCreate
+from app.services.rate_limiter import RateLimitExceeded, check_and_increment
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_RECIPES_DIR = Path("/data/recipes")
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _job_dir(job_id: uuid.UUID, recipes_dir: Path = _DEFAULT_RECIPES_DIR) -> Path:
+    return recipes_dir / str(job_id)
+
+
+async def save_images(
+    files,
+    job_id: uuid.UUID,
+    recipes_dir: Path = _DEFAULT_RECIPES_DIR,
+) -> Path:
+    """
+    Persist uploaded UploadFile objects to <recipes_dir>/<job_id>/.
+    Returns the job directory path.
+    """
+    job_dir = _job_dir(job_id, recipes_dir)
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    for i, file in enumerate(files):
+        suffix = Path(file.filename).suffix if file.filename else ".jpg"
+        dest = job_dir / f"image_{i:02d}{suffix}"
+        content = await file.read()
+        dest.write_bytes(content)
+        logger.debug("image saved", extra={"path": str(dest), "bytes": len(content)})
+
+    return job_dir
+
+
+def _validate_llm_result(parsed: dict) -> list[str]:
+    """
+    Validate the structured recipe dict returned by the LLM.
+    Returns a list of error strings; empty list means valid.
+    """
+    errors: list[str] = []
+    ingredients = parsed.get("ingredients") or []
+    steps = parsed.get("steps") or []
+    cooking_time = parsed.get("cooking_time_mins")
+
+    if not ingredients:
+        errors.append("LLM response contains no ingredients")
+    if not steps:
+        errors.append("LLM response contains no steps")
+
+    if cooking_time is not None:
+        if not isinstance(cooking_time, (int, float)) or cooking_time <= 0 or cooking_time > 300:
+            errors.append(
+                f"cooking_time_mins={cooking_time!r} is out of valid range (1–300)"
+            )
+
+    for ing in ingredients:
+        qty = ing.get("quantity")
+        if qty is None or not isinstance(qty, (int, float)) or qty <= 0:
+            errors.append(
+                f"Ingredient {ing.get('raw_name')!r} has invalid quantity: {qty!r}"
+            )
+
+    return errors
+
+
+# ── Main pipeline ─────────────────────────────────────────────────────────────
+
+async def run_ingestion(
+    job_id: uuid.UUID,
+    db: AsyncSession,
+    redis_client,
+    recipes_dir: Path = _DEFAULT_RECIPES_DIR,
+) -> None:
+    """
+    Full ingestion pipeline called by the arq worker.
+
+    Updates IngestJob.status throughout. All exceptions are caught and stored
+    as status=FAILED so callers never need to handle arq task exceptions.
+    """
+    job = await db.get(IngestJob, job_id)
+    if job is None:
+        logger.error("IngestJob not found — skipping", extra={"job_id": str(job_id)})
+        return
+
+    try:
+        # ── PROCESSING ────────────────────────────────────────────────────────
+        job.status = IngestStatus.PROCESSING
+        await db.commit()
+
+        job_dir = _job_dir(job_id, recipes_dir)
+        image_paths = sorted(job_dir.glob("image_*"))
+        if not image_paths:
+            raise ValueError(f"No images found in {job_dir}")
+
+        # Rate-limit check before the (expensive) Bedrock call
+        await check_and_increment(redis_client)
+
+        # LLM call — raw response intentionally NOT logged (would bloat NAS logs)
+        from app.services.bedrock import call_ingestion_llm
+        raw_response, parsed = await call_ingestion_llm(image_paths)
+
+        # Persist raw response immediately so it survives validation failures
+        llm_out = LlmOutput(
+            ingest_job_id=job_id,
+            raw_llm_response=raw_response,
+            parsed_result={},  # filled after normalisation below
+        )
+        db.add(llm_out)
+        await db.flush()  # obtain llm_out.id before further operations
+
+        # Validate LLM output structure
+        errors = _validate_llm_result(parsed)
+        if errors:
+            raise ValueError("; ".join(errors))
+
+        # Run normaliser on every ingredient (lookup + fuzzy only; no nested LLM calls)
+        from app.services.normaliser import resolve_ingredient
+
+        enriched: list[dict] = []
+        unresolved: list[str] = []
+
+        for ing in parsed.get("ingredients", []):
+            result = await resolve_ingredient(
+                raw_name=ing["raw_name"],
+                db=db,
+                redis_client=redis_client,
+                use_llm=False,
+            )
+            entry = dict(ing)
+            if result.ingredient:
+                entry["ingredient_id"] = str(result.ingredient.id)
+                entry["resolved"] = True
+            else:
+                entry["ingredient_id"] = None
+                entry["resolved"] = False
+                unresolved.append(ing["raw_name"])
+            enriched.append(entry)
+
+        # Store enriched result in llm_outputs (without the raw image data)
+        parsed_result = {
+            **{k: v for k, v in parsed.items() if k != "ingredients"},
+            "ingredients": enriched,
+            "unresolved_ingredients": unresolved,
+        }
+        llm_out.parsed_result = parsed_result
+        job.status = IngestStatus.REVIEW
+        await db.commit()
+
+        logger.info(
+            "ingestion pipeline complete — awaiting user review",
+            extra={
+                "job_id": str(job_id),
+                "title": parsed.get("title"),
+                "unresolved_count": len(unresolved),
+                "unresolved": unresolved,
+            },
+        )
+
+    except RateLimitExceeded as exc:
+        job.status = IngestStatus.FAILED
+        job.error_message = str(exc)
+        await db.commit()
+        logger.warning(
+            "ingestion aborted — rate limit exceeded",
+            extra={"job_id": str(job_id), "retry_after": exc.retry_after},
+        )
+
+    except Exception as exc:
+        job.status = IngestStatus.FAILED
+        job.error_message = str(exc)
+        await db.commit()
+        logger.error(
+            "ingestion failed",
+            extra={"job_id": str(job_id), "error": str(exc)},
+            exc_info=True,
+        )
+
+
+# ── Confirm ───────────────────────────────────────────────────────────────────
+
+async def confirm_recipe(
+    job_id: uuid.UUID,
+    recipe_data: RecipeCreate,
+    db: AsyncSession,
+) -> Recipe:
+    """
+    User-confirmed: validate, insert Recipe into the DB, and mark job COMPLETE.
+
+    Raises ValueError for:
+    - Job not found or not in REVIEW status
+    - Any ingredient without ingredient_id (must be resolved before confirming)
+    """
+    unresolved = [
+        ing.raw_name for ing in recipe_data.ingredients if ing.ingredient_id is None
+    ]
+    if unresolved:
+        raise ValueError(
+            f"All ingredients must be resolved before confirming. "
+            f"Unresolved: {unresolved}"
+        )
+
+    job = await db.get(IngestJob, job_id)
+    if job is None:
+        raise ValueError(f"IngestJob {job_id} not found")
+    if job.status != IngestStatus.REVIEW:
+        raise ValueError(
+            f"Job {job_id} cannot be confirmed — current status: {job.status.value!r} "
+            f"(expected 'review')"
+        )
+
+    # Load the most recent LlmOutput for this job (to link recipe_id and store corrections)
+    stmt = (
+        select(LlmOutput)
+        .where(LlmOutput.ingest_job_id == job_id)
+        .order_by(LlmOutput.created_at.desc())
+        .limit(1)
+    )
+    llm_out = (await db.execute(stmt)).scalar_one_or_none()
+
+    # Use the first saved image as the hero image
+    job_dir = Path(job.image_dir)
+    image_paths = sorted(job_dir.glob("image_*"))
+    hero_image_path = str(image_paths[0]) if image_paths else None
+
+    recipe = Recipe(
+        title=recipe_data.title,
+        hello_fresh_style=recipe_data.hello_fresh_style,
+        cooking_time_mins=recipe_data.cooking_time_mins,
+        base_servings=recipe_data.base_servings,
+        source_type=recipe_data.source_type,
+        source_reference=recipe_data.source_reference,
+        mood_tags=recipe_data.mood_tags,
+        hero_image_path=hero_image_path,
+    )
+    db.add(recipe)
+    await db.flush()  # get recipe.id
+
+    for ing_data in recipe_data.ingredients:
+        db.add(RecipeIngredient(
+            recipe_id=recipe.id,
+            ingredient_id=ing_data.ingredient_id,
+            raw_name=ing_data.raw_name,
+            quantity=ing_data.quantity,
+            unit=ing_data.unit,
+        ))
+
+    for step_data in recipe_data.steps:
+        db.add(Step(
+            recipe_id=recipe.id,
+            order=step_data.order,
+            text=step_data.text,
+            timer_seconds=step_data.timer_seconds,
+        ))
+
+    if llm_out:
+        llm_out.recipe_id = recipe.id
+        # Record user corrections if the confirmed data differs from the LLM parse
+        confirmed_dict = recipe_data.model_dump(mode="json")
+        if confirmed_dict != llm_out.parsed_result:
+            llm_out.user_corrected = confirmed_dict
+
+    job.status = IngestStatus.COMPLETE
+    await db.commit()
+    await db.refresh(recipe)
+
+    logger.info(
+        "recipe confirmed and saved",
+        extra={"recipe_id": str(recipe.id), "title": recipe.title},
+    )
+    return recipe

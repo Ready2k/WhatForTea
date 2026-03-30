@@ -11,7 +11,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 0 — Scaffolding | ✅ Complete | All services start; health endpoint returns `{"status":"ok"}` |
 | 1 — Data Layer | ✅ Complete | 13 tables + alembic_version; 16 unit_conversions seeded |
 | 2 — Ingredient Normaliser | ✅ Complete | 55/55 golden set (100%); 5/5 tests pass |
-| 3 — LLM Ingestion Pipeline | ⏳ Pending | |
+| 3 — LLM Ingestion Pipeline | ✅ Complete | Upload → LLM → normalise → review → confirm flow |
 | 4 — Pantry Intelligence | ⏳ Pending | |
 | 5 — Hangry Matcher | ⏳ Pending | |
 | 6 — Planner & Shopping List | ⏳ Pending | |
@@ -148,26 +148,59 @@ One schema file per model group; request/response/summary variants where needed.
 
 ---
 
-## Next Up: Phase 3 — LLM Ingestion Pipeline
+## What Has Been Built (Phase 3)
 
-**Goal:** Upload HelloFresh card images → structured Recipe in DB, with human review step.
+### Services
+- `backend/app/services/rate_limiter.py` — hourly-bucket Redis rate limiter; raises `RateLimitExceeded` with `retry_after`
+- `backend/app/services/ingestion.py` — full pipeline: `save_images`, `run_ingestion` (arq task body), `confirm_recipe`
+- `backend/app/services/bedrock.py` — added `call_ingestion_llm(image_paths)` → `(raw_response, parsed_dict)`
+
+### Worker
+- `backend/app/worker.py` — arq `WorkerSettings`; `task_process_ingest_job` task; startup/shutdown DB + Redis lifecycle
+  - Run: `poetry run arq app.worker.WorkerSettings` inside the api container
+
+### API (`/api/v1/recipes/`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/ingest` | Multipart upload; saves images; enqueues arq job; returns `{job_id}` |
+| GET | `/ingest/{id}/status` | Poll: `queued / processing / review / complete / failed` |
+| GET | `/ingest/{id}/review` | Parsed recipe draft + unresolved ingredient list |
+| POST | `/ingest/confirm/{id}` | User-confirmed recipe → inserts to DB; returns full Recipe |
+| GET | `/` | List all recipes (summary cards) |
+| GET | `/{id}` | Full recipe with ingredients + steps |
+
+### Key design notes
+- Images stored to `/data/recipes/{job_id}/image_NN.{ext}` (bind-mounted from `./data/recipes`)
+- Raw LLM response stored in `llm_outputs.raw_llm_response` — intentionally NOT logged
+- Validation: rejects qty ≤ 0, empty ingredients/steps, `cooking_time_mins` = 0 or > 300
+- Normaliser runs on every ingredient (lookup+fuzzy only; no nested LLM); unresolved flagged for UI
+- `confirm_recipe` requires all `ingredient_id` fields set; 422 returned otherwise
+- `docker-compose.yml` updated: `./data/recipes:/data/recipes` volume added to api service
+
+### Tests
+- `tests/unit/test_ingestion.py` — 8 tests: 7 pure-function validation tests + 3 integration tests (mocked Bedrock + rate limiter, real DB)
+
+---
+
+## Next Up: Phase 4 — Pantry Intelligence
+
+**Goal:** Track ingredient inventory with confidence decay; update on cooking events.
 
 **Files to create:**
-- `backend/app/services/ingestion.py` — pipeline orchestrator (upload → queue → LLM → validate → normalise)
-- `backend/app/services/rate_limiter.py` — Redis-backed LLM rate limiter (reads from agent_settings.yaml)
-- `backend/app/api/v1/recipes.py` — ingest, status, confirm endpoints
-- Alembic migration: add image storage path helpers if needed
-- `tests/unit/test_ingestion.py` — mocked LLM response tests
+- `backend/app/services/pantry.py` — CRUD + confidence-decay logic + availability query
+- `backend/app/services/scheduler.py` — APScheduler embedded in FastAPI lifespan; daily decay job at 03:00
+- `backend/app/api/v1/pantry.py` — CRUD + availability endpoints
 
 **Key implementation rules:**
-- `POST /api/v1/recipes/ingest` — multipart; stores images to `/data/recipes/{job_id}/`; enqueues arq job; returns `{job_id}`
-- `GET /api/v1/recipes/ingest/{job_id}/status` — polls job status
-- `POST /api/v1/recipes/ingest/confirm/{job_id}` — user confirms parsed recipe → inserts to DB
-- LLM call uses `ingestion_prompt.md` Jinja2 template; base64-encodes images for Bedrock
-- Validation: reject qty ≤ 0, empty ingredients/steps, cooking_time = 0 or > 300
-- Run normaliser on every ingredient after LLM parse; unresolved ones flagged in review payload
-- Raw LLM response stored in `llm_outputs` table; NOT in logs
-- Rate limit: check `llm_rate_limit_per_hour` from `agent_settings.yaml` before each LLM call
+- `GET /api/v1/pantry` — list all pantry items
+- `POST /api/v1/pantry` — add/update item (upsert by ingredient_id)
+- `PATCH /api/v1/pantry/{id}` — adjust quantity or confirm (bumps confidence to 1.0)
+- `DELETE /api/v1/pantry/{id}`
+- `GET /api/v1/pantry/available` — returns `{ingredient, total_quantity, reserved_quantity, available_quantity, confidence}` list
+- Confidence decay formula: `confidence -= decay_rate * days_since_last_confirmed; confidence = max(0.0, confidence)`
+- Default `decay_rate`: fridge = 0.1/day, pantry = 0.02/day (stored per item, user-overridable)
+- APScheduler job: daily 03:00 local time — apply decay to all items, zero out expired items
+- `POST /api/v1/cooking-sessions/{id}/complete` should eventually trigger consumption (Phase 5+)
 
 ---
 
