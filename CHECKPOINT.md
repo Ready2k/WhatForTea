@@ -10,7 +10,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 |-------|--------|-------|
 | 0 — Scaffolding | ✅ Complete | All services start; health endpoint returns `{"status":"ok"}` |
 | 1 — Data Layer | ✅ Complete | 13 tables + alembic_version; 16 unit_conversions seeded |
-| 2 — Ingredient Normaliser | ⏳ Pending | |
+| 2 — Ingredient Normaliser | ✅ Complete | 55/55 golden set (100%); 5/5 tests pass |
 | 3 — LLM Ingestion Pipeline | ⏳ Pending | |
 | 4 — Pantry Intelligence | ⏳ Pending | |
 | 5 — Hangry Matcher | ⏳ Pending | |
@@ -125,7 +125,55 @@ One schema file per model group; request/response/summary variants where needed.
 
 ---
 
-## Next Up: Phase 2 — ⚠️ Ingredient Normaliser (Critical)
+## What Has Been Built (Phase 2)
+
+### Services
+- `backend/app/services/normaliser.py` — 4-layer pipeline (lookup → fuzzy → LLM → unresolved)
+- `backend/app/services/bedrock.py` — AWS Bedrock client; reads prompts from `agent_config/*.md`
+
+### API endpoints (`/api/v1/ingredients/`)
+- `POST /resolve` — runs full pipeline, returns ingredient + confidence + source
+- `POST /override` — appends alias to ingredients.aliases, persists mapping
+- `GET /` — list all canonical ingredients
+- `GET /{id}` — get single ingredient
+
+### Migrations
+- `e38f3283b1e4` — GIN index on `ingredients.aliases`, lower() index on `canonical_name`
+- `2bd943073a70` — 35 seeded canonical ingredients with aliases (common HelloFresh items)
+
+### Tests
+- `tests/unit/test_normaliser.py` — 5 tests including golden set gate
+- `tests/fixtures/golden_ingredients.json` — 55 raw→canonical mappings
+- **Result: 55/55 (100%) — exceeds 95% threshold**
+
+---
+
+## Next Up: Phase 3 — LLM Ingestion Pipeline
+
+**Goal:** Upload HelloFresh card images → structured Recipe in DB, with human review step.
+
+**Files to create:**
+- `backend/app/services/ingestion.py` — pipeline orchestrator (upload → queue → LLM → validate → normalise)
+- `backend/app/services/rate_limiter.py` — Redis-backed LLM rate limiter (reads from agent_settings.yaml)
+- `backend/app/api/v1/recipes.py` — ingest, status, confirm endpoints
+- Alembic migration: add image storage path helpers if needed
+- `tests/unit/test_ingestion.py` — mocked LLM response tests
+
+**Key implementation rules:**
+- `POST /api/v1/recipes/ingest` — multipart; stores images to `/data/recipes/{job_id}/`; enqueues arq job; returns `{job_id}`
+- `GET /api/v1/recipes/ingest/{job_id}/status` — polls job status
+- `POST /api/v1/recipes/ingest/confirm/{job_id}` — user confirms parsed recipe → inserts to DB
+- LLM call uses `ingestion_prompt.md` Jinja2 template; base64-encodes images for Bedrock
+- Validation: reject qty ≤ 0, empty ingredients/steps, cooking_time = 0 or > 300
+- Run normaliser on every ingredient after LLM parse; unresolved ones flagged in review payload
+- Raw LLM response stored in `llm_outputs` table; NOT in logs
+- Rate limit: check `llm_rate_limit_per_hour` from `agent_settings.yaml` before each LLM call
+
+---
+
+## Open Questions / Blockers
+
+None — Phase 3 can start immediately.
 
 **Goal:** `POST /api/v1/ingredients/resolve` correctly maps ≥95% of a golden test set.
 
