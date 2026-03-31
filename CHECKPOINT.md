@@ -16,7 +16,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 5 — Hangry Matcher | ✅ Complete | Continuous scoring, 3 buckets, category filter |
 | 6 — Planner & Shopping List | ✅ Complete | Week plan, pack-size rounding, WhatsApp export |
 | 7 — Frontend UI | ✅ Complete | All 6 views; cooking mode with swipe/timer/voice |
-| 8 — Security | ⏳ Pending | |
+| 8 — Security | ✅ Complete | JWT + Argon2id auth, httpOnly secure cookies, auth middleware, 11/11 tests; Caddy HTTPS (whatsfortea.zapto.org) |
 | 9 — Observability | ✅ Complete | JSON logs with timestamp/level/route/duration_ms; /metrics with 3 custom metrics |
 | 10 — Testing | ✅ Complete | 95 tests passing; fixed 3 pre-existing bugs found by new tests |
 

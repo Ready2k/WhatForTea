@@ -22,8 +22,8 @@ def _make_hash(plain: str) -> str:
     from argon2 import PasswordHasher
     return PasswordHasher(time_cost=1, memory_cost=8, parallelism=1).hash(plain)  # fast params for tests
 
-# Use TestClient — automatically handles cookies between requests
-client = TestClient(app, raise_server_exceptions=True)
+# Use https://testserver so secure=True cookies are sent back in subsequent requests
+client = TestClient(app, raise_server_exceptions=True, base_url="https://testserver")
 
 
 def _patch_settings(**kwargs):
@@ -100,13 +100,13 @@ def test_logout_clears_cookies():
 def test_health_accessible_without_auth():
     """Health endpoint must bypass auth."""
     # Use a fresh client with no cookies
-    fresh = TestClient(app, raise_server_exceptions=True)
+    fresh = TestClient(app, raise_server_exceptions=True, base_url="https://testserver")
     res = fresh.get("/health")
     assert res.status_code == 200
 
 
 def test_protected_route_without_token_returns_401():
-    fresh = TestClient(app, raise_server_exceptions=True)
+    fresh = TestClient(app, raise_server_exceptions=True, base_url="https://testserver")
     res = fresh.get("/api/v1/recipes/")
     assert res.status_code == 401
     assert res.json()["error"]["code"] == "UNAUTHORIZED"
@@ -115,7 +115,7 @@ def test_protected_route_without_token_returns_401():
 def test_protected_route_with_valid_token():
     """A valid access cookie grants access (response may be 200 or 500 depending on DB)."""
     token = _make_token("household", timedelta(minutes=15))
-    fresh = TestClient(app, raise_server_exceptions=False)
+    fresh = TestClient(app, raise_server_exceptions=False, base_url="https://testserver")
     fresh.cookies.set(ACCESS_COOKIE, token)
     res = fresh.get("/api/v1/recipes/")
     # Not 401 — auth passed (may be 500 if no DB in unit test environment)
@@ -132,7 +132,7 @@ def test_expired_token_returns_401():
         real_settings.jwt_secret,
         algorithm="HS256",
     )
-    fresh = TestClient(app, raise_server_exceptions=True)
+    fresh = TestClient(app, raise_server_exceptions=True, base_url="https://testserver")
     fresh.cookies.set(ACCESS_COOKIE, expired_token)
     res = fresh.get("/api/v1/recipes/")
     assert res.status_code == 401
