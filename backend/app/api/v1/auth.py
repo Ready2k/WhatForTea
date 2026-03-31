@@ -7,9 +7,9 @@ POST /api/auth/logout  — clear cookies
 """
 from datetime import datetime, timedelta, timezone
 
+import bcrypt as _bcrypt
 from fastapi import APIRouter, Response, Request
 from jose import jwt, JWTError
-from passlib.hash import bcrypt
 from pydantic import BaseModel
 
 from app.config import settings
@@ -71,7 +71,7 @@ async def login(body: LoginRequest, response: Response):
     valid_username = (body.username == settings.household_username)
     valid_password = (
         bool(settings.household_password_hash)
-        and bcrypt.verify(body.password, settings.household_password_hash)
+        and _bcrypt.checkpw(body.password.encode(), settings.household_password_hash.encode())
     )
     if not valid_username or not valid_password:
         raise AppError(ErrorCode.UNAUTHORIZED, "Invalid credentials", status_code=401)

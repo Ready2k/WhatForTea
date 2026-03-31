@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-from passlib.hash import bcrypt
 
 from app.main import app
 from app.api.v1.auth import _make_token, ACCESS_COOKIE, REFRESH_COOKIE
@@ -17,8 +16,11 @@ from app.api.v1.auth import _make_token, ACCESS_COOKIE, REFRESH_COOKIE
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-PLAIN_PASSWORD = "test-password-123"
-HASHED_PASSWORD = bcrypt.hash(PLAIN_PASSWORD)
+PLAIN_PASSWORD = "test-pw"
+
+def _make_hash(plain: str) -> str:
+    import bcrypt as _bcrypt
+    return _bcrypt.hashpw(plain.encode(), _bcrypt.gensalt(rounds=4)).decode()
 
 # Use TestClient — automatically handles cookies between requests
 client = TestClient(app, raise_server_exceptions=True)
@@ -49,7 +51,8 @@ def test_make_token_different_each_call():
 # ── Login ─────────────────────────────────────────────────────────────────────
 
 def test_login_success():
-    with _patch_settings(household_username="household", household_password_hash=HASHED_PASSWORD):
+    hashed = _make_hash(PLAIN_PASSWORD)
+    with _patch_settings(household_username="household", household_password_hash=hashed):
         res = client.post("/api/auth/login", json={"username": "household", "password": PLAIN_PASSWORD})
     assert res.status_code == 200
     assert res.json() == {"ok": True}
@@ -58,14 +61,16 @@ def test_login_success():
 
 
 def test_login_wrong_password():
-    with _patch_settings(household_username="household", household_password_hash=HASHED_PASSWORD):
+    hashed = _make_hash(PLAIN_PASSWORD)
+    with _patch_settings(household_username="household", household_password_hash=hashed):
         res = client.post("/api/auth/login", json={"username": "household", "password": "wrong"})
     assert res.status_code == 401
     assert res.json()["error"]["code"] == "UNAUTHORIZED"
 
 
 def test_login_wrong_username():
-    with _patch_settings(household_username="household", household_password_hash=HASHED_PASSWORD):
+    hashed = _make_hash(PLAIN_PASSWORD)
+    with _patch_settings(household_username="household", household_password_hash=hashed):
         res = client.post("/api/auth/login", json={"username": "admin", "password": PLAIN_PASSWORD})
     assert res.status_code == 401
 
@@ -80,7 +85,8 @@ def test_login_empty_hash_rejected():
 # ── Logout ────────────────────────────────────────────────────────────────────
 
 def test_logout_clears_cookies():
-    with _patch_settings(household_username="household", household_password_hash=HASHED_PASSWORD):
+    hashed = _make_hash(PLAIN_PASSWORD)
+    with _patch_settings(household_username="household", household_password_hash=hashed):
         # Login first
         client.post("/api/auth/login", json={"username": "household", "password": PLAIN_PASSWORD})
         res = client.post("/api/auth/logout")
