@@ -13,7 +13,6 @@ and never read pantry_items.quantity directly.
 import logging
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import select
@@ -21,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.metrics import pantry_item_count
-from app.models.ingredient import Ingredient, UnitConversion
+from app.models.ingredient import UnitConversion
 from app.models.pantry import PantryItem, PantryReservation
 from app.models.recipe import Recipe
 from app.schemas.pantry import PantryAvailability, PantryItemCreate, PantryItemUpdate

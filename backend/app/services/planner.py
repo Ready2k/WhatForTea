@@ -12,7 +12,7 @@ import logging
 import math
 import urllib.parse
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional

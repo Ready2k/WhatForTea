@@ -8,15 +8,15 @@ POST /api/auth/logout  — clear cookies
 from datetime import datetime, timedelta, timezone
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
-from fastapi import APIRouter, Response, Request
-from jose import jwt, JWTError
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+from fastapi import APIRouter, Request, Response
+from jose import JWTError, jwt
 from pydantic import BaseModel
-
-_ph = PasswordHasher()  # default params: time=3, memory=65536, parallelism=4
 
 from app.config import settings
 from app.errors import AppError, ErrorCode
+
+_ph = PasswordHasher()  # default params: time=3, memory=65536, parallelism=4
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

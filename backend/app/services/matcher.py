@@ -26,7 +26,7 @@ from sqlalchemy.orm import selectinload
 
 from app.metrics import match_score_histogram
 from app.models.ingredient import UnitConversion
-from app.models.recipe import Recipe, RecipeIngredient
+from app.models.recipe import Recipe
 from app.schemas.matcher import IngredientMatchDetail, RecipeMatchResult
 from app.schemas.pantry import PantryAvailability
 from app.schemas.recipe import RecipeSummary

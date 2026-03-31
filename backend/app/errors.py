@@ -23,7 +23,7 @@ class ErrorCode:
 
     # Auth
     UNAUTHORIZED = "UNAUTHORIZED"
-    TOKEN_EXPIRED = "TOKEN_EXPIRED"
+    TOKEN_EXPIRED = "TOKEN_EXPIRED"  # nosec B105 — error code string, not a password
 
     # Generic
     NOT_FOUND = "NOT_FOUND"

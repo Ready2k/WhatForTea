@@ -10,7 +10,7 @@ The scheduler is started/stopped in main.py's lifespan context manager.
 """
 import asyncio
 import logging
-import subprocess
+import subprocess  # nosec B404 — used only to call a hardcoded version-controlled script
 from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -58,7 +58,7 @@ async def _nightly_backup_job() -> None:
     try:
         result = await loop.run_in_executor(
             None,
-            lambda: subprocess.run(
+            lambda: subprocess.run(  # nosec B603 B607 — fixed path, no user input
                 ["bash", str(_BACKUP_SCRIPT)],
                 capture_output=True,
                 text=True,

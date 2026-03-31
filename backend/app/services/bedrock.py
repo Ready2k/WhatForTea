@@ -8,7 +8,6 @@ All prompt text lives in those files — nothing hardcoded here.
 import base64
 import json
 import logging
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -53,18 +52,6 @@ async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
     """
     cfg = _load_settings()
     template_src = _load_prompt("normaliser_prompt.md")
-
-    # Extract only the content after the last ## System header
-    system_section = ""
-    user_section = ""
-    for line in template_src.splitlines():
-        if line.startswith("## System"):
-            system_section = ""
-            continue
-        if line.startswith("## Task"):
-            user_section = ""
-            continue
-        system_section += line + "\n"
 
     # Render template variables
     rendered = Template(template_src).render(raw_name=raw_name, candidate=candidate)

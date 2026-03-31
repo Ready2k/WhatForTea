@@ -6,7 +6,7 @@ All routes prefixed /api/v1/ via the router include in main.py.
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -17,7 +17,7 @@ from app.schemas.ingredient import (
     ResolveRequest,
     ResolveResponse,
 )
-from app.services.normaliser import ResolveSource, apply_override, resolve_ingredient
+from app.services.normaliser import apply_override, resolve_ingredient
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/ingredients", tags=["ingredients"])
