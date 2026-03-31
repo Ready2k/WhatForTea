@@ -49,7 +49,7 @@ def calculate_confidence(
     if last_confirmed_at.tzinfo is None:
         last_confirmed_at = last_confirmed_at.replace(tzinfo=timezone.utc)
     days = (now - last_confirmed_at).total_seconds() / 86400
-    return max(0.0, 1.0 - decay_rate * days)
+    return max(0.0, min(1.0, 1.0 - decay_rate * days))
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ async def get_available(db: AsyncSession) -> list[PantryAvailability]:
     result = []
     for item in items:
         live_confidence = calculate_confidence(item.decay_rate, item.last_confirmed_at, now)
-        effective = item.quantity * live_confidence
+        effective = float(item.quantity) * live_confidence
         reserved = sum(float(r.quantity) for r in item.reservations)
         available = max(0.0, effective - reserved)
 

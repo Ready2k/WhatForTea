@@ -136,15 +136,18 @@ _MOCK_LLM_RESULT = {
 @pytest.mark.asyncio
 async def test_run_ingestion_reaches_review(db_session, tmp_path):
     """Happy path: valid LLM response → job reaches REVIEW status."""
-    # Create a dummy image file
-    image_file = tmp_path / "image_00.jpg"
-    image_file.write_bytes(b"fake-image-data")
-
-    # Create IngestJob
-    job = IngestJob(image_dir=str(tmp_path))
+    # Create IngestJob first so we have the job_id for the directory name
+    job = IngestJob(image_dir=str(tmp_path))  # placeholder, updated below
     db_session.add(job)
     await db_session.flush()
     job_id = job.id
+
+    # Images must live at recipes_dir/{job_id}/image_* to match _job_dir()
+    job_dir = tmp_path / str(job_id)
+    job_dir.mkdir()
+    (job_dir / "image_00.jpg").write_bytes(b"fake-image-data")
+    job.image_dir = str(job_dir)
+    await db_session.flush()
 
     mock_redis = AsyncMock()
 
@@ -156,14 +159,14 @@ async def test_run_ingestion_reaches_review(db_session, tmp_path):
         patch(
             "app.services.bedrock.call_ingestion_llm",
             new_callable=AsyncMock,
-            return_value=({"content": [{"text": "{}"}]}, _MOCK_LLM_RESULT),
+            return_value=({"content": [{"text": "{}"}], "usage": {}}, _MOCK_LLM_RESULT),
         ),
     ):
         await run_ingestion(
             job_id=job_id,
             db=db_session,
             redis_client=mock_redis,
-            recipes_dir=tmp_path.parent,
+            recipes_dir=tmp_path,
         )
 
     await db_session.refresh(job)
@@ -187,13 +190,14 @@ async def test_run_ingestion_rate_limited(db_session, tmp_path):
     """When rate limit is exceeded the job should be marked FAILED."""
     from app.services.rate_limiter import RateLimitExceeded
 
-    image_file = tmp_path / "image_00.jpg"
-    image_file.write_bytes(b"fake-image-data")
-
     job = IngestJob(image_dir=str(tmp_path))
     db_session.add(job)
     await db_session.flush()
     job_id = job.id
+
+    job_dir = tmp_path / str(job_id)
+    job_dir.mkdir()
+    (job_dir / "image_00.jpg").write_bytes(b"fake-image-data")
 
     mock_redis = AsyncMock()
 
@@ -206,7 +210,7 @@ async def test_run_ingestion_rate_limited(db_session, tmp_path):
             job_id=job_id,
             db=db_session,
             redis_client=mock_redis,
-            recipes_dir=tmp_path.parent,
+            recipes_dir=tmp_path,
         )
 
     await db_session.refresh(job)
@@ -221,9 +225,6 @@ async def test_run_ingestion_rate_limited(db_session, tmp_path):
 @pytest.mark.asyncio
 async def test_run_ingestion_invalid_llm_response(db_session, tmp_path):
     """A malformed LLM response (empty ingredients) should fail the job."""
-    image_file = tmp_path / "image_00.jpg"
-    image_file.write_bytes(b"fake-image-data")
-
     bad_result = {
         "title": "Empty Recipe",
         "cooking_time_mins": 30,
@@ -236,6 +237,10 @@ async def test_run_ingestion_invalid_llm_response(db_session, tmp_path):
     await db_session.flush()
     job_id = job.id
 
+    job_dir = tmp_path / str(job_id)
+    job_dir.mkdir()
+    (job_dir / "image_00.jpg").write_bytes(b"fake-image-data")
+
     mock_redis = AsyncMock()
 
     with (
@@ -243,14 +248,14 @@ async def test_run_ingestion_invalid_llm_response(db_session, tmp_path):
         patch(
             "app.services.bedrock.call_ingestion_llm",
             new_callable=AsyncMock,
-            return_value=({"content": [{"text": "{}"}]}, bad_result),
+            return_value=({"content": [{"text": "{}"}], "usage": {}}, bad_result),
         ),
     ):
         await run_ingestion(
             job_id=job_id,
             db=db_session,
             redis_client=mock_redis,
-            recipes_dir=tmp_path.parent,
+            recipes_dir=tmp_path,
         )
 
     await db_session.refresh(job)

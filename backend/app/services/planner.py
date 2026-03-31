@@ -49,8 +49,12 @@ def round_to_pack_size(required: float, canonical_name: str, unit: str) -> float
     """
     Round a required quantity up to the nearest available pack size.
     Tries: exact canonical name → any word in the name → unit default.
-    Returns the largest pack size if required exceeds all defined sizes.
+    Returns required as-is if it exceeds all defined pack sizes (buy in bulk).
+    Returns 0.0 for zero or negative required quantities.
     """
+    if required <= 0:
+        return 0.0
+
     sizes = _load_pack_sizes()
     name_lower = canonical_name.lower()
 
@@ -67,13 +71,15 @@ def round_to_pack_size(required: float, canonical_name: str, unit: str) -> float
             chosen = sizes.get("default_g", [100, 250, 500, 1000])
         elif unit_lower in ("ml", "l"):
             chosen = sizes.get("default_ml", [100, 200, 500, 1000])
-        else:
+        elif unit_lower in ("count", ""):
             chosen = sizes.get("default_count", [1, 2, 4, 6])
+        else:
+            return required  # unknown unit — return as-is
 
     for size in sorted(chosen):
         if size >= math.ceil(required):
             return float(size)
-    return float(sorted(chosen)[-1])  # required exceeds largest pack; return biggest
+    return required  # required exceeds largest pack — return as-is (buy in bulk)
 
 
 # ── Zone mapping ───────────────────────────────────────────────────────────────

@@ -48,9 +48,9 @@ def test_round_to_pack_size_default_ml_fallback():
 
 
 def test_round_to_pack_size_exceeds_largest():
-    """When required > all pack sizes, return the largest."""
+    """When required > all pack sizes, return required as-is (buy in bulk)."""
     result = round_to_pack_size(2000.0, "Beef Mince", "g")
-    assert result == 1000.0  # largest defined mince pack
+    assert result == 2000.0  # return as-is — shopper buys what they need
 
 
 def test_zone_mapping():
