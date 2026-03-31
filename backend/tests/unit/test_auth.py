@@ -19,8 +19,8 @@ from app.api.v1.auth import _make_token, ACCESS_COOKIE, REFRESH_COOKIE
 PLAIN_PASSWORD = "test-pw"
 
 def _make_hash(plain: str) -> str:
-    import bcrypt as _bcrypt
-    return _bcrypt.hashpw(plain.encode(), _bcrypt.gensalt(rounds=4)).decode()
+    from argon2 import PasswordHasher
+    return PasswordHasher(time_cost=1, memory_cost=8, parallelism=1).hash(plain)  # fast params for tests
 
 # Use TestClient — automatically handles cookies between requests
 client = TestClient(app, raise_server_exceptions=True)

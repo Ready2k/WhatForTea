@@ -15,7 +15,6 @@ greenlet = "^3.1"
 alembic = "^1.14"
 pydantic-settings = "^2.7"
 python-jose = {extras = ["cryptography"], version = "^3.3"}
-passlib = {extras = ["bcrypt"], version = "^1.7"}
 python-multipart = "^0.0.20"
 redis = "^5.2"
 arq = "^0.26"
@@ -26,6 +25,7 @@ pyyaml = "^6.0"
 apscheduler = "^3.11"
 python-json-logger = "^3.2"
 prometheus-fastapi-instrumentator = "^7.0"
+argon2-cffi = "^25.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

@@ -7,10 +7,13 @@ POST /api/auth/logout  — clear cookies
 """
 from datetime import datetime, timedelta, timezone
 
-import bcrypt as _bcrypt
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 from fastapi import APIRouter, Response, Request
 from jose import jwt, JWTError
 from pydantic import BaseModel
+
+_ph = PasswordHasher()  # default params: time=3, memory=65536, parallelism=4
 
 from app.config import settings
 from app.errors import AppError, ErrorCode
@@ -69,10 +72,13 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 async def login(body: LoginRequest, response: Response):
     valid_username = (body.username == settings.household_username)
-    valid_password = (
-        bool(settings.household_password_hash)
-        and _bcrypt.checkpw(body.password.encode(), settings.household_password_hash.encode())
-    )
+    try:
+        valid_password = (
+            bool(settings.household_password_hash)
+            and _ph.verify(settings.household_password_hash, body.password)
+        )
+    except (VerifyMismatchError, VerificationError, InvalidHashError):
+        valid_password = False
     if not valid_username or not valid_password:
         raise AppError(ErrorCode.UNAUTHORIZED, "Invalid credentials", status_code=401)
 
