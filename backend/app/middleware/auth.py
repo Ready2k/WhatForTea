@@ -18,6 +18,7 @@ from app.api.v1.auth import ACCESS_COOKIE, ALGORITHM
 
 _SKIP_PATHS = {
     "/health",
+    "/metrics",
     "/api/auth/login",
     "/api/auth/refresh",
     "/docs",

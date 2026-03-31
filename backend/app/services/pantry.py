@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.metrics import pantry_item_count
 from app.models.ingredient import Ingredient, UnitConversion
 from app.models.pantry import PantryItem, PantryReservation
 from app.models.recipe import Recipe
@@ -153,6 +154,7 @@ async def get_available(db: AsyncSession) -> list[PantryAvailability]:
         )
     )
     items = (await db.execute(stmt)).scalars().all()
+    pantry_item_count.set(len(items))
 
     now = datetime.now(timezone.utc)
     result = []

@@ -17,7 +17,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 6 — Planner & Shopping List | ✅ Complete | Week plan, pack-size rounding, WhatsApp export |
 | 7 — Frontend UI | ✅ Complete | All 6 views; cooking mode with swipe/timer/voice |
 | 8 — Security | ⏳ Pending | |
-| 9 — Observability | ⏳ Pending | |
+| 9 — Observability | ✅ Complete | JSON logs with timestamp/level/route/duration_ms; /metrics with 3 custom metrics |
 | 10 — Testing | ⏳ Pending | |
 
 ---

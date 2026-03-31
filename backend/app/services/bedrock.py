@@ -193,12 +193,21 @@ async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
         text = text.strip()
 
     parsed = json.loads(text)
+
+    # Structured trace log — first 200 chars only; full response in llm_outputs table
+    usage = raw_response.get("usage", {})
     logger.info(
-        "ingestion LLM call complete",
+        "ingestion LLM call",
         extra={
+            "model": raw_response.get("model", cfg.get("model_id")),
+            "provider": "bedrock",
+            "prompt_tokens": usage.get("input_tokens"),
+            "completion_tokens": usage.get("output_tokens"),
+            "status": "success",
             "title": parsed.get("title"),
             "ingredient_count": len(parsed.get("ingredients", [])),
             "step_count": len(parsed.get("steps", [])),
+            "response_preview": text[:200],
         },
     )
     return raw_response, parsed

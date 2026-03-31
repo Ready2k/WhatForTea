@@ -17,6 +17,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.metrics import ingestion_total
 from app.models.ingest import IngestJob, IngestStatus, LlmOutput
 from app.models.recipe import Recipe, RecipeIngredient, Step
 from app.schemas.recipe import RecipeCreate
@@ -168,6 +169,7 @@ async def run_ingestion(
         llm_out.parsed_result = parsed_result
         job.status = IngestStatus.REVIEW
         await db.commit()
+        ingestion_total.labels(status="success").inc()
 
         logger.info(
             "ingestion pipeline complete — awaiting user review",
@@ -192,6 +194,7 @@ async def run_ingestion(
         job.status = IngestStatus.FAILED
         job.error_message = str(exc)
         await db.commit()
+        ingestion_total.labels(status="error").inc()
         logger.error(
             "ingestion failed",
             extra={"job_id": str(job_id), "error": str(exc)},

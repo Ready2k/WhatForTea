@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.config import settings
 from app.errors import register_exception_handlers
@@ -14,6 +15,7 @@ from app.api.v1.pantry import router as pantry_router
 from app.api.v1.planner import router as planner_router
 from app.api.v1.recipes import router as recipes_router
 from app.middleware.auth import AuthMiddleware
+from app.middleware.logging import RequestLoggingMiddleware
 from app.services.scheduler import create_scheduler
 
 setup_logging(settings.log_level)
@@ -43,7 +45,11 @@ app = FastAPI(
 )
 
 register_exception_handlers(app)
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(AuthMiddleware)
+
+# Prometheus metrics at GET /metrics (exempt from auth middleware — scraped internally)
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 app.include_router(auth_router)
 app.include_router(health_router, tags=["health"])

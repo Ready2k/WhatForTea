@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.metrics import match_score_histogram
 from app.models.ingredient import UnitConversion
 from app.models.recipe import Recipe, RecipeIngredient
 from app.schemas.matcher import IngredientMatchDetail, RecipeMatchResult
@@ -162,6 +163,7 @@ async def score_recipe(
             full.append(detail)
 
     recipe_score = (mean(scores) * 100) if scores else 0.0
+    match_score_histogram.observe(recipe_score)
 
     return RecipeMatchResult(
         recipe=RecipeSummary.model_validate(recipe),
