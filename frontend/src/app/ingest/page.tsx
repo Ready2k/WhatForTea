@@ -3,10 +3,69 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useIngestRecipe } from '@/lib/hooks';
+
+const MAX_DIMENSION = 1500;
+const JPEG_QUALITY = 0.85;
+
+async function resizeImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const { width, height } = img;
+      const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => resolve(new File([blob!], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })),
+        'image/jpeg',
+        JPEG_QUALITY,
+      );
+    };
+    img.src = url;
+  });
+}
 import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
 import type { IngestReviewPayload } from '@/lib/types';
 
 type FlowState = 'upload' | 'processing' | 'review' | 'done';
+type ApiStatus = 'uploading' | 'queued' | 'processing' | 'review';
+
+const STAGES: { key: ApiStatus; label: string; icon: string }[] = [
+  { key: 'uploading', label: 'Uploading photo',      icon: '📤' },
+  { key: 'queued',    label: 'In the queue',          icon: '⏳' },
+  { key: 'processing', label: 'Reading the card',    icon: '🤖' },
+  { key: 'review',    label: 'Almost ready!',         icon: '✨' },
+];
+
+const FUN_MESSAGES: Record<ApiStatus, string[]> = {
+  uploading: [
+    'Squishing your photo down to size...',
+    'Sending the card over...',
+  ],
+  queued: [
+    'Waiting for the AI chef to wake up...',
+    'Your card is next in line!',
+    'Warming up the neural networks...',
+  ],
+  processing: [
+    'Teaching AI to read handwriting...',
+    'Counting ingredients very carefully...',
+    'Figuring out what a "knob of butter" is...',
+    'Converting ounces to something sensible...',
+    'Interrogating the recipe for hidden steps...',
+    'Making sure it\'s actually food...',
+    'Cross-referencing with 10,000 HelloFresh cards...',
+    'Decoding chef\'s scrawl...',
+  ],
+  review: [
+    'Checking everything looks tasty...',
+    'Almost on your plate!',
+  ],
+};
 
 export default function IngestPage() {
   const [flowState, setFlowState] = useState<FlowState>('upload');
@@ -17,6 +76,9 @@ export default function IngestPage() {
   const [savedRecipeId, setSavedRecipeId] = useState<string | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState<ApiStatus>('uploading');
+  const [funMessageIdx, setFunMessageIdx] = useState(0);
+  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,15 +90,29 @@ export default function IngestPage() {
     return () => {
       previews.forEach((url) => URL.revokeObjectURL(url));
       if (pollRef.current) clearInterval(pollRef.current);
+      if (tickerRef.current) clearInterval(tickerRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleFilesSelected(files: FileList | null) {
+  // Cycle fun messages while processing
+  useEffect(() => {
+    if (flowState !== 'processing') {
+      if (tickerRef.current) clearInterval(tickerRef.current);
+      return;
+    }
+    tickerRef.current = setInterval(() => {
+      setFunMessageIdx((i) => i + 1);
+    }, 3500);
+    return () => { if (tickerRef.current) clearInterval(tickerRef.current); };
+  }, [flowState, apiStatus]);
+
+  async function handleFilesSelected(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const arr = Array.from(files).slice(0, 2);
-    setSelectedFiles(arr);
+    const raw = Array.from(files).slice(0, 2);
+    const resized = await Promise.all(raw.map(resizeImage));
+    setSelectedFiles(resized);
     previews.forEach((url) => URL.revokeObjectURL(url));
-    setPreviews(arr.map((f) => URL.createObjectURL(f)));
+    setPreviews(resized.map((f) => URL.createObjectURL(f)));
   }
 
   const startPolling = useCallback((id: string) => {
@@ -45,7 +121,12 @@ export default function IngestPage() {
     pollRef.current = setInterval(async () => {
       try {
         const status = await getIngestStatus(id);
-        if (status.status === 'review' || status.status === 'complete') {
+        if (status.status === 'queued') {
+          setApiStatus('queued');
+        } else if (status.status === 'processing') {
+          setApiStatus('processing');
+        } else if (status.status === 'review' || status.status === 'complete') {
+          setApiStatus('review');
           clearInterval(pollRef.current!);
           pollRef.current = null;
           const payload = await getIngestReview(id);
@@ -72,9 +153,12 @@ export default function IngestPage() {
     selectedFiles.forEach((f) => fd.append('images', f));
 
     try {
+      setApiStatus('uploading');
+      setFunMessageIdx(0);
       const result = await ingestMutation.mutateAsync(fd);
       setJobId(result.job_id);
       setProcessingError(null);
+      setApiStatus('queued');
       setFlowState('processing');
       startPolling(result.job_id);
     } catch (err: any) {
@@ -98,6 +182,7 @@ export default function IngestPage() {
 
   function handleStartOver() {
     if (pollRef.current) clearInterval(pollRef.current);
+    if (tickerRef.current) clearInterval(tickerRef.current);
     setFlowState('upload');
     setSelectedFiles([]);
     previews.forEach((url) => URL.revokeObjectURL(url));
@@ -106,6 +191,8 @@ export default function IngestPage() {
     setReviewPayload(null);
     setSavedRecipeId(null);
     setProcessingError(null);
+    setApiStatus('uploading');
+    setFunMessageIdx(0);
   }
 
   // ---- Upload step ----
@@ -182,16 +269,54 @@ export default function IngestPage() {
 
   // ---- Processing step ----
   if (flowState === 'processing') {
+    const currentStageIdx = STAGES.findIndex((s) => s.key === apiStatus);
+    const messages = FUN_MESSAGES[apiStatus];
+    const funMessage = messages[funMessageIdx % messages.length];
+
     return (
-      <main className="max-w-lg mx-auto px-4 pt-16 pb-4 flex flex-col items-center gap-6">
-        <div className="w-16 h-16 rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin" />
-        <div className="text-center">
-          <p className="text-lg font-semibold text-gray-900">Analysing your recipe card...</p>
-          <p className="text-sm text-gray-500 mt-1">This usually takes 10–20 seconds</p>
+      <main className="max-w-lg mx-auto px-4 pt-10 pb-4 flex flex-col gap-8">
+        {/* Stage steps */}
+        <div className="space-y-3">
+          {STAGES.map((stage, idx) => {
+            const done = idx < currentStageIdx;
+            const active = idx === currentStageIdx;
+            return (
+              <div
+                key={stage.key}
+                className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+                  active
+                    ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                    : done
+                    ? 'bg-white border-gray-100 opacity-50'
+                    : 'bg-white border-gray-100 opacity-30'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${
+                  active ? 'bg-emerald-100' : done ? 'bg-gray-100' : 'bg-gray-50'
+                }`}>
+                  {done ? '✅' : active ? (
+                    <span className="inline-block animate-spin">⚙️</span>
+                  ) : stage.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${active ? 'text-emerald-800' : 'text-gray-600'}`}>
+                    {stage.label}
+                  </p>
+                  {active && (
+                    <p className="text-xs text-emerald-600 mt-0.5 truncate">{funMessage}</p>
+                  )}
+                </div>
+                {active && (
+                  <div className="w-4 h-4 rounded-full border-2 border-emerald-300 border-t-emerald-600 animate-spin flex-shrink-0" />
+                )}
+              </div>
+            );
+          })}
         </div>
+
         <button
           onClick={handleStartOver}
-          className="text-sm text-gray-400 hover:text-gray-600 mt-4"
+          className="text-sm text-gray-400 hover:text-gray-600 text-center"
         >
           Cancel
         </button>

@@ -25,10 +25,22 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     if (refreshRes.ok) {
       // Retry the original request with the new cookie
       const retryRes = await fetch(`${BASE}${url}`, { credentials: 'include', ...options });
-      if (retryRes.ok) {
-        if (retryRes.status === 204) return undefined as unknown as T;
-        return retryRes.json() as Promise<T>;
+      if (retryRes.status === 401) {
+        // Still unauthorized after refresh — redirect to login
+        if (typeof window !== 'undefined') window.location.href = '/login';
+        throw new Error('Authentication required');
       }
+      if (!retryRes.ok) {
+        let message = `HTTP ${retryRes.status}`;
+        try {
+          const body = await retryRes.json();
+          if (body?.error?.message) message = body.error.message;
+          else if (body?.detail) message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+        } catch { /* ignore */ }
+        throw new Error(message);
+      }
+      if (retryRes.status === 204) return undefined as unknown as T;
+      return retryRes.json() as Promise<T>;
     }
     // Refresh failed — redirect to login
     if (typeof window !== 'undefined') {
@@ -74,7 +86,7 @@ export async function logout(): Promise<void> {
 }
 
 export function fetchRecipes(): Promise<RecipeSummary[]> {
-  return request<RecipeSummary[]>('/api/v1/recipes/');
+  return request<RecipeSummary[]>('/api/v1/recipes');
 }
 
 export function fetchRecipe(id: string): Promise<Recipe> {
@@ -87,7 +99,7 @@ export function fetchMatches(category?: string): Promise<RecipeMatchResult[]> {
 }
 
 export function fetchPantry(): Promise<PantryItem[]> {
-  return request<PantryItem[]>('/api/v1/pantry/');
+  return request<PantryItem[]>('/api/v1/pantry');
 }
 
 export function fetchAvailable(): Promise<PantryAvailability[]> {
@@ -157,6 +169,6 @@ export function confirmIngest(jobId: string, recipe: any): Promise<Recipe> {
   return request<Recipe>(`/api/v1/recipes/ingest/confirm/${jobId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(recipe),
+    body: JSON.stringify({ recipe }),
   });
 }

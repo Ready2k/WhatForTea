@@ -43,7 +43,7 @@ def _set_access_cookie(response: Response, token: str) -> None:
         key=ACCESS_COOKIE,
         value=token,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="strict",
         max_age=ACCESS_TTL_MINUTES * 60,
         path="/",
@@ -55,7 +55,7 @@ def _set_refresh_cookie(response: Response, token: str) -> None:
         key=REFRESH_COOKIE,
         value=token,
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="strict",
         max_age=REFRESH_TTL_DAYS * 86400,
         path="/api/auth/refresh",  # only sent to the refresh endpoint

@@ -39,7 +39,7 @@ class RecipeIngredientCreate(RecipeIngredientBase):
 class RecipeIngredient(RecipeIngredientBase):
     id: uuid.UUID
     recipe_id: uuid.UUID
-    ingredient_id: uuid.UUID
+    ingredient_id: Optional[uuid.UUID] = None
     normalized_quantity: Optional[float] = None
     normalized_unit: Optional[str] = None
 

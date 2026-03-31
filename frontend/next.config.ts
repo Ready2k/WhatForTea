@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   // Required for the production Docker image (copies only necessary files)
   output: "standalone",
 
+  // Allow larger image uploads — client resizes first but this is the safety net
+  experimental: {
+    middlewareClientMaxBodySize: 20 * 1024 * 1024, // 20MB
+  },
+
   // Proxy /api/* → backend container so the browser never needs to know
   // the backend host, and CORS is a non-issue.
   async rewrites() {

@@ -16,6 +16,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.metrics import ingestion_total
 from app.models.ingest import IngestJob, IngestStatus, LlmOutput
@@ -220,14 +221,31 @@ async def confirm_recipe(
         ing.raw_name for ing in recipe_data.ingredients if ing.ingredient_id is None
     ]
     if unresolved:
-        raise ValueError(
-            f"All ingredients must be resolved before confirming. "
-            f"Unresolved: {unresolved}"
+        logger.info(
+            "confirming recipe with unresolved ingredients — they won't contribute to pantry matching",
+            extra={"unresolved": unresolved},
         )
 
     job = await db.get(IngestJob, job_id)
     if job is None:
         raise ValueError(f"IngestJob {job_id} not found")
+    if job.status == IngestStatus.COMPLETE:
+        # Already confirmed — return the saved recipe idempotently
+        llm_stmt = (
+            select(LlmOutput)
+            .where(LlmOutput.ingest_job_id == job_id)
+            .order_by(LlmOutput.created_at.desc())
+            .limit(1)
+        )
+        llm_out = (await db.execute(llm_stmt)).scalar_one_or_none()
+        if llm_out and llm_out.recipe_id:
+            recipe_stmt = (
+                select(Recipe)
+                .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
+                .where(Recipe.id == llm_out.recipe_id)
+            )
+            return (await db.execute(recipe_stmt)).scalar_one()
+        raise ValueError(f"Job {job_id} is complete but recipe not found")
     if job.status != IngestStatus.REVIEW:
         raise ValueError(
             f"Job {job_id} cannot be confirmed — current status: {job.status.value!r} "
@@ -287,7 +305,14 @@ async def confirm_recipe(
 
     job.status = IngestStatus.COMPLETE
     await db.commit()
-    await db.refresh(recipe)
+
+    # Reload with relationships eagerly — lazy loading doesn't work in async SQLAlchemy
+    stmt = (
+        select(Recipe)
+        .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
+        .where(Recipe.id == recipe.id)
+    )
+    recipe = (await db.execute(stmt)).scalar_one()
 
     logger.info(
         "recipe confirmed and saved",

@@ -60,8 +60,8 @@ class RecipeIngredient(Base):
     recipe_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False
     )
-    ingredient_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("ingredients.id"), nullable=False
+    ingredient_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ingredients.id"), nullable=True
     )
     raw_name: Mapped[str] = mapped_column(Text, nullable=False)
     quantity: Mapped[float] = mapped_column(Numeric(12, 4), nullable=False)

@@ -14,12 +14,13 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
-    bedrock_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    bedrock_model_id: str = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
 
     # Auth
     jwt_secret: str = "dev-secret-change-in-production"
     household_username: str = "household"
     household_password_hash: str = ""
+    cookie_secure: bool = False  # set True in production (requires HTTPS)
 
     # Observability
     log_level: str = "INFO"

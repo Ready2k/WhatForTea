@@ -15,6 +15,7 @@ from pathlib import Path
 from arq import create_pool
 from arq.connections import RedisSettings
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -210,7 +211,28 @@ async def get_recipe(
     db: AsyncSession = Depends(get_db),
 ):
     """Fetch a single recipe with full ingredients and steps."""
-    recipe = await db.get(Recipe, recipe_id)
+    from sqlalchemy.orm import selectinload
+    stmt = (
+        select(Recipe)
+        .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
+        .where(Recipe.id == recipe_id)
+    )
+    recipe = (await db.execute(stmt)).scalar_one_or_none()
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
+
+
+@router.get("/{recipe_id}/image")
+async def get_recipe_image(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve the hero image for a recipe."""
+    recipe = await db.get(Recipe, recipe_id)
+    if recipe is None or not recipe.hero_image_path:
+        raise HTTPException(status_code=404, detail="Image not found")
+    path = Path(recipe.hero_image_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Image file not found")
+    return FileResponse(path)
