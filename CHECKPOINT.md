@@ -14,7 +14,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 3 — LLM Ingestion Pipeline | ✅ Complete | Upload → LLM → normalise → review → confirm flow |
 | 4 — Pantry Intelligence | ✅ Complete | CRUD + decay scheduler + availability + consume |
 | 5 — Hangry Matcher | ✅ Complete | Continuous scoring, 3 buckets, category filter |
-| 6 — Planner & Shopping List | ⏳ Pending | |
+| 6 — Planner & Shopping List | ✅ Complete | Week plan, pack-size rounding, WhatsApp export |
 | 7 — Frontend UI | ⏳ Pending | |
 | 8 — Security | ⏳ Pending | |
 | 9 — Observability | ⏳ Pending | |
@@ -252,7 +252,46 @@ One schema file per model group; request/response/summary variants where needed.
 
 ---
 
-## Next Up: Phase 6 — Planner & Shopping List
+## What Has Been Built (Phase 6)
+
+### Migration
+- `a9d2e4f6c801` — adds nullable `servings` column to `meal_plan_entries` (NULL = use recipe.base_servings)
+
+### Services
+- `backend/app/services/planner.py`
+  - `round_to_pack_size(required, name, unit)` — pure; YAML-driven pack-size lookup (exact → word → unit default)
+  - `set_week_plan(data, db)` — replace week plan; deletes old entries+reservations, creates new ones
+  - `get_plan(week_start, db)` — load with entries+recipes
+  - `delete_plan_entry(entry_id, db)` — remove entry + its pantry reservations
+  - `generate_shopping_list(week_start, db)` — aggregate → subtract pantry → round → zone-group
+  - `_format_text_export(zones)` — plain-text export for WhatsApp sharing
+  - `zero_waste_suggestions(...)` — scaffolded (returns `[]`; full logic future phase)
+
+### API (`/api/v1/planner/`)
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/week` | Create/replace week plan + rebuild reservations |
+| GET | `/week/current` | Current ISO week plan (creates empty if absent) |
+| GET | `/week/{week_start}` | Specific week plan |
+| DELETE | `/entries/{id}` | Remove entry + reservations |
+| GET | `/shopping-list?week_start=` | Shopping list with pack rounding + WhatsApp URL |
+| GET | `/zero-waste-suggestions` | Scaffolded endpoint |
+
+### Key design notes
+- `servings` on `MealPlanEntry` overrides `recipe.base_servings` for scaling (NULL = no override)
+- Pack sizes from `config/pack_sizes.yaml` — edit YAML to change sizes without touching Python
+- Shopping list includes `text_export` string and `whatsapp_url` (`whatsapp://send?text=...`)
+- Pantry reservations created only for ingredients that exist in the pantry; others appear on shopping list
+- `GET /week/current` registered before `GET /week/{week_start}` to avoid "current" parsed as a date
+
+### Tests
+- `tests/unit/test_planner.py` — 10 pure function tests + 2 integration tests
+
+---
+
+## Next Up: Phase 6 — Planner & Shopping List (done — see above)
+
+## Next Up: Phase 7 — Frontend UI
 
 **Goal:** Schedule meals for the week; generate a consolidated shopping list.
 

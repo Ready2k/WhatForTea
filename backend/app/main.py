@@ -10,6 +10,7 @@ from app.api.v1.health import router as health_router
 from app.api.v1.ingredients import router as ingredients_router
 from app.api.v1.matcher import router as matcher_router
 from app.api.v1.pantry import router as pantry_router
+from app.api.v1.planner import router as planner_router
 from app.api.v1.recipes import router as recipes_router
 from app.services.scheduler import create_scheduler
 
@@ -44,6 +45,7 @@ register_exception_handlers(app)
 app.include_router(health_router, tags=["health"])
 app.include_router(ingredients_router)
 app.include_router(pantry_router)
+app.include_router(planner_router)
 # matcher_router must come before recipes_router: /recipes/match before /recipes/{id}
 app.include_router(matcher_router)
 app.include_router(recipes_router)

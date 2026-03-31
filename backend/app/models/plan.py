@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Optional
 
 from sqlalchemy import Date, ForeignKey, SmallInteger, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
@@ -36,6 +37,8 @@ class MealPlanEntry(Base):
     recipe_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("recipes.id"), nullable=False
     )
+    # Override serving count; NULL means use recipe.base_servings
+    servings: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
 
     # Relationships
     meal_plan: Mapped["MealPlan"] = relationship(back_populates="entries")
