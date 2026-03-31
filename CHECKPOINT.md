@@ -12,7 +12,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 1 — Data Layer | ✅ Complete | 13 tables + alembic_version; 16 unit_conversions seeded |
 | 2 — Ingredient Normaliser | ✅ Complete | 55/55 golden set (100%); 5/5 tests pass |
 | 3 — LLM Ingestion Pipeline | ✅ Complete | Upload → LLM → normalise → review → confirm flow |
-| 4 — Pantry Intelligence | ⏳ Pending | |
+| 4 — Pantry Intelligence | ✅ Complete | CRUD + decay scheduler + availability + consume |
 | 5 — Hangry Matcher | ⏳ Pending | |
 | 6 — Planner & Shopping List | ⏳ Pending | |
 | 7 — Frontend UI | ⏳ Pending | |
@@ -182,25 +182,61 @@ One schema file per model group; request/response/summary variants where needed.
 
 ---
 
-## Next Up: Phase 4 — Pantry Intelligence
+## What Has Been Built (Phase 4)
 
-**Goal:** Track ingredient inventory with confidence decay; update on cooking events.
+### Services
+- `backend/app/services/pantry.py`
+  - `calculate_confidence(decay_rate, last_confirmed_at, now)` — pure function; idempotent from confirmation point
+  - `upsert_pantry_item` — insert or update by ingredient_id; resets confidence to 1.0 on update
+  - `update_pantry_item` — partial PATCH
+  - `confirm_pantry_item` — sets confidence=1.0, last_confirmed_at=now
+  - `delete_pantry_item`
+  - `get_available` — `(quantity × live_confidence) − sum(reservations)`, floored at 0
+  - `apply_decay_all` — recalculates all items from last_confirmed_at (idempotent, called by scheduler)
+  - `consume_from_pantry(recipe_id, db)` — deducts recipe quantities; extra penalty if confidence < 0.7
+
+- `backend/app/services/scheduler.py`
+  - `create_scheduler()` → `AsyncIOScheduler` with two cron jobs:
+    - `daily_decay` at 03:00 — runs `apply_decay_all`
+    - `llm_output_cleanup` at 04:00 — deletes expired `llm_outputs` rows
+
+### API (`/api/v1/pantry/`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/available` | Availability view (confidence-weighted, minus reservations) |
+| GET | `/` | Raw pantry items list |
+| POST | `/` | Add / upsert pantry item |
+| PATCH | `/{id}` | Partial update |
+| POST | `/{id}/confirm` | Reset confidence to 1.0 |
+| DELETE | `/{id}` | Remove item |
+
+### Key design notes
+- Decay is recalculated from `last_confirmed_at` — idempotent, safe to replay
+- Fridge default `decay_rate=0.1/day`, pantry `decay_rate=0.02/day` (per-item, user-overridable)
+- `GET /available` is the only correct read path for downstream systems
+- `consume_from_pantry` does unit conversion via `unit_conversions` table; logs warnings for unknown pairs
+- APScheduler starts/stops in `main.py` lifespan; misfire grace = 1 hour (survives brief restarts)
+
+### Tests
+- `tests/unit/test_pantry.py` — 6 pure decay function tests + 5 integration tests (real DB)
+
+---
+
+## Next Up: Phase 5 — "Hangry" Matcher
+
+**Goal:** Score every recipe against current pantry; surface ranked results.
 
 **Files to create:**
-- `backend/app/services/pantry.py` — CRUD + confidence-decay logic + availability query
-- `backend/app/services/scheduler.py` — APScheduler embedded in FastAPI lifespan; daily decay job at 03:00
-- `backend/app/api/v1/pantry.py` — CRUD + availability endpoints
+- `backend/app/services/matcher.py` — per-ingredient score + recipe match score
+- `backend/app/api/v1/matcher.py` — `GET /api/v1/recipes/match` scored list endpoint
 
 **Key implementation rules:**
-- `GET /api/v1/pantry` — list all pantry items
-- `POST /api/v1/pantry` — add/update item (upsert by ingredient_id)
-- `PATCH /api/v1/pantry/{id}` — adjust quantity or confirm (bumps confidence to 1.0)
-- `DELETE /api/v1/pantry/{id}`
-- `GET /api/v1/pantry/available` — returns `{ingredient, total_quantity, reserved_quantity, available_quantity, confidence}` list
-- Confidence decay formula: `confidence -= decay_rate * days_since_last_confirmed; confidence = max(0.0, confidence)`
-- Default `decay_rate`: fridge = 0.1/day, pantry = 0.02/day (stored per item, user-overridable)
-- APScheduler job: daily 03:00 local time — apply decay to all items, zero out expired items
-- `POST /api/v1/cooking-sessions/{id}/complete` should eventually trigger consumption (Phase 5+)
+- `ingredient_score = min(available / required, 1.0)`; 0.0 if ingredient missing
+- `recipe_score = mean(ingredient_scores) × 100`
+- Buckets: ≥90 = "Cook Now", 50–89 = "Almost There", <50 = "Planner"
+- Use `GET /api/v1/pantry/available` (the service function, not HTTP) for availability data
+- Normalise units before comparison using `unit_conversions` table (same helper as consume)
+- Response: `[{recipe_id, title, score, bucket, missing_ingredients, low_confidence_ingredients}]`
 
 ---
 
