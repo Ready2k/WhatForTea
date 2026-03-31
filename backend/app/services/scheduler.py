@@ -2,17 +2,24 @@
 APScheduler setup — embedded in the FastAPI process (no Celery needed).
 
 Jobs:
-  - daily_decay   : 03:00 every day — recalculates pantry confidence values
+  - daily_decay        : 03:00 every day — recalculates pantry confidence values
   - llm_output_cleanup : 04:00 every day — deletes expired llm_outputs rows
+  - nightly_backup     : 02:00 every day — runs scripts/backup.sh via subprocess
 
 The scheduler is started/stopped in main.py's lifespan context manager.
 """
+import asyncio
 import logging
+import subprocess
+from pathlib import Path
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 logger = logging.getLogger(__name__)
+
+# Backup script is at /app/../scripts/backup.sh inside the container
+_BACKUP_SCRIPT = Path(__file__).parent.parent.parent.parent / "scripts" / "backup.sh"
 
 
 async def _daily_decay_job() -> None:
@@ -41,6 +48,31 @@ async def _llm_output_cleanup_job() -> None:
     )
 
 
+async def _nightly_backup_job() -> None:
+    """Run scripts/backup.sh in a subprocess (non-blocking via thread executor)."""
+    if not _BACKUP_SCRIPT.exists():
+        logger.warning("backup script not found", extra={"path": str(_BACKUP_SCRIPT)})
+        return
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await loop.run_in_executor(
+            None,
+            lambda: subprocess.run(
+                ["bash", str(_BACKUP_SCRIPT)],
+                capture_output=True,
+                text=True,
+                timeout=300,
+            ),
+        )
+        if result.returncode == 0:
+            logger.info("nightly backup complete", extra={"stdout": result.stdout[-500:]})
+        else:
+            logger.error("nightly backup failed", extra={"stderr": result.stderr[-500:]})
+    except Exception as exc:
+        logger.error("nightly backup exception", extra={"error": str(exc)})
+
+
 def create_scheduler() -> AsyncIOScheduler:
     """Build and configure the APScheduler instance (does not start it)."""
     scheduler = AsyncIOScheduler()
@@ -59,6 +91,15 @@ def create_scheduler() -> AsyncIOScheduler:
         trigger=CronTrigger(hour=4, minute=0),
         id="llm_output_cleanup",
         name="LLM output expiry cleanup",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
+        _nightly_backup_job,
+        trigger=CronTrigger(hour=2, minute=0),
+        id="nightly_backup",
+        name="Nightly data backup",
         replace_existing=True,
         misfire_grace_time=3600,
     )

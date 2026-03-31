@@ -6,12 +6,14 @@ from fastapi import FastAPI
 from app.config import settings
 from app.errors import register_exception_handlers
 from app.logging_config import setup_logging
+from app.api.v1.auth import router as auth_router
 from app.api.v1.health import router as health_router
 from app.api.v1.ingredients import router as ingredients_router
 from app.api.v1.matcher import router as matcher_router
 from app.api.v1.pantry import router as pantry_router
 from app.api.v1.planner import router as planner_router
 from app.api.v1.recipes import router as recipes_router
+from app.middleware.auth import AuthMiddleware
 from app.services.scheduler import create_scheduler
 
 setup_logging(settings.log_level)
@@ -41,7 +43,9 @@ app = FastAPI(
 )
 
 register_exception_handlers(app)
+app.add_middleware(AuthMiddleware)
 
+app.include_router(auth_router)
 app.include_router(health_router, tags=["health"])
 app.include_router(ingredients_router)
 app.include_router(pantry_router)

@@ -12,8 +12,31 @@ import type {
 
 const BASE = '';
 
+// 401 → attempt one silent token refresh, then retry original request
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, options);
+  const res = await fetch(`${BASE}${url}`, { credentials: 'include', ...options });
+
+  if (res.status === 401) {
+    // Try to refresh the access token
+    const refreshRes = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (refreshRes.ok) {
+      // Retry the original request with the new cookie
+      const retryRes = await fetch(`${BASE}${url}`, { credentials: 'include', ...options });
+      if (retryRes.ok) {
+        if (retryRes.status === 204) return undefined as unknown as T;
+        return retryRes.json() as Promise<T>;
+      }
+    }
+    // Refresh failed — redirect to login
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    throw new Error('Authentication required');
+  }
+
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
     try {
@@ -30,6 +53,24 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   }
   if (res.status === 204) return undefined as unknown as T;
   return res.json() as Promise<T>;
+}
+
+export async function login(username: string, password: string): Promise<void> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message ?? 'Login failed');
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/login';
 }
 
 export function fetchRecipes(): Promise<RecipeSummary[]> {

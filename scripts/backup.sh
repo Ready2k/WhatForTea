@@ -47,7 +47,16 @@ echo "  ✅ Archive: ${ARCHIVE}"
 echo ""
 
 # ── Retention ─────────────────────────────────────────────────────────────────
-# Keep last 7 daily backups
-ls -t "${BACKUP_DIR}"/whatsfortea_*.tar.gz 2>/dev/null | tail -n +8 | xargs rm -f || true
+# Tag Sundays as weekly backups; keep last 4 weeklies + last 7 dailies.
+DAY_OF_WEEK="$(date +%u)"  # 1=Mon … 7=Sun
+if [ "${DAY_OF_WEEK}" = "7" ]; then
+    WEEKLY_ARCHIVE="${BACKUP_DIR}/whatsfortea_weekly_${TIMESTAMP}.tar.gz"
+    cp "${ARCHIVE}" "${WEEKLY_ARCHIVE}"
+    # Retain last 4 weekly backups
+    ls -t "${BACKUP_DIR}"/whatsfortea_weekly_*.tar.gz 2>/dev/null | tail -n +5 | xargs rm -f || true
+fi
 
-echo "🎉 Backup complete: $(du -sh "${ARCHIVE}" | cut -f1)"
+# Retain last 7 daily backups
+ls -t "${BACKUP_DIR}"/whatsfortea_[0-9]*.tar.gz 2>/dev/null | tail -n +8 | xargs rm -f || true
+
+echo "Backup complete: $(du -sh "${ARCHIVE}" | cut -f1)"
