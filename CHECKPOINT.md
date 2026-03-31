@@ -15,7 +15,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 4 — Pantry Intelligence | ✅ Complete | CRUD + decay scheduler + availability + consume |
 | 5 — Hangry Matcher | ✅ Complete | Continuous scoring, 3 buckets, category filter |
 | 6 — Planner & Shopping List | ✅ Complete | Week plan, pack-size rounding, WhatsApp export |
-| 7 — Frontend UI | ⏳ Pending | |
+| 7 — Frontend UI | ✅ Complete | All 6 views; cooking mode with swipe/timer/voice |
 | 8 — Security | ⏳ Pending | |
 | 9 — Observability | ⏳ Pending | |
 | 10 — Testing | ⏳ Pending | |

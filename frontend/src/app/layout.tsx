@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Providers } from "@/components/providers";
+import { Nav } from "@/components/nav";
 
 export const metadata: Metadata = {
   title: "What's for Tea?",
@@ -20,7 +22,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-white text-gray-900 antialiased">{children}</body>
+      <body className="bg-gray-50 text-gray-900 antialiased font-sans">
+        <Providers>
+          <div className="min-h-screen pb-16">
+            {children}
+          </div>
+          <Nav />
+        </Providers>
+      </body>
     </html>
   );
 }

@@ -1,0 +1,206 @@
+'use client';
+
+import { useState } from 'react';
+import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem } from '@/lib/hooks';
+import { ConfidenceBar } from '@/components/ConfidenceBar';
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+interface AddItemForm {
+  ingredient_id: string;
+  quantity: string;
+  unit: string;
+}
+
+const EMPTY_FORM: AddItemForm = { ingredient_id: '', quantity: '', unit: '' };
+
+export default function PantryPage() {
+  const { data: items, isLoading, isError, refetch } = useAvailable();
+  const confirmMutation = useConfirmPantryItem();
+  const upsertMutation = useUpsertPantryItem();
+  const deleteMutation = useDeletePantryItem();
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [form, setForm] = useState<AddItemForm>(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
+
+  const sorted = items
+    ? [...items].sort((a, b) => a.confidence - b.confidence)
+    : [];
+
+  async function handleAddItem(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError('');
+    const qty = parseFloat(form.quantity);
+    if (!form.ingredient_id.trim()) {
+      setFormError('Ingredient ID is required');
+      return;
+    }
+    if (isNaN(qty) || qty <= 0) {
+      setFormError('Enter a valid quantity');
+      return;
+    }
+    try {
+      await upsertMutation.mutateAsync({
+        ingredient_id: form.ingredient_id.trim(),
+        quantity: qty,
+        unit: form.unit.trim() || 'unit',
+      });
+      setForm(EMPTY_FORM);
+      setShowAddForm(false);
+    } catch (err: any) {
+      setFormError(err.message ?? 'Failed to add item');
+    }
+  }
+
+  return (
+    <main className="max-w-lg mx-auto px-4 pt-6 pb-4">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-gray-900">My Pantry</h1>
+        <button
+          onClick={() => { setShowAddForm((v) => !v); setFormError(''); setForm(EMPTY_FORM); }}
+          className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+        >
+          {showAddForm ? 'Cancel' : '+ Add Item'}
+        </button>
+      </div>
+
+      {/* Add item form */}
+      {showAddForm && (
+        <form onSubmit={handleAddItem} className="mb-4 p-4 bg-white rounded-2xl border border-gray-200 space-y-3 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-700">Add Pantry Item</h2>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ingredient ID (UUID)</label>
+            <input
+              type="text"
+              value={form.ingredient_id}
+              onChange={(e) => setForm((f) => ({ ...f, ingredient_id: e.target.value }))}
+              placeholder="e.g. 3fa85f64-5717-4562-..."
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={form.quantity}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+                placeholder="1"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-500 mb-1">Unit</label>
+              <input
+                type="text"
+                value={form.unit}
+                onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
+                placeholder="g / ml / unit"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+          </div>
+          {formError && <p className="text-xs text-red-600">{formError}</p>}
+          <button
+            type="submit"
+            disabled={upsertMutation.isPending}
+            className="w-full py-2.5 bg-emerald-600 text-white font-medium text-sm rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            {upsertMutation.isPending ? 'Adding...' : 'Add to Pantry'}
+          </button>
+        </form>
+      )}
+
+      {isError && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-3">Failed to load pantry</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && !isError && sorted.length === 0 && (
+        <div className="text-center py-16 text-gray-400">
+          <p className="text-5xl mb-3">🥦</p>
+          <p className="font-medium text-gray-600">Your pantry is empty</p>
+          <p className="text-sm mt-1">Add items to start tracking your ingredients</p>
+        </div>
+      )}
+
+      {!isLoading && !isError && sorted.length > 0 && (
+        <div className="space-y-2">
+          {sorted.map((item) => {
+            const confidencePct = Math.round(item.confidence * 100);
+            return (
+              <div
+                key={item.ingredient.id}
+                className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {item.ingredient.canonical_name}
+                      </p>
+                      <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                        {confidencePct}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {item.available_quantity.toFixed(1)} {item.unit} available
+                      {item.reserved_quantity > 0 && (
+                        <span className="text-yellow-600"> · {item.reserved_quantity.toFixed(1)} reserved</span>
+                      )}
+                    </p>
+                    <div className="mt-2">
+                      <ConfidenceBar confidence={item.confidence} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-gray-400">
+                    {item.ingredient.category}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => deleteMutation.mutate(item.ingredient.id)}
+                      disabled={deleteMutation.isPending}
+                      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40 px-2 py-1"
+                    >
+                      Remove
+                    </button>
+                    <button
+                      onClick={() => confirmMutation.mutate(item.ingredient.id)}
+                      disabled={confirmMutation.isPending}
+                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      {confirmMutation.isPending ? '...' : 'Confirm'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </main>
+  );
+}
