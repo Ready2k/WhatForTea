@@ -13,7 +13,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 2 — Ingredient Normaliser | ✅ Complete | 55/55 golden set (100%); 5/5 tests pass |
 | 3 — LLM Ingestion Pipeline | ✅ Complete | Upload → LLM → normalise → review → confirm flow |
 | 4 — Pantry Intelligence | ✅ Complete | CRUD + decay scheduler + availability + consume |
-| 5 — Hangry Matcher | ⏳ Pending | |
+| 5 — Hangry Matcher | ✅ Complete | Continuous scoring, 3 buckets, category filter |
 | 6 — Planner & Shopping List | ⏳ Pending | |
 | 7 — Frontend UI | ⏳ Pending | |
 | 8 — Security | ⏳ Pending | |
@@ -222,21 +222,52 @@ One schema file per model group; request/response/summary variants where needed.
 
 ---
 
-## Next Up: Phase 5 — "Hangry" Matcher
+## What Has Been Built (Phase 5)
 
-**Goal:** Score every recipe against current pantry; surface ranked results.
+### Services
+- `backend/app/services/matcher.py`
+  - `ingredient_score(available_qty, required_qty)` — pure; `min(avail/req, 1.0)`, 0.0 if missing/zero
+  - `get_category(score)` — pure; thresholds 90/50
+  - `score_recipe(recipe, avail_map, db)` — async; converts units, categorises each ingredient
+  - `score_all_recipes(db)` — loads all recipes + availability, returns sorted results
+
+### Schemas
+- `backend/app/schemas/matcher.py`
+  - `IngredientMatchDetail` — per-ingredient score, required/available qty, confidence
+  - `RecipeMatchResult` — recipe summary + score + category + four ingredient lists
+
+### API
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/recipes/match` | All recipes scored, sorted by score desc; `?category=` filter |
+
+### Key design notes
+- Matcher router registered in `main.py` **before** recipes router — prevents "match" being parsed as a UUID
+- Scoring uses live confidence-decayed availability (`get_available()`) — never stale
+- Unknown unit conversions → ingredient treated as `hard_missing` (conservative)
+- `?category=cook_now|almost_there|planner` filter available on the match endpoint
+
+### Tests
+- `tests/unit/test_matcher.py` — 9 pure function tests + 4 integration tests
+
+---
+
+## Next Up: Phase 6 — Planner & Shopping List
+
+**Goal:** Schedule meals for the week; generate a consolidated shopping list.
 
 **Files to create:**
-- `backend/app/services/matcher.py` — per-ingredient score + recipe match score
-- `backend/app/api/v1/matcher.py` — `GET /api/v1/recipes/match` scored list endpoint
+- `backend/app/services/planner.py` — create/update meal plan; generate shopping list
+- `backend/app/api/v1/planner.py` — plan CRUD + shopping list endpoint
 
 **Key implementation rules:**
-- `ingredient_score = min(available / required, 1.0)`; 0.0 if ingredient missing
-- `recipe_score = mean(ingredient_scores) × 100`
-- Buckets: ≥90 = "Cook Now", 50–89 = "Almost There", <50 = "Planner"
-- Use `GET /api/v1/pantry/available` (the service function, not HTTP) for availability data
-- Normalise units before comparison using `unit_conversions` table (same helper as consume)
-- Response: `[{recipe_id, title, score, bucket, missing_ingredients, low_confidence_ingredients}]`
+- `POST /api/v1/plan` — create/replace week plan with `{entries: [{date, recipe_id, servings}]}`
+- `GET /api/v1/plan` — current week plan with recipe summaries
+- `GET /api/v1/plan/shopping-list` — consolidated ingredient list (shortfall only: required − available)
+  - Group by ingredient; round up to nearest pack size from `config/pack_sizes.yaml`
+  - Skip ingredients where pantry fully covers the need
+- `POST /api/v1/plan/{entry_id}/reserve` — create `pantry_reservations` for a plan entry
+- Scale quantities by `servings / recipe.base_servings`
 
 ---
 
