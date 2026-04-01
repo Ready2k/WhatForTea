@@ -30,6 +30,21 @@ export default function PantryPage() {
   const [newIngForm, setNewIngForm] = useState<{ category: string; dimension: string; unit: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Per-item inline quantity editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editQty, setEditQty] = useState('');
+
+  async function handleUpdateQty(item: typeof sorted[number]) {
+    const qty = parseFloat(editQty);
+    if (isNaN(qty) || qty < 0) { setEditingId(null); return; }
+    await upsertMutation.mutateAsync({
+      ingredient_id: item.ingredient.id,
+      quantity: qty,
+      unit: item.unit,
+    });
+    setEditingId(null);
+  }
+
   const suggestions = useMemo(() => {
     if (form.ingredient || !inputFocused) return [];
     const q = form.search.trim().toLowerCase();
@@ -332,12 +347,51 @@ export default function PantryPage() {
                         {confidencePct}%
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {item.available_quantity.toFixed(1)} {item.unit} available
-                      {item.reserved_quantity > 0 && (
-                        <span className="text-yellow-600"> · {item.reserved_quantity.toFixed(1)} reserved</span>
-                      )}
-                    </p>
+                    {editingId === item.pantry_item_id ? (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={editQty}
+                          onChange={(e) => setEditQty(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateQty(item);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          autoFocus
+                          className="w-24 px-2 py-1 text-sm border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                        <span className="text-xs text-gray-500">{item.unit}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateQty(item)}
+                          disabled={upsertMutation.isPending}
+                          className="text-xs px-2 py-1 bg-emerald-600 text-white rounded-lg disabled:opacity-50"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setEditingId(item.pantry_item_id); setEditQty(item.total_quantity.toString()); }}
+                        className="text-xs text-gray-500 mt-0.5 hover:text-emerald-700 text-left"
+                      >
+                        {item.available_quantity.toFixed(1)} {item.unit} available
+                        {item.reserved_quantity > 0 && (
+                          <span className="text-yellow-600"> · {item.reserved_quantity.toFixed(1)} reserved</span>
+                        )}
+                        <span className="ml-1 text-gray-300">✎</span>
+                      </button>
+                    )}
                     <div className="mt-2">
                       <ConfidenceBar confidence={item.confidence} />
                     </div>
