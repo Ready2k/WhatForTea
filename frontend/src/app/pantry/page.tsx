@@ -48,10 +48,32 @@ export default function PantryPage() {
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
     setFormError('');
-    if (!form.ingredient) {
+
+    let ingredient = form.ingredient;
+
+    // If the create form is open, create the ingredient first
+    if (!ingredient && newIngForm) {
+      const name = form.search.trim();
+      if (!name) { setFormError('Enter an ingredient name'); return; }
+      try {
+        ingredient = await createIngredientMutation.mutateAsync({
+          canonical_name: name,
+          category: newIngForm.category,
+          dimension: newIngForm.dimension,
+          typical_unit: newIngForm.unit || 'unit',
+        });
+        setNewIngForm(null);
+      } catch (err: any) {
+        setFormError(err.message ?? 'Failed to create ingredient');
+        return;
+      }
+    }
+
+    if (!ingredient) {
       setFormError('Select an ingredient from the list');
       return;
     }
+
     const qty = parseFloat(form.quantity);
     if (isNaN(qty) || qty <= 0) {
       setFormError('Enter a valid quantity');
@@ -59,9 +81,9 @@ export default function PantryPage() {
     }
     try {
       await upsertMutation.mutateAsync({
-        ingredient_id: form.ingredient.id,
+        ingredient_id: ingredient.id,
         quantity: qty,
-        unit: form.unit.trim() || form.ingredient.typical_unit || 'unit',
+        unit: form.unit.trim() || ingredient.typical_unit || 'unit',
       });
       setForm(EMPTY_FORM);
       setShowAddForm(false);
