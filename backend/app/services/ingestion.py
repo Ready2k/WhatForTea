@@ -261,10 +261,11 @@ async def confirm_recipe(
     )
     llm_out = (await db.execute(stmt)).scalar_one_or_none()
 
-    # Use the first saved image as the hero image
+    # Use the last saved image as the hero (users typically photograph the
+    # pretty front-cover last and the ingredient/step side first).
     job_dir = Path(job.image_dir)
     image_paths = sorted(job_dir.glob("image_*"))
-    hero_image_path = str(image_paths[0]) if image_paths else None
+    hero_image_path = str(image_paths[-1]) if image_paths else None
 
     recipe = Recipe(
         title=recipe_data.title,

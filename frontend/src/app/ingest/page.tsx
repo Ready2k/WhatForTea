@@ -71,51 +71,47 @@ function detectCardBounds(
 }
 
 // ── Main image pipeline ───────────────────────────────────────────────────────
-// Relies on the browser to auto-apply EXIF orientation (Chrome 81+, Safari 15+,
-// Firefox 72+). naturalWidth/naturalHeight and ctx.drawImage all respect EXIF.
+// createImageBitmap with imageOrientation:'from-image' applies EXIF rotation
+// before we ever touch canvas — the most reliable cross-browser approach.
+// (Chrome 84+, Firefox 90+, Safari 15+)
 
 async function processImage(file: File): Promise<File> {
+  // Decode with EXIF orientation already applied
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const w = bitmap.width;
+  const h = bitmap.height;
+
+  // Draw at natural (post-rotation) size
+  const full = document.createElement('canvas');
+  full.width = w;
+  full.height = h;
+  full.getContext('2d')!.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+
+  // Detect card bounds and crop
+  const crop = detectCardBounds(full);
+  const cropW = crop.x2 - crop.x1;
+  const cropH = crop.y2 - crop.y1;
+
+  // Resize so longest edge ≤ MAX_DIMENSION
+  const scale = Math.min(1, MAX_DIMENSION / Math.max(cropW, cropH));
+  const outW = Math.round(cropW * scale);
+  const outH = Math.round(cropH * scale);
+
+  const out = document.createElement('canvas');
+  out.width = outW;
+  out.height = outH;
+  out.getContext('2d')!.drawImage(full, crop.x1, crop.y1, cropW, cropH, 0, 0, outW, outH);
+
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      // naturalWidth/Height are already in display orientation (EXIF applied by browser)
-      const w = img.naturalWidth;
-      const h = img.naturalHeight;
-
-      // Step 1: draw at natural size (browser applies EXIF rotation automatically)
-      const full = document.createElement('canvas');
-      full.width = w;
-      full.height = h;
-      full.getContext('2d')!.drawImage(img, 0, 0, w, h);
-
-      // Step 2: detect card bounds and crop
-      const crop = detectCardBounds(full);
-      const cropW = crop.x2 - crop.x1;
-      const cropH = crop.y2 - crop.y1;
-
-      // Step 3: resize to MAX_DIMENSION
-      const scale = Math.min(1, MAX_DIMENSION / Math.max(cropW, cropH));
-      const outW = Math.round(cropW * scale);
-      const outH = Math.round(cropH * scale);
-
-      const out = document.createElement('canvas');
-      out.width = outW;
-      out.height = outH;
-      out.getContext('2d')!.drawImage(full, crop.x1, crop.y1, cropW, cropH, 0, 0, outW, outH);
-
-      out.toBlob(
-        (blob) => {
-          if (!blob) { reject(new Error('toBlob failed')); return; }
-          resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
-        },
-        'image/jpeg',
-        JPEG_QUALITY,
-      );
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
-    img.src = url;
+    out.toBlob(
+      (blob) => {
+        if (!blob) { reject(new Error('toBlob failed')); return; }
+        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+      },
+      'image/jpeg',
+      JPEG_QUALITY,
+    );
   });
 }
 import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
@@ -315,7 +311,7 @@ export default function IngestPage() {
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Scan Recipe Card</h1>
-          <p className="text-sm text-gray-500 mt-1">Upload up to 2 images of a recipe card</p>
+          <p className="text-sm text-gray-500 mt-1">Take the recipe back first, then the front cover</p>
         </div>
 
         {processingError && (
