@@ -112,7 +112,7 @@ export function upsertPantryItem(data: {
   unit: string;
   confidence?: number;
 }): Promise<PantryItem> {
-  return request<PantryItem>('/api/v1/pantry/', {
+  return request<PantryItem>('/api/v1/pantry', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

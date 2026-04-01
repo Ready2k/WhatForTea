@@ -7,25 +7,175 @@ import { useIngestRecipe } from '@/lib/hooks';
 const MAX_DIMENSION = 1500;
 const JPEG_QUALITY = 0.85;
 
-async function resizeImage(file: File): Promise<File> {
+// ── EXIF orientation ──────────────────────────────────────────────────────────
+
+function getExifOrientation(buffer: ArrayBuffer): number {
+  const view = new DataView(buffer);
+  if (view.byteLength < 4 || view.getUint16(0, false) !== 0xFFD8) return 1;
+  let offset = 2;
+  while (offset + 4 < view.byteLength) {
+    const marker = view.getUint16(offset, false);
+    const segLen = view.getUint16(offset + 2, false);
+    if (
+      marker === 0xFFE1 &&
+      offset + 10 < view.byteLength &&
+      view.getUint32(offset + 4, false) === 0x45786966 // "Exif"
+    ) {
+      const tiff = offset + 10;
+      if (tiff + 8 > view.byteLength) break;
+      const le = view.getUint16(tiff, false) === 0x4949;
+      const ifd = tiff + view.getUint32(tiff + 4, le);
+      if (ifd + 2 > view.byteLength) break;
+      const n = view.getUint16(ifd, le);
+      for (let i = 0; i < n; i++) {
+        const e = ifd + 2 + i * 12;
+        if (e + 12 > view.byteLength) break;
+        if (view.getUint16(e, le) === 0x0112) return view.getUint16(e + 8, le);
+      }
+    }
+    if (segLen < 2) break;
+    offset += 2 + segLen;
+  }
+  return 1;
+}
+
+function applyOrientationTransform(
+  ctx: CanvasRenderingContext2D,
+  orientation: number,
+  w: number,
+  h: number,
+): void {
+  // ctx.transform(a, b, c, d, e, f) — maps raw image pixels to oriented canvas pixels.
+  // Canvas must be sized (w, h) for orientations 1–4 and (h, w) for 5–8.
+  switch (orientation) {
+    case 2: ctx.transform(-1,  0,  0,  1, w, 0); break; // flip X
+    case 3: ctx.transform(-1,  0,  0, -1, w, h); break; // rotate 180°
+    case 4: ctx.transform( 1,  0,  0, -1, 0, h); break; // flip Y
+    case 5: ctx.transform( 0,  1,  1,  0, 0, 0); break; // transpose
+    case 6: ctx.transform( 0,  1, -1,  0, h, 0); break; // rotate 90° CW
+    case 7: ctx.transform( 0, -1, -1,  0, h, w); break; // rotate 90° CW + flip
+    case 8: ctx.transform( 0, -1,  1,  0, 0, w); break; // rotate 90° CCW
+    default: break;
+  }
+}
+
+// ── Card bounds detection (Sobel + projection) ────────────────────────────────
+
+function detectCardBounds(
+  canvas: HTMLCanvasElement,
+): { x1: number; y1: number; x2: number; y2: number } {
+  const { width, height } = canvas;
+  const WORK = 400;
+  const scale = Math.min(1, WORK / Math.max(width, height));
+  const ww = Math.round(width * scale);
+  const wh = Math.round(height * scale);
+
+  const work = document.createElement('canvas');
+  work.width = ww;
+  work.height = wh;
+  work.getContext('2d')!.drawImage(canvas, 0, 0, ww, wh);
+  const { data } = work.getContext('2d')!.getImageData(0, 0, ww, wh);
+
+  const g = new Float32Array(ww * wh);
+  for (let i = 0; i < ww * wh; i++) {
+    g[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
+  }
+
+  const rowE = new Float32Array(wh);
+  const colE = new Float32Array(ww);
+  for (let y = 1; y < wh - 1; y++) {
+    for (let x = 1; x < ww - 1; x++) {
+      const gx =
+        -g[(y - 1) * ww + x - 1] + g[(y - 1) * ww + x + 1] +
+        -2 * g[y * ww + x - 1]   + 2 * g[y * ww + x + 1] +
+        -g[(y + 1) * ww + x - 1] + g[(y + 1) * ww + x + 1];
+      const gy =
+        -g[(y - 1) * ww + x - 1] - 2 * g[(y - 1) * ww + x] - g[(y - 1) * ww + x + 1] +
+        g[(y + 1) * ww + x - 1]  + 2 * g[(y + 1) * ww + x] + g[(y + 1) * ww + x + 1];
+      const e = Math.sqrt(gx * gx + gy * gy);
+      rowE[y] += e;
+      colE[x] += e;
+    }
+  }
+
+  const rowMax = Math.max(1, ...Array.from(rowE));
+  const colMax = Math.max(1, ...Array.from(colE));
+  const T = 0.1;
+
+  let y1 = 0, y2 = wh - 1, x1 = 0, x2 = ww - 1;
+  for (let y = 0; y < wh; y++)      { if (rowE[y] / rowMax > T) { y1 = y; break; } }
+  for (let y = wh - 1; y >= 0; y--) { if (rowE[y] / rowMax > T) { y2 = y; break; } }
+  for (let x = 0; x < ww; x++)      { if (colE[x] / colMax > T) { x1 = x; break; } }
+  for (let x = ww - 1; x >= 0; x--) { if (colE[x] / colMax > T) { x2 = x; break; } }
+
+  // Skip crop if the result is less than 40% of the original (over-aggressive)
+  if ((x2 - x1) * (y2 - y1) < 0.4 * ww * wh) return { x1: 0, y1: 0, x2: width, y2: height };
+
+  const px = Math.round(ww * 0.02);
+  const py = Math.round(wh * 0.02);
+  return {
+    x1: Math.max(0,     Math.round((x1 - px) / scale)),
+    y1: Math.max(0,     Math.round((y1 - py) / scale)),
+    x2: Math.min(width, Math.round((x2 + px) / scale)),
+    y2: Math.min(height,Math.round((y2 + py) / scale)),
+  };
+}
+
+// ── Main image pipeline ───────────────────────────────────────────────────────
+
+async function processImage(file: File): Promise<File> {
+  const buffer = await file.arrayBuffer();
+  const orientation = getExifOrientation(buffer);
+  const blob = new Blob([buffer], { type: file.type });
+
+  // Load raw pixels without browser EXIF auto-correction so we can apply it ourselves.
+  let source: ImageBitmap;
+  let needsOrientationFix = orientation > 1;
+  try {
+    source = await createImageBitmap(blob, { imageOrientation: 'none' } as ImageBitmapOptions);
+  } catch {
+    // Older browsers that don't support imageOrientation option auto-apply EXIF themselves.
+    source = await createImageBitmap(blob);
+    needsOrientationFix = false;
+  }
+
+  const iw = source.width;
+  const ih = source.height;
+  const swapDims = needsOrientationFix && orientation >= 5;
+  const cw = swapDims ? ih : iw;
+  const ch = swapDims ? iw : ih;
+
+  // Step 1: orient
+  const oriented = document.createElement('canvas');
+  oriented.width = cw;
+  oriented.height = ch;
+  const oCtx = oriented.getContext('2d')!;
+  if (needsOrientationFix) applyOrientationTransform(oCtx, orientation, iw, ih);
+  oCtx.drawImage(source, 0, 0, iw, ih);
+  source.close();
+
+  // Step 2: crop to card bounds
+  const crop = detectCardBounds(oriented);
+  const cropW = crop.x2 - crop.x1;
+  const cropH = crop.y2 - crop.y1;
+
+  // Step 3: resize to MAX_DIMENSION
+  const scale = Math.min(1, MAX_DIMENSION / Math.max(cropW, cropH));
+  const outW = Math.round(cropW * scale);
+  const outH = Math.round(cropH * scale);
+
+  const out = document.createElement('canvas');
+  out.width = outW;
+  out.height = outH;
+  out.getContext('2d')!.drawImage(oriented, crop.x1, crop.y1, cropW, cropH, 0, 0, outW, outH);
+
   return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const { width, height } = img;
-      const scale = Math.min(1, MAX_DIMENSION / Math.max(width, height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(width * scale);
-      canvas.height = Math.round(height * scale);
-      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => resolve(new File([blob!], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })),
-        'image/jpeg',
-        JPEG_QUALITY,
-      );
-    };
-    img.src = url;
+    out.toBlob(
+      (blob) =>
+        resolve(new File([blob!], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })),
+      'image/jpeg',
+      JPEG_QUALITY,
+    );
   });
 }
 import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
@@ -109,7 +259,7 @@ export default function IngestPage() {
   async function handleFilesSelected(files: FileList | null) {
     if (!files || files.length === 0) return;
     const raw = Array.from(files).slice(0, 2);
-    const resized = await Promise.all(raw.map(resizeImage));
+    const resized = await Promise.all(raw.map(processImage));
     setSelectedFiles(resized);
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews(resized.map((f) => URL.createObjectURL(f)));
