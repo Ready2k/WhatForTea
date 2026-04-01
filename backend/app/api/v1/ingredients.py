@@ -106,7 +106,7 @@ async def create_ingredient(
     db.add(ingredient)
     await db.commit()
     await db.refresh(ingredient)
-    logger.info("ingredient created", extra={"id": str(ingredient.id), "name": ingredient.canonical_name})
+    logger.info("ingredient created", extra={"ingredient_id": str(ingredient.id), "canonical_name": ingredient.canonical_name})
     return IngredientSchema.model_validate(ingredient)
 
 
