@@ -87,10 +87,22 @@ export default function PantryPage() {
             <input
               type="text"
               value={form.search}
-              onChange={(e) => setForm((f) => ({ ...f, search: e.target.value, ingredient: null }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => ({
+                  ...f,
+                  search: val,
+                  // Only deselect if the text no longer matches the selected ingredient
+                  ingredient: f.ingredient?.canonical_name === val ? f.ingredient : null,
+                }));
+              }}
               placeholder="Search ingredients..."
               autoComplete="off"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 ${
+                form.ingredient
+                  ? 'border-emerald-400 bg-emerald-50 focus:ring-emerald-400'
+                  : 'border-gray-300 focus:ring-emerald-400'
+              }`}
             />
             {suggestions.length > 0 && (
               <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
