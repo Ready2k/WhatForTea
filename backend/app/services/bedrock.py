@@ -25,7 +25,12 @@ _AGENT_CONFIG_DIR = Path(__file__).parent.parent.parent / "agent_config"
 def _load_settings() -> dict:
     path = _AGENT_CONFIG_DIR / "agent_settings.yaml"
     with open(path) as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    # Allow .env BEDROCK_MODEL_ID to override the YAML value
+    from app.config import settings
+    if settings.bedrock_model_id:
+        cfg["model_id"] = settings.bedrock_model_id
+    return cfg
 
 
 def _load_prompt(filename: str) -> str:
