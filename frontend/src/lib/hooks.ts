@@ -10,6 +10,7 @@ import {
   upsertPantryItem,
   confirmPantryItem,
   deletePantryItem,
+  deleteRecipe,
   fetchCurrentPlan,
   setWeekPlan,
   fetchShoppingList,
@@ -113,6 +114,17 @@ export function useDeletePantryItem() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pantry'] });
       qc.invalidateQueries({ queryKey: ['available'] });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+export function useDeleteRecipe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteRecipe,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['recipes'] });
       qc.invalidateQueries({ queryKey: ['matches'] });
     },
   });

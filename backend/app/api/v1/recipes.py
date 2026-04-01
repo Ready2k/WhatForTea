@@ -223,6 +223,34 @@ async def get_recipe(
     return recipe
 
 
+@router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_recipe(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete a recipe and its associated images."""
+    from sqlalchemy.orm import selectinload
+    stmt = (
+        select(Recipe)
+        .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
+        .where(Recipe.id == recipe_id)
+    )
+    recipe = (await db.execute(stmt)).scalar_one_or_none()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # Delete image directory if it exists
+    if recipe.hero_image_path:
+        image_dir = Path(recipe.hero_image_path).parent
+        if image_dir.exists() and image_dir.is_dir():
+            import shutil
+            shutil.rmtree(image_dir, ignore_errors=True)
+
+    await db.delete(recipe)
+    await db.commit()
+    logger.info("recipe deleted", extra={"recipe_id": str(recipe_id)})
+
+
 @router.get("/{recipe_id}/image")
 async def get_recipe_image(
     recipe_id: uuid.UUID,

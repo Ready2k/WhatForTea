@@ -144,6 +144,10 @@ export function confirmPantryItem(id: string): Promise<PantryItem> {
   });
 }
 
+export function deleteRecipe(id: string): Promise<void> {
+  return request<void>(`/api/v1/recipes/${id}`, { method: 'DELETE' });
+}
+
 export function deletePantryItem(id: string): Promise<void> {
   return request<void>(`/api/v1/pantry/${id}`, {
     method: 'DELETE',

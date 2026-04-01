@@ -2,7 +2,8 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useRecipe, useMatches } from '@/lib/hooks';
+import { useState } from 'react';
+import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import type { IngredientMatchDetail } from '@/lib/types';
 
@@ -30,8 +31,10 @@ function IngredientScore({ detail }: { detail: IngredientMatchDetail | undefined
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { data: matches } = useMatches();
+  const deleteMutation = useDeleteRecipe();
 
   const matchData = matches?.find((m) => m.recipe.id === id);
 
@@ -98,6 +101,40 @@ export default function RecipeDetailPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+
+        {/* Delete */}
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500/80 transition-colors"
+            aria-label="Delete recipe"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        ) : (
+          <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
+            <span className="text-white text-xs font-medium">Delete?</span>
+            <button
+              onClick={async () => {
+                await deleteMutation.mutateAsync(id);
+                router.replace('/recipes');
+              }}
+              disabled={deleteMutation.isPending}
+              className="text-xs font-semibold text-red-300 hover:text-red-100 disabled:opacity-50"
+            >
+              {deleteMutation.isPending ? '…' : 'Yes'}
+            </button>
+            <span className="text-white/40 text-xs">|</span>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="text-xs font-semibold text-white/70 hover:text-white"
+            >
+              No
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="px-4 pt-4 space-y-5">
