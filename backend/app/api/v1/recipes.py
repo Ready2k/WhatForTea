@@ -229,15 +229,24 @@ async def delete_recipe(
     db: AsyncSession = Depends(get_db),
 ):
     """Permanently delete a recipe and its associated images."""
-    from sqlalchemy.orm import selectinload
-    stmt = (
-        select(Recipe)
-        .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
-        .where(Recipe.id == recipe_id)
-    )
-    recipe = (await db.execute(stmt)).scalar_one_or_none()
+    from app.models.plan import MealPlanEntry
+    from app.models.pantry import PantryReservation
+
+    recipe = await db.get(Recipe, recipe_id)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # Remove pantry reservations that reference this recipe
+    res_stmt = select(PantryReservation).where(PantryReservation.recipe_id == recipe_id)
+    for res in (await db.execute(res_stmt)).scalars().all():
+        await db.delete(res)
+
+    # Remove meal plan entries that reference this recipe
+    entry_stmt = select(MealPlanEntry).where(MealPlanEntry.recipe_id == recipe_id)
+    for entry in (await db.execute(entry_stmt)).scalars().all():
+        await db.delete(entry)
+
+    await db.flush()
 
     # Delete image directory if it exists
     if recipe.hero_image_path:
