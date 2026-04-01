@@ -59,6 +59,7 @@ export interface PantryItem {
 }
 
 export interface PantryAvailability {
+  pantry_item_id: string;
   ingredient: Ingredient;
   total_quantity: number;
   reserved_quantity: number;

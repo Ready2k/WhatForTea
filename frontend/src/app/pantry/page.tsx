@@ -350,14 +350,14 @@ export default function PantryPage() {
                   </p>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => deleteMutation.mutate(item.ingredient.id)}
+                      onClick={() => deleteMutation.mutate(item.pantry_item_id)}
                       disabled={deleteMutation.isPending}
                       className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40 px-2 py-1"
                     >
                       Remove
                     </button>
                     <button
-                      onClick={() => confirmMutation.mutate(item.ingredient.id)}
+                      onClick={() => confirmMutation.mutate(item.pantry_item_id)}
                       disabled={confirmMutation.isPending}
                       className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                     >
