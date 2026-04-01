@@ -263,10 +263,13 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
     aggregated: dict[tuple[uuid.UUID, str], float] = {}
 
     for entry in plan.entries:
-        recipe = await db.get(
-            Recipe, entry.recipe_id,
-            options=[selectinload(Recipe.ingredients)]
+        # Use explicit select to avoid identity-map cache returning Recipe without ingredients
+        recipe_stmt = (
+            select(Recipe)
+            .options(selectinload(Recipe.ingredients))
+            .where(Recipe.id == entry.recipe_id)
         )
+        recipe = (await db.execute(recipe_stmt)).scalar_one_or_none()
         if recipe is None:
             continue
         scale = ((entry.servings or recipe.base_servings) / recipe.base_servings)
