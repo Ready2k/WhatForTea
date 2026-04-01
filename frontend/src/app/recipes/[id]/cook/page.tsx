@@ -8,23 +8,52 @@ import { StepTimer } from '@/components/StepTimer';
 import type { Step } from '@/lib/types';
 
 // ── Sub-step parser ──────────────────────────────────────────────────────────
-// Splits "a) Do this. b) Do that. c) And this." into an array of task strings.
-function parseSubSteps(text: string): string[] {
-  // Match segments like "a) ...", "b) ..." etc.
-  const lettered = text.split(/(?=\b[a-z]\)\s)/);
-  if (lettered.length > 1) {
-    return lettered.map((s) => s.trim()).filter(Boolean);
-  }
-  return [text];
-}
+type SubStep = { text: string; label: string; type: 'task' | 'important' | 'tip' };
 
-// Uppercase the first character of a label like "a)" → "A)"
-function formatLabel(s: string): { label: string; body: string } {
-  const match = s.match(/^([a-z]\))\s*/);
-  if (match) {
-    return { label: match[1].toUpperCase(), body: s.slice(match[0].length) };
+function parseSubSteps(raw: string): SubStep[] {
+  // 1. Try lettered sub-steps: "a) ...  b) ...  c) ..."
+  const lettered = raw.split(/(?=\b[a-z]\)\s)/);
+  if (lettered.length > 1) {
+    return lettered.map((s) => s.trim()).filter(Boolean).map((s) => {
+      const m = s.match(/^([a-z]\))\s*/);
+      return {
+        label: m ? m[1].toUpperCase() : '',
+        text:  m ? s.slice(m[0].length) : s,
+        type: 'task',
+      };
+    });
   }
-  return { label: '', body: s };
+
+  // 2. Split on sentence boundaries: ". " followed by an uppercase letter
+  const sentences: string[] = [];
+  let buf = '';
+  for (let i = 0; i < raw.length; i++) {
+    buf += raw[i];
+    if (
+      raw[i] === '.' &&
+      raw[i + 1] === ' ' &&
+      raw[i + 2] &&
+      /[A-Z]/.test(raw[i + 2])
+    ) {
+      sentences.push(buf.trim());
+      buf = '';
+      i++; // skip the space
+    }
+  }
+  if (buf.trim()) sentences.push(buf.trim());
+
+  // If only 1 sentence, return as-is (no artificial splitting)
+  if (sentences.length <= 1) return [{ label: '', text: raw, type: 'task' }];
+
+  return sentences.map((s) => {
+    if (s.startsWith('IMPORTANT:') || s.startsWith('Important:')) {
+      return { label: '!', text: s.replace(/^IMPORTANT:\s*/i, ''), type: 'important' };
+    }
+    if (s.startsWith('TIP:') || s.startsWith('Tip:')) {
+      return { label: '💡', text: s.replace(/^TIP:\s*/i, ''), type: 'tip' };
+    }
+    return { label: '', text: s, type: 'task' };
+  });
 }
 
 export default function CookingModePage() {
@@ -172,25 +201,42 @@ export default function CookingModePage() {
         </div>
 
         {/* Sub-steps */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {subSteps.map((sub, si) => {
-            const { label, body } = formatLabel(sub);
+            const isImportant = sub.type === 'important';
+            const isTip = sub.type === 'tip';
             return (
               <div
                 key={si}
-                className={`flex gap-3 p-4 rounded-2xl border transition-colors ${
-                  subSteps.length === 1
-                    ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                className={`flex gap-3 p-4 rounded-2xl border ${
+                  isImportant
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/60'
+                    : isTip
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60'
                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 }`}
               >
-                {label && (
-                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center justify-center mt-0.5">
-                    {label.replace(')', '')}
+                {sub.label && (
+                  <span className={`flex-shrink-0 w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 ${
+                    isImportant
+                      ? 'bg-red-100 dark:bg-red-800/50 text-red-700 dark:text-red-300'
+                      : isTip
+                      ? 'bg-amber-100 dark:bg-amber-800/50 text-amber-700 dark:text-amber-300 text-base'
+                      : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
+                  }`}>
+                    {sub.label.replace(')', '')}
                   </span>
                 )}
-                <p className="text-base font-medium leading-relaxed text-gray-800 dark:text-gray-100">
-                  {body}
+                <p className={`text-base font-medium leading-relaxed ${
+                  isImportant
+                    ? 'text-red-800 dark:text-red-200'
+                    : isTip
+                    ? 'text-amber-800 dark:text-amber-200'
+                    : 'text-gray-800 dark:text-gray-100'
+                }`}>
+                  {isImportant && <span className="font-bold">Important: </span>}
+                  {isTip && <span className="font-bold">Tip: </span>}
+                  {sub.text}
                 </p>
               </div>
             );
@@ -203,7 +249,7 @@ export default function CookingModePage() {
             <StepTimer
               key={`${currentStep.id}-${currentIndex}`}
               seconds={currentStep.timer_seconds}
-              autoStart={true}
+              autoStart={false}
             />
           </div>
         )}
