@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem, useIngredients } from '@/lib/hooks';
 import { ConfidenceBar } from '@/components/ConfidenceBar';
 import type { Ingredient } from '@/lib/types';
@@ -24,14 +24,19 @@ export default function PantryPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState<AddItemForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const suggestions = useMemo(() => {
+    if (form.ingredient || !inputFocused) return [];
     const q = form.search.trim().toLowerCase();
-    if (!q || form.ingredient) return [];
+    if (!q) return ingredients.slice(0, 8); // show first 8 when empty
     return ingredients
       .filter((i) => i.canonical_name.toLowerCase().includes(q))
       .slice(0, 8);
-  }, [form.search, form.ingredient, ingredients]);
+  }, [form.search, form.ingredient, ingredients, inputFocused]);
+
+  const noResults = inputFocused && !form.ingredient && form.search.trim().length > 0 && suggestions.length === 0;
 
   const sorted = items
     ? [...items].sort((a, b) => a.confidence - b.confidence)
@@ -85,6 +90,7 @@ export default function PantryPage() {
           <div className="relative">
             <label className="block text-xs text-gray-500 mb-1">Ingredient</label>
             <input
+              ref={searchRef}
               type="text"
               value={form.search}
               onChange={(e) => {
@@ -92,10 +98,11 @@ export default function PantryPage() {
                 setForm((f) => ({
                   ...f,
                   search: val,
-                  // Only deselect if the text no longer matches the selected ingredient
                   ingredient: f.ingredient?.canonical_name === val ? f.ingredient : null,
                 }));
               }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setTimeout(() => setInputFocused(false), 150)}
               placeholder="Search ingredients..."
               autoComplete="off"
               className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 ${
@@ -104,13 +111,13 @@ export default function PantryPage() {
                   : 'border-gray-300 focus:ring-emerald-400'
               }`}
             />
-            {suggestions.length > 0 && (
+            {(suggestions.length > 0 || noResults) && (
               <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                 {suggestions.map((ing) => (
                   <li key={ing.id}>
                     <button
                       type="button"
-                      onClick={() => selectIngredient(ing)}
+                      onMouseDown={(e) => { e.preventDefault(); selectIngredient(ing); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center justify-between"
                     >
                       <span>{ing.canonical_name}</span>
@@ -118,6 +125,11 @@ export default function PantryPage() {
                     </button>
                   </li>
                 ))}
+                {noResults && (
+                  <li className="px-3 py-2 text-sm text-gray-400 italic">
+                    No ingredient found for "{form.search.trim()}"
+                  </li>
+                )}
               </ul>
             )}
             {form.ingredient && (
