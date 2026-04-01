@@ -1,23 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem } from '@/lib/hooks';
+import { useState, useMemo } from 'react';
+import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem, useIngredients } from '@/lib/hooks';
 import { ConfidenceBar } from '@/components/ConfidenceBar';
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+import type { Ingredient } from '@/lib/types';
 
 interface AddItemForm {
-  ingredient_id: string;
+  search: string;
+  ingredient: Ingredient | null;
   quantity: string;
   unit: string;
 }
 
-const EMPTY_FORM: AddItemForm = { ingredient_id: '', quantity: '', unit: '' };
+const EMPTY_FORM: AddItemForm = { search: '', ingredient: null, quantity: '', unit: '' };
 
 export default function PantryPage() {
   const { data: items, isLoading, isError, refetch } = useAvailable();
+  const { data: ingredients = [] } = useIngredients();
   const confirmMutation = useConfirmPantryItem();
   const upsertMutation = useUpsertPantryItem();
   const deleteMutation = useDeletePantryItem();
@@ -26,6 +25,14 @@ export default function PantryPage() {
   const [form, setForm] = useState<AddItemForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
 
+  const suggestions = useMemo(() => {
+    const q = form.search.trim().toLowerCase();
+    if (!q || form.ingredient) return [];
+    return ingredients
+      .filter((i) => i.canonical_name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [form.search, form.ingredient, ingredients]);
+
   const sorted = items
     ? [...items].sort((a, b) => a.confidence - b.confidence)
     : [];
@@ -33,26 +40,30 @@ export default function PantryPage() {
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
     setFormError('');
-    const qty = parseFloat(form.quantity);
-    if (!form.ingredient_id.trim()) {
-      setFormError('Ingredient ID is required');
+    if (!form.ingredient) {
+      setFormError('Select an ingredient from the list');
       return;
     }
+    const qty = parseFloat(form.quantity);
     if (isNaN(qty) || qty <= 0) {
       setFormError('Enter a valid quantity');
       return;
     }
     try {
       await upsertMutation.mutateAsync({
-        ingredient_id: form.ingredient_id.trim(),
+        ingredient_id: form.ingredient.id,
         quantity: qty,
-        unit: form.unit.trim() || 'unit',
+        unit: form.unit.trim() || form.ingredient.typical_unit || 'unit',
       });
       setForm(EMPTY_FORM);
       setShowAddForm(false);
     } catch (err: any) {
       setFormError(err.message ?? 'Failed to add item');
     }
+  }
+
+  function selectIngredient(ing: Ingredient) {
+    setForm((f) => ({ ...f, ingredient: ing, search: ing.canonical_name, unit: ing.typical_unit || '' }));
   }
 
   return (
@@ -71,15 +82,35 @@ export default function PantryPage() {
       {showAddForm && (
         <form onSubmit={handleAddItem} className="mb-4 p-4 bg-white rounded-2xl border border-gray-200 space-y-3 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-700">Add Pantry Item</h2>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Ingredient ID (UUID)</label>
+          <div className="relative">
+            <label className="block text-xs text-gray-500 mb-1">Ingredient</label>
             <input
               type="text"
-              value={form.ingredient_id}
-              onChange={(e) => setForm((f) => ({ ...f, ingredient_id: e.target.value }))}
-              placeholder="e.g. 3fa85f64-5717-4562-..."
+              value={form.search}
+              onChange={(e) => setForm((f) => ({ ...f, search: e.target.value, ingredient: null }))}
+              placeholder="Search ingredients..."
+              autoComplete="off"
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
             />
+            {suggestions.length > 0 && (
+              <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                {suggestions.map((ing) => (
+                  <li key={ing.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectIngredient(ing)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center justify-between"
+                    >
+                      <span>{ing.canonical_name}</span>
+                      <span className="text-xs text-gray-400 ml-2">{ing.category}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {form.ingredient && (
+              <p className="text-xs text-emerald-600 mt-1">✓ {form.ingredient.canonical_name}</p>
+            )}
           </div>
           <div className="flex gap-2">
             <div className="flex-1">

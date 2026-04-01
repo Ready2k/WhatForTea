@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  fetchIngredients,
   fetchRecipes,
   fetchRecipe,
   fetchMatches,
@@ -13,6 +14,14 @@ import {
   fetchShoppingList,
   ingestRecipe,
 } from './api';
+
+export function useIngredients() {
+  return useQuery({
+    queryKey: ['ingredients'],
+    queryFn: fetchIngredients,
+    staleTime: 5 * 60 * 1000, // ingredient list changes infrequently
+  });
+}
 
 export function useRecipes() {
   return useQuery({

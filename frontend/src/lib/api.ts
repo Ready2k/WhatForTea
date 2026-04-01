@@ -1,4 +1,5 @@
 import type {
+  Ingredient,
   Recipe,
   RecipeSummary,
   RecipeMatchResult,
@@ -83,6 +84,10 @@ export async function login(username: string, password: string): Promise<void> {
 export async function logout(): Promise<void> {
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
   window.location.href = '/login';
+}
+
+export function fetchIngredients(): Promise<Ingredient[]> {
+  return request<Ingredient[]>('/api/v1/ingredients');
 }
 
 export function fetchRecipes(): Promise<RecipeSummary[]> {
