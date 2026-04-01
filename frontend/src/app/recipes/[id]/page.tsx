@@ -168,33 +168,39 @@ export default function RecipeDetailPage() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">Ingredients</h2>
-            {recipe.ingredients.some((i) => i.servings_quantities) && (
-              <div className="flex gap-1">
-                {[2, 3, 4].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setServings(n)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      servings === n
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {n}P
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 dark:text-gray-500 mr-0.5">Servings:</span>
+              {[1, 2, 3, 4, 6, 8].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setServings(n)}
+                  className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
+                    servings === n
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
           </div>
           <ul className="space-y-1.5">
             {recipe.ingredients.map((ing) => {
               const detail = scoreMap.get(ing.ingredient_id);
+              // Scaling logic: pre-calculated ? use it : (base_qty / base_servings) * servings
+              let displayQty = ing.servings_quantities?.[String(servings)];
+              if (displayQty === undefined) {
+                const scale = servings / (recipe.base_servings || 2);
+                displayQty = Math.round(ing.quantity * scale * 100) / 100;
+              }
+
               return (
                 <li key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
                   <span className="text-sm text-gray-800 dark:text-gray-200">{ing.raw_name}</span>
                   <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <span>
-                      {ing.servings_quantities?.[String(servings)] ?? ing.quantity} {ing.unit ?? ''}
+                      {displayQty} {ing.unit ?? ''}
                     </span>
                     <IngredientScore detail={detail} name={ing.raw_name} />
                   </div>

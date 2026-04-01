@@ -21,7 +21,9 @@ function getWeekStart(): string {
 export default function PlannerPage() {
   const [activeTab, setActiveTab] = useState<Tab>('week');
   const [dayPlan, setDayPlan] = useState<Record<number, string | null>>({});
+  const [servingsPlan, setServingsPlan] = useState<Record<number, number | null>>({});
   const [showPickerFor, setShowPickerFor] = useState<number | null>(null);
+  const [showServingPickerFor, setShowServingPickerFor] = useState<number | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
   const { data: plan, isLoading: planLoading } = useCurrentPlan();
@@ -32,12 +34,15 @@ export default function PlannerPage() {
 
   // Merge server plan with local overrides
   const resolvedPlan: Record<number, string | null> = {};
+  const resolvedServings: Record<number, number | null> = {};
   for (let d = 0; d < 7; d++) {
     if (d in dayPlan) {
       resolvedPlan[d] = dayPlan[d];
+      resolvedServings[d] = servingsPlan[d] ?? null;
     } else {
       const entry = plan?.entries.find((e) => e.day_of_week === d);
       resolvedPlan[d] = entry?.recipe_id ?? null;
+      resolvedServings[d] = entry?.servings ?? null;
     }
   }
 
@@ -49,10 +54,14 @@ export default function PlannerPage() {
   async function handleSavePlan() {
     const entries = Object.entries(resolvedPlan)
       .filter(([, recipeId]) => recipeId !== null)
-      .map(([dayStr, recipeId]) => ({
-        day_of_week: parseInt(dayStr),
-        recipe_id: recipeId as string,
-      }));
+      .map(([dayStr, recipeId]) => {
+        const d = parseInt(dayStr);
+        return {
+          day_of_week: d,
+          recipe_id: recipeId as string,
+          servings: resolvedServings[d] ?? undefined,
+        };
+      });
 
     try {
       await setWeekPlanMutation.mutateAsync({
@@ -60,6 +69,7 @@ export default function PlannerPage() {
         entries,
       });
       setDayPlan({});
+      setServingsPlan({});
     } catch {
       // errors shown via mutation state
     }
@@ -130,20 +140,32 @@ export default function PlannerPage() {
                     <div className="flex-1 flex items-center justify-between min-w-0">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{recipeSummary.title}</p>
-                        {recipeSummary.cooking_time_mins && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500">{recipeSummary.cooking_time_mins} min</p>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {recipeSummary.cooking_time_mins && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500">{recipeSummary.cooking_time_mins} min</p>
+                          )}
+                          <span className="text-gray-300 dark:text-gray-600">•</span>
+                          <button
+                            onClick={() => setShowServingPickerFor(showServingPickerFor === idx ? null : idx)}
+                            className="text-xs font-medium text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-1"
+                          >
+                            👥 {resolvedServings[idx] || 'Default'}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 ml-2">
+                      <div className="flex gap-3 ml-2">
                         <button
                           onClick={() => setShowPickerFor(idx)}
-                          className="text-xs text-emerald-600 hover:underline"
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-emerald-600 transition-colors"
                         >
                           Change
                         </button>
                         <button
-                          onClick={() => setDayPlan((p) => ({ ...p, [idx]: null }))}
-                          className="text-xs text-red-400 hover:underline"
+                          onClick={() => {
+                            setDayPlan((p) => ({ ...p, [idx]: null }));
+                            setServingsPlan((p) => ({ ...p, [idx]: null }));
+                          }}
+                          className="text-xs text-red-300 hover:text-red-500 transition-colors"
                         >
                           Clear
                         </button>
@@ -159,6 +181,38 @@ export default function PlannerPage() {
                   )}
                 </div>
 
+                {/* Serving Picker */}
+                {showServingPickerFor === idx && (
+                  <div className="mt-3 flex items-center gap-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Servings for {dayName}:</span>
+                    {[1, 2, 3, 4, 6, 8].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => {
+                          setServingsPlan((p) => ({ ...p, [idx]: n }));
+                          setShowServingPickerFor(null);
+                        }}
+                        className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
+                          resolvedServings[idx] === n
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setServingsPlan((p) => ({ ...p, [idx]: null }));
+                        setShowServingPickerFor(null);
+                      }}
+                      className="ml-auto text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    >
+                      Default
+                    </button>
+                  </div>
+                )}
+
                 {/* Inline picker */}
                 {showPickerFor === idx && (
                   <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
@@ -168,6 +222,8 @@ export default function PlannerPage() {
                           key={r.id}
                           onClick={() => {
                             setDayPlan((p) => ({ ...p, [idx]: r.id }));
+                            // Reset servings to recipe base servings when recipe changes
+                            setServingsPlan((p) => ({ ...p, [idx]: r.base_servings || 2 }));
                             setShowPickerFor(null);
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
