@@ -12,9 +12,9 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
   return (
     <Link
       href={`/recipes/${match.recipe.id}`}
-      className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+      className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
     >
-      <div className="w-full h-28 bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
+      <div className="w-full h-28 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 flex items-center justify-center">
         {match.recipe.hero_image_path ? (
           <img
             src={`/api/v1/recipes/${match.recipe.id}/image`}
@@ -26,9 +26,9 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
         )}
       </div>
       <div className="p-3 space-y-1.5">
-        <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{match.recipe.title}</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-2">{match.recipe.title}</p>
         {match.recipe.cooking_time_mins && (
-          <p className="text-xs text-gray-500">{match.recipe.cooking_time_mins} min</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{match.recipe.cooking_time_mins} min</p>
         )}
         <MatchBadge score={match.score} category={match.category} />
       </div>
@@ -48,8 +48,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">What's for Tea?</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">What's for Tea?</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {mode === 'hangry' ? 'Quick — what can I cook RIGHT NOW?' : 'Plan your week ahead'}
           </p>
         </div>
@@ -58,7 +58,7 @@ export default function Dashboard() {
           className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
             mode === 'hangry'
               ? 'bg-orange-500 text-white shadow-orange-200 shadow-md'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
           {mode === 'hangry' ? '🔥 Hangry' : '📅 Planning'}
@@ -80,36 +80,36 @@ export default function Dashboard() {
 
         <Link
           href="/pantry"
-          className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
         >
           <div className="text-3xl">🥦</div>
-          <div className="text-sm font-semibold text-gray-900 mt-1">My Pantry</div>
-          <div className="text-xs text-gray-500 mt-0.5">Manage ingredients</div>
+          <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">My Pantry</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage ingredients</div>
         </Link>
 
         <Link
           href="/planner"
-          className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
         >
           <div className="text-3xl">📅</div>
-          <div className="text-sm font-semibold text-gray-900 mt-1">This Week</div>
-          <div className="text-xs text-gray-500 mt-0.5">Meal plan & shopping</div>
+          <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">This Week</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal plan & shopping</div>
         </Link>
 
         <Link
           href="/ingest"
-          className="rounded-2xl bg-white border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow"
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
         >
           <div className="text-3xl">📷</div>
-          <div className="text-sm font-semibold text-gray-900 mt-1">Scan Card</div>
-          <div className="text-xs text-gray-500 mt-0.5">Add new recipe</div>
+          <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">Scan Card</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Add new recipe</div>
         </Link>
       </div>
 
       {/* Top recipes */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-900">Top Matches</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Top Matches</h2>
           <Link href="/recipes" className="text-sm text-emerald-600 font-medium hover:underline">
             See all
           </Link>
@@ -118,17 +118,17 @@ export default function Dashboard() {
         {isLoading ? (
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white shadow-sm border border-gray-100 animate-pulse">
-                <div className="w-full h-28 bg-gray-200" />
+              <div key={i} className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse">
+                <div className="w-full h-28 bg-gray-200 dark:bg-gray-700" />
                 <div className="p-3 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
                 </div>
               </div>
             ))}
           </div>
         ) : topMatches.length === 0 ? (
-          <div className="text-center py-8 text-gray-400">
+          <div className="text-center py-8 text-gray-400 dark:text-gray-500">
             <p className="text-4xl mb-2">🍽️</p>
             <p className="text-sm">No recipes yet. Scan your first card!</p>
           </div>

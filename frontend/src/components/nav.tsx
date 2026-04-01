@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from '@/context/ThemeContext';
 
 const tabs = [
   {
@@ -63,6 +64,7 @@ const tabs = [
 
 export function Nav() {
   const pathname = usePathname();
+  const { theme, toggle } = useTheme();
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/';
@@ -70,7 +72,7 @@ export function Nav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 pb-safe">
       <div className="flex items-stretch h-16">
         {tabs.map((tab) => {
           const active = isActive(tab.href);
@@ -79,14 +81,39 @@ export function Nav() {
               key={tab.href}
               href={tab.href}
               className={`flex flex-col items-center justify-center flex-1 gap-0.5 text-xs font-medium transition-colors ${
-                active ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-800'
+                active ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
               }`}
             >
-              <span className={active ? 'text-emerald-600' : 'text-gray-400'}>{tab.icon}</span>
+              <span className={active ? 'text-emerald-600' : 'text-gray-400 dark:text-gray-500'}>{tab.icon}</span>
               {tab.label}
             </Link>
           );
         })}
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="w-12 flex items-center justify-center border-l border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+        >
+          {theme === 'dark' ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          )}
+        </button>
       </div>
     </nav>
   );

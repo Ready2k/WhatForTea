@@ -16,7 +16,7 @@ export function ConfidenceBar({ confidence, className = '' }: ConfidenceBarProps
   }
 
   return (
-    <div className={`w-full bg-gray-200 rounded-full h-2 overflow-hidden ${className}`}>
+    <div className={`w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden ${className}`}>
       <div
         className={`h-2 rounded-full transition-all duration-300 ${colorClass}`}
         style={{ width: `${pct}%` }}

@@ -48,7 +48,7 @@ export default function PantryPage() {
   const suggestions = useMemo(() => {
     if (form.ingredient || !inputFocused) return [];
     const q = form.search.trim().toLowerCase();
-    if (!q) return ingredients.slice(0, 8); // show first 8 when empty
+    if (!q) return ingredients.slice(0, 8);
     return ingredients
       .filter((i) => i.canonical_name.toLowerCase().includes(q))
       .slice(0, 8);
@@ -66,7 +66,6 @@ export default function PantryPage() {
 
     let ingredient = form.ingredient;
 
-    // If the create form is open, create the ingredient first
     if (!ingredient && newIngForm) {
       const name = form.search.trim();
       if (!name) { setFormError('Enter an ingredient name'); return; }
@@ -114,7 +113,7 @@ export default function PantryPage() {
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-gray-900">My Pantry</h1>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">My Pantry</h1>
         <button
           onClick={() => { setShowAddForm((v) => !v); setFormError(''); setForm(EMPTY_FORM); }}
           className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
@@ -125,10 +124,10 @@ export default function PantryPage() {
 
       {/* Add item form */}
       {showAddForm && (
-        <form onSubmit={handleAddItem} className="mb-4 p-4 bg-white rounded-2xl border border-gray-200 space-y-3 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-700">Add Pantry Item</h2>
+        <form onSubmit={handleAddItem} className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-600 space-y-3 shadow-sm">
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Add Pantry Item</h2>
           <div className="relative">
-            <label className="block text-xs text-gray-500 mb-1">Ingredient</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Ingredient</label>
             <input
               ref={searchRef}
               type="text"
@@ -145,28 +144,28 @@ export default function PantryPage() {
               onBlur={() => setTimeout(() => setInputFocused(false), 150)}
               placeholder="Search ingredients..."
               autoComplete="off"
-              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 ${
+              className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 ${
                 form.ingredient
-                  ? 'border-emerald-400 bg-emerald-50 focus:ring-emerald-400'
-                  : 'border-gray-300 focus:ring-emerald-400'
+                  ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 focus:ring-emerald-400'
+                  : 'border-gray-300 dark:border-gray-500 focus:ring-emerald-400'
               }`}
             />
             {(suggestions.length > 0 || noResults) && (
-              <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+              <ul className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                 {suggestions.map((ing) => (
                   <li key={ing.id}>
                     <button
                       type="button"
                       onMouseDown={(e) => { e.preventDefault(); selectIngredient(ing); }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex items-center justify-between"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30 flex items-center justify-between text-gray-800 dark:text-gray-200"
                     >
                       <span>{ing.canonical_name}</span>
-                      <span className="text-xs text-gray-400 ml-2">{ing.category}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">{ing.category}</span>
                     </button>
                   </li>
                 ))}
                 {noResults && (
-                  <li className="px-3 py-2 text-sm text-gray-500">
+                  <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
                     <span className="italic">No match for "{form.search.trim()}"</span>
                     <button
                       type="button"
@@ -190,17 +189,17 @@ export default function PantryPage() {
 
           {/* Inline new-ingredient creation */}
           {newIngForm && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-              <p className="text-xs font-semibold text-emerald-800">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl space-y-2">
+              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 Creating "{form.search.trim()}" as a new ingredient
               </p>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">Category</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category</label>
                   <select
                     value={newIngForm.category}
                     onChange={(e) => setNewIngForm((f) => f && ({ ...f, category: e.target.value }))}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
                   >
                     {['produce','dairy','meat','fish','pantry','spice','bakery','other'].map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -208,11 +207,11 @@ export default function PantryPage() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">Dimension</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Dimension</label>
                   <select
                     value={newIngForm.dimension}
                     onChange={(e) => setNewIngForm((f) => f && ({ ...f, dimension: e.target.value }))}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
                   >
                     {['mass','volume','count','pack'].map((d) => (
                       <option key={d} value={d}>{d}</option>
@@ -220,13 +219,13 @@ export default function PantryPage() {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Unit</label>
                   <input
                     type="text"
                     value={newIngForm.unit}
                     onChange={(e) => setNewIngForm((f) => f && ({ ...f, unit: e.target.value }))}
                     placeholder="ml / g / unit"
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
               </div>
@@ -258,7 +257,7 @@ export default function PantryPage() {
                 <button
                   type="button"
                   onClick={() => setNewIngForm(null)}
-                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+                  className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   Cancel
                 </button>
@@ -267,7 +266,7 @@ export default function PantryPage() {
           )}
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Quantity</label>
               <input
                 type="number"
                 min="0"
@@ -275,21 +274,21 @@ export default function PantryPage() {
                 value={form.quantity}
                 onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
                 placeholder="1"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-500 mb-1">Unit</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Unit</label>
               <input
                 type="text"
                 value={form.unit}
                 onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
                 placeholder="g / ml / unit"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
           </div>
-          {formError && <p className="text-xs text-red-600">{formError}</p>}
+          {formError && <p className="text-xs text-red-600 dark:text-red-400">{formError}</p>}
           <button
             type="submit"
             disabled={upsertMutation.isPending}
@@ -302,7 +301,7 @@ export default function PantryPage() {
 
       {isError && (
         <div className="text-center py-12">
-          <p className="text-gray-500 mb-3">Failed to load pantry</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load pantry</p>
           <button
             onClick={() => refetch()}
             className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium"
@@ -315,15 +314,15 @@ export default function PantryPage() {
       {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 bg-gray-200 rounded-2xl animate-pulse" />
+            <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
           ))}
         </div>
       )}
 
       {!isLoading && !isError && sorted.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <p className="text-5xl mb-3">🥦</p>
-          <p className="font-medium text-gray-600">Your pantry is empty</p>
+          <p className="font-medium text-gray-600 dark:text-gray-300">Your pantry is empty</p>
           <p className="text-sm mt-1">Add items to start tracking your ingredients</p>
         </div>
       )}
@@ -335,15 +334,15 @@ export default function PantryPage() {
             return (
               <div
                 key={item.ingredient.id}
-                className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
+                className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                         {item.ingredient.canonical_name}
                       </p>
-                      <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
                         {confidencePct}%
                       </span>
                     </div>
@@ -360,9 +359,9 @@ export default function PantryPage() {
                             if (e.key === 'Escape') setEditingId(null);
                           }}
                           autoFocus
-                          className="w-24 px-2 py-1 text-sm border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                          className="w-24 px-2 py-1 text-sm border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
                         />
-                        <span className="text-xs text-gray-500">{item.unit}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{item.unit}</span>
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(item)}
@@ -374,7 +373,7 @@ export default function PantryPage() {
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="text-xs text-gray-400 hover:text-gray-600"
+                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                         >
                           Cancel
                         </button>
@@ -383,13 +382,13 @@ export default function PantryPage() {
                       <button
                         type="button"
                         onClick={() => { setEditingId(item.pantry_item_id); setEditQty(item.total_quantity.toString()); }}
-                        className="text-xs text-gray-500 mt-0.5 hover:text-emerald-700 text-left"
+                        className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hover:text-emerald-700 dark:hover:text-emerald-400 text-left"
                       >
                         {item.available_quantity.toFixed(1)} {item.unit} available
                         {item.reserved_quantity > 0 && (
-                          <span className="text-yellow-600"> · {item.reserved_quantity.toFixed(1)} reserved</span>
+                          <span className="text-yellow-600 dark:text-yellow-400"> · {item.reserved_quantity.toFixed(1)} reserved</span>
                         )}
-                        <span className="ml-1 text-gray-300">✎</span>
+                        <span className="ml-1 text-gray-300 dark:text-gray-600">✎</span>
                       </button>
                     )}
                     <div className="mt-2">
@@ -399,14 +398,14 @@ export default function PantryPage() {
                 </div>
 
                 <div className="flex items-center justify-between mt-3">
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     {item.ingredient.category}
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => deleteMutation.mutate(item.pantry_item_id)}
                       disabled={deleteMutation.isPending}
-                      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40 px-2 py-1"
+                      className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 disabled:opacity-40 px-2 py-1"
                     >
                       Remove
                     </button>

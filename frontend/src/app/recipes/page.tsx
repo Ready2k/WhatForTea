@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMatches } from '@/lib/hooks';
@@ -18,9 +18,9 @@ function RecipeGridCard({ match }: { match: RecipeMatchResult }) {
   return (
     <Link
       href={`/recipes/${match.recipe.id}`}
-      className="rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+      className="rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
     >
-      <div className="w-full aspect-video bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center">
+      <div className="w-full aspect-video bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center">
         {match.recipe.hero_image_path ? (
           <img
             src={`/api/v1/recipes/${match.recipe.id}/image`}
@@ -32,18 +32,18 @@ function RecipeGridCard({ match }: { match: RecipeMatchResult }) {
         )}
       </div>
       <div className="p-3 space-y-2">
-        <h3 className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-2">
           {match.recipe.title}
         </h3>
         <div className="flex items-center justify-between gap-2">
           {match.recipe.cooking_time_mins && (
-            <span className="text-xs text-gray-500">⏱ {match.recipe.cooking_time_mins} min</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">⏱ {match.recipe.cooking_time_mins} min</span>
           )}
         </div>
         {match.recipe.mood_tags?.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {match.recipe.mood_tags.slice(0, 2).map((tag) => (
-              <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+              <span key={tag} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-full">
                 {tag}
               </span>
             ))}
@@ -57,18 +57,18 @@ function RecipeGridCard({ match }: { match: RecipeMatchResult }) {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl overflow-hidden bg-white border border-gray-100 animate-pulse">
-      <div className="w-full aspect-video bg-gray-200" />
+    <div className="rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 animate-pulse">
+      <div className="w-full aspect-video bg-gray-200 dark:bg-gray-700" />
       <div className="p-3 space-y-2">
-        <div className="h-3 bg-gray-200 rounded w-3/4" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-5 bg-gray-200 rounded w-1/3" />
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
       </div>
     </div>
   );
 }
 
-export default function RecipesPage() {
+function RecipesContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category') ?? undefined;
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(initialCategory);
@@ -77,7 +77,7 @@ export default function RecipesPage() {
 
   return (
     <main className="max-w-2xl mx-auto px-4 pt-6 pb-4">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">Recipe Library</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Recipe Library</h1>
 
       {/* Filter tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4">
@@ -88,7 +88,7 @@ export default function RecipesPage() {
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === tab.value
                 ? 'bg-emerald-600 text-white'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
             {tab.label}
@@ -98,7 +98,7 @@ export default function RecipesPage() {
 
       {isError && (
         <div className="text-center py-12">
-          <p className="text-gray-500 mb-3">Failed to load recipes</p>
+          <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load recipes</p>
           <button
             onClick={() => refetch()}
             className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700"
@@ -117,9 +117,9 @@ export default function RecipesPage() {
       )}
 
       {!isLoading && !isError && matches?.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           <p className="text-5xl mb-3">🍽️</p>
-          <p className="font-medium text-gray-600">No recipes found</p>
+          <p className="font-medium text-gray-600 dark:text-gray-300">No recipes found</p>
           <p className="text-sm mt-1">
             {selectedCategory ? 'Try a different filter' : 'Scan a recipe card to get started'}
           </p>
@@ -140,5 +140,13 @@ export default function RecipesPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function RecipesPage() {
+  return (
+    <Suspense>
+      <RecipesContent />
+    </Suspense>
   );
 }

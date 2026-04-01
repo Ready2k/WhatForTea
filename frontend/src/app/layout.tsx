@@ -21,8 +21,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-gray-50 text-gray-900 antialiased font-sans">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Set theme class before first paint to avoid flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark')}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white antialiased font-sans">
         <Providers>
           <div className="min-h-screen pb-16">
             {children}

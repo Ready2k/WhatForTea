@@ -409,12 +409,12 @@ export default function IngestPage() {
     return (
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Scan Recipe Card</h1>
-          <p className="text-sm text-gray-500 mt-1">You need both sides of the card — back first, then front</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Scan Recipe Card</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">You need both sides of the card — back first, then front</p>
         </div>
 
         {processingError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
             {processingError}
           </div>
         )}
@@ -423,7 +423,7 @@ export default function IngestPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 rounded-2xl text-gray-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors bg-white"
+            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
           >
             <span className="text-3xl">📷</span>
             <span className="text-sm font-medium">
@@ -432,7 +432,7 @@ export default function IngestPage() {
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 rounded-2xl text-gray-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors bg-white"
+            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
           >
             <span className="text-3xl">📁</span>
             <span className="text-sm font-medium">Choose File</span>
@@ -460,7 +460,7 @@ export default function IngestPage() {
         {previews.length > 0 && (
           <div className="flex gap-3">
             {previews.map((url, i) => (
-              <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+              <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
                 <img src={url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
                 <button
                   onClick={() => {
@@ -482,7 +482,7 @@ export default function IngestPage() {
         )}
 
         {selectedFiles.length === 1 && (
-          <p className="text-sm text-center text-amber-600 font-medium">
+          <p className="text-sm text-center text-amber-600 dark:text-amber-400 font-medium">
             Add the other side of the card to continue
           </p>
         )}
@@ -515,25 +515,25 @@ export default function IngestPage() {
                 key={stage.key}
                 className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
                   active
-                    ? 'bg-emerald-50 border-emerald-200 shadow-sm'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 shadow-sm'
                     : done
-                    ? 'bg-white border-gray-100 opacity-50'
-                    : 'bg-white border-gray-100 opacity-30'
+                    ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-50'
+                    : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-30'
                 }`}
               >
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${
-                  active ? 'bg-emerald-100' : done ? 'bg-gray-100' : 'bg-gray-50'
+                  active ? 'bg-emerald-100 dark:bg-emerald-900/40' : done ? 'bg-gray-100 dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'
                 }`}>
                   {done ? '✅' : active ? (
                     <span className="inline-block animate-spin">⚙️</span>
                   ) : stage.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${active ? 'text-emerald-800' : 'text-gray-600'}`}>
+                  <p className={`text-sm font-semibold ${active ? 'text-emerald-800 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-400'}`}>
                     {stage.label}
                   </p>
                   {active && (
-                    <p className="text-xs text-emerald-600 mt-0.5 truncate">{funMessage}</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">{funMessage}</p>
                   )}
                 </div>
                 {active && (
@@ -546,7 +546,7 @@ export default function IngestPage() {
 
         <button
           onClick={handleStartOver}
-          className="text-sm text-gray-400 hover:text-gray-600 text-center"
+          className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-center"
         >
           Cancel
         </button>
@@ -560,29 +560,29 @@ export default function IngestPage() {
     return (
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Review Recipe</h1>
-          <button onClick={handleStartOver} className="text-sm text-gray-400 hover:text-gray-600">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Review Recipe</h1>
+          <button onClick={handleStartOver} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
             Start Over
           </button>
         </div>
 
         {processingError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
             {processingError}
           </div>
         )}
 
         {/* Parsed recipe summary */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm space-y-2">
-          <h2 className="font-semibold text-gray-800 text-base">{pr?.title ?? 'Unknown title'}</h2>
-          <div className="flex gap-4 text-sm text-gray-500">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm space-y-2">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-base">{pr?.title ?? 'Unknown title'}</h2>
+          <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400">
             {pr?.cooking_time_mins && <span>⏱ {pr.cooking_time_mins} min</span>}
             {pr?.base_servings && <span>👥 Serves {pr.base_servings}</span>}
           </div>
           {pr?.mood_tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {pr.mood_tags.map((tag: string) => (
-                <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                <span key={tag} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
                   {tag}
                 </span>
               ))}
@@ -592,19 +592,19 @@ export default function IngestPage() {
 
         {/* Ingredients */}
         {pr?.ingredients?.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Ingredients</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Ingredients</h3>
             <ul className="space-y-1.5">
               {pr.ingredients.map((ing: any, i: number) => {
                 const isUnresolved = reviewPayload.unresolved_ingredients.includes(ing.raw_name ?? ing.name ?? '');
                 return (
                   <li key={i} className="flex items-center gap-2 text-sm">
                     <span>{isUnresolved ? '⚠️' : '✅'}</span>
-                    <span className={isUnresolved ? 'text-yellow-700' : 'text-gray-800'}>
+                    <span className={isUnresolved ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-800 dark:text-gray-200'}>
                       {ing.raw_name ?? ing.name}
                     </span>
                     {ing.quantity && (
-                      <span className="text-gray-400 text-xs ml-auto">
+                      <span className="text-gray-400 dark:text-gray-500 text-xs ml-auto">
                         {ing.quantity} {ing.unit ?? ''}
                       </span>
                     )}
@@ -613,7 +613,7 @@ export default function IngestPage() {
               })}
             </ul>
             {reviewPayload.unresolved_ingredients.length > 0 && (
-              <p className="text-xs text-yellow-600 mt-2">
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
                 ⚠️ {reviewPayload.unresolved_ingredients.length} ingredient(s) could not be automatically resolved
               </p>
             )}
@@ -622,12 +622,12 @@ export default function IngestPage() {
 
         {/* Steps */}
         {pr?.steps?.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Steps ({pr.steps.length})</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Steps ({pr.steps.length})</h3>
             <ol className="space-y-2">
               {pr.steps.map((step: any, i: number) => (
-                <li key={i} className="flex gap-2 text-sm text-gray-700">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-xs flex items-center justify-center font-medium">
+                <li key={i} className="flex gap-2 text-sm text-gray-700 dark:text-gray-200">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-center font-medium">
                     {i + 1}
                   </span>
                   <span className="leading-relaxed">{step.text ?? step}</span>
@@ -652,12 +652,12 @@ export default function IngestPage() {
   if (flowState === 'done') {
     return (
       <main className="max-w-lg mx-auto px-4 pt-16 pb-4 flex flex-col items-center gap-5 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-3xl">
+        <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-3xl">
           ✅
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Recipe Saved!</h1>
-          <p className="text-sm text-gray-500 mt-1">Your recipe card has been added to the library</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Recipe Saved!</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Your recipe card has been added to the library</p>
         </div>
         <div className="flex gap-3 w-full">
           {savedRecipeId && (
@@ -670,7 +670,7 @@ export default function IngestPage() {
           )}
           <button
             onClick={handleStartOver}
-            className="flex-1 py-3.5 border border-gray-200 text-gray-700 font-medium rounded-2xl hover:bg-gray-50 transition-colors"
+            className="flex-1 py-3.5 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             Scan Another
           </button>

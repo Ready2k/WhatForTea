@@ -8,7 +8,7 @@ import { MatchBadge } from '@/components/MatchBadge';
 import type { IngredientMatchDetail } from '@/lib/types';
 
 function IngredientScore({ detail }: { detail: IngredientMatchDetail | undefined; name: string }) {
-  if (!detail) return <span className="text-gray-400 text-xs">—</span>;
+  if (!detail) return <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>;
 
   const pct = Math.round(detail.score * 100);
   let color = 'text-emerald-600';
@@ -56,12 +56,12 @@ export default function RecipeDetailPage() {
   if (isLoading) {
     return (
       <main className="max-w-lg mx-auto animate-pulse">
-        <div className="w-full aspect-video bg-gray-200" />
+        <div className="w-full aspect-video bg-gray-200 dark:bg-gray-700" />
         <div className="p-4 space-y-3">
-          <div className="h-6 bg-gray-200 rounded w-2/3" />
-          <div className="h-4 bg-gray-200 rounded w-1/3" />
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-4 bg-gray-200 rounded" />
+            <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded" />
           ))}
         </div>
       </main>
@@ -71,7 +71,7 @@ export default function RecipeDetailPage() {
   if (isError || !recipe) {
     return (
       <main className="max-w-lg mx-auto p-4 text-center py-16">
-        <p className="text-gray-500 mb-3">Failed to load recipe</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load recipe</p>
         <button
           onClick={() => refetch()}
           className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium"
@@ -87,7 +87,7 @@ export default function RecipeDetailPage() {
   return (
     <main className="max-w-lg mx-auto pb-8">
       {/* Hero */}
-      <div className="relative w-full aspect-video bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
+      <div className="relative w-full aspect-video bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 flex items-center justify-center">
         {recipe.hero_image_path ? (
           <img
             src={`/api/v1/recipes/${recipe.id}/image`}
@@ -146,17 +146,17 @@ export default function RecipeDetailPage() {
         {/* Title + meta */}
         <div>
           <div className="flex items-start justify-between gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 leading-tight">{recipe.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{recipe.title}</h1>
             {matchData && <MatchBadge score={matchData.score} category={matchData.category} />}
           </div>
-          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400">
             {recipe.cooking_time_mins && <span>⏱ {recipe.cooking_time_mins} min</span>}
             <span>👥 Serves {recipe.base_servings}</span>
           </div>
           {recipe.mood_tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {recipe.mood_tags.map((tag) => (
-                <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                <span key={tag} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
                   {tag}
                 </span>
               ))}
@@ -167,7 +167,7 @@ export default function RecipeDetailPage() {
         {/* Ingredients */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-base font-semibold text-gray-900">Ingredients</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Ingredients</h2>
             {recipe.ingredients.some((i) => i.servings_quantities) && (
               <div className="flex gap-1">
                 {[2, 3, 4].map((n) => (
@@ -177,7 +177,7 @@ export default function RecipeDetailPage() {
                     className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
                       servings === n
                         ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
                     {n}P
@@ -190,9 +190,9 @@ export default function RecipeDetailPage() {
             {recipe.ingredients.map((ing) => {
               const detail = scoreMap.get(ing.ingredient_id);
               return (
-                <li key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-0">
-                  <span className="text-sm text-gray-800">{ing.raw_name}</span>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                <li key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                  <span className="text-sm text-gray-800 dark:text-gray-200">{ing.raw_name}</span>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <span>
                       {ing.servings_quantities?.[String(servings)] ?? ing.quantity} {ing.unit ?? ''}
                     </span>
@@ -206,20 +206,20 @@ export default function RecipeDetailPage() {
 
         {/* Steps */}
         <div>
-          <h2 className="text-base font-semibold text-gray-900 mb-2">Method</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Method</h2>
           <ol className="space-y-3">
             {sortedSteps.map((step, idx) => (
               <li key={step.id} className="flex gap-3">
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm flex items-center justify-center">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-bold text-sm flex items-center justify-center">
                   {idx + 1}
                 </span>
                 <div className="flex-1 pt-0.5">
-                  <p className="text-sm text-gray-800 leading-relaxed">{step.text}</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step.text}</p>
                   {step.image_description && (
-                    <p className="text-xs text-gray-400 italic mt-1">{step.image_description}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1">{step.image_description}</p>
                   )}
                   {step.timer_seconds && (
-                    <span className="inline-block mt-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <span className="inline-block mt-1 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
                       ⏱ {Math.round(step.timer_seconds / 60)} min timer
                     </span>
                   )}

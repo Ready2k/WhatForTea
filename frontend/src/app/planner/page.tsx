@@ -87,16 +87,18 @@ export default function PlannerPage() {
 
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">Planner</h1>
+      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Planner</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl">
+      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
         {(['week', 'shopping'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              activeTab === tab
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             {tab === 'week' ? 'This Week' : 'Shopping List'}
@@ -110,7 +112,7 @@ export default function PlannerPage() {
           {planLoading && (
             <div className="space-y-2">
               {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded-2xl animate-pulse" />
+                <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
               ))}
             </div>
           )}
@@ -120,16 +122,16 @@ export default function PlannerPage() {
             const recipeSummary = getRecipeSummary(recipeId);
 
             return (
-              <div key={idx} className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+              <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-gray-500 w-20 flex-shrink-0">{dayName}</span>
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 w-20 flex-shrink-0">{dayName}</span>
 
                   {recipeSummary ? (
                     <div className="flex-1 flex items-center justify-between min-w-0">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{recipeSummary.title}</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{recipeSummary.title}</p>
                         {recipeSummary.cooking_time_mins && (
-                          <p className="text-xs text-gray-400">{recipeSummary.cooking_time_mins} min</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">{recipeSummary.cooking_time_mins} min</p>
                         )}
                       </div>
                       <div className="flex gap-2 ml-2">
@@ -150,7 +152,7 @@ export default function PlannerPage() {
                   ) : (
                     <button
                       onClick={() => setShowPickerFor(idx)}
-                      className="flex-1 py-2 border-2 border-dashed border-gray-200 text-sm text-gray-400 rounded-xl hover:border-emerald-300 hover:text-emerald-600 transition-colors text-center"
+                      className="flex-1 py-2 border-2 border-dashed border-gray-200 dark:border-gray-600 text-sm text-gray-400 dark:text-gray-500 rounded-xl hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-600 transition-colors text-center"
                     >
                       + Add recipe
                     </button>
@@ -159,7 +161,7 @@ export default function PlannerPage() {
 
                 {/* Inline picker */}
                 {showPickerFor === idx && (
-                  <div className="mt-3 border-t border-gray-100 pt-3">
+                  <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                     <div className="max-h-40 overflow-y-auto space-y-1">
                       {recipes?.map((r) => (
                         <button
@@ -168,21 +170,21 @@ export default function PlannerPage() {
                             setDayPlan((p) => ({ ...p, [idx]: r.id }));
                             setShowPickerFor(null);
                           }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-800 hover:bg-emerald-50 rounded-lg transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
                         >
                           {r.title}
                           {r.cooking_time_mins && (
-                            <span className="text-gray-400 ml-2">({r.cooking_time_mins} min)</span>
+                            <span className="text-gray-400 dark:text-gray-500 ml-2">({r.cooking_time_mins} min)</span>
                           )}
                         </button>
                       ))}
                       {(!recipes || recipes.length === 0) && (
-                        <p className="text-xs text-gray-400 px-2">No recipes available</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 px-2">No recipes available</p>
                       )}
                     </div>
                     <button
                       onClick={() => setShowPickerFor(null)}
-                      className="mt-2 text-xs text-gray-400 hover:text-gray-600"
+                      className="mt-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                     >
                       Cancel
                     </button>
@@ -218,14 +220,14 @@ export default function PlannerPage() {
           {shopLoading && (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-24 bg-gray-200 rounded-2xl animate-pulse" />
+                <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
               ))}
             </div>
           )}
 
           {shopError && (
             <div className="text-center py-12">
-              <p className="text-gray-500 mb-3">Failed to load shopping list</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load shopping list</p>
               <button
                 onClick={() => refetchShopping()}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium"
@@ -243,7 +245,7 @@ export default function PlannerPage() {
                   onClick={() => {
                     navigator.clipboard?.writeText(shoppingList.text_export).catch(() => {});
                   }}
-                  className="flex-1 py-2.5 border border-gray-200 text-sm font-medium text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="flex-1 py-2.5 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Copy List
                 </button>
@@ -258,17 +260,17 @@ export default function PlannerPage() {
               {/* Zones */}
               <div className="space-y-4">
                 {Object.entries(shoppingList.zones).map(([zone, items]) => (
-                  <details key={zone} open className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 hover:bg-gray-50 select-none capitalize">
+                  <details key={zone} open className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 select-none capitalize">
                       {zone} ({items.length})
                     </summary>
-                    <ul className="divide-y divide-gray-50">
+                    <ul className="divide-y divide-gray-50 dark:divide-gray-700">
                       {items.map((item) => {
                         const isChecked = checkedItems.has(item.ingredient_id);
                         return (
                           <li
                             key={item.ingredient_id}
-                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${isChecked ? 'bg-gray-50 opacity-60' : ''}`}
+                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50 opacity-60' : ''}`}
                           >
                             <input
                               type="checkbox"
@@ -277,17 +279,17 @@ export default function PlannerPage() {
                               className="w-4 h-4 accent-emerald-600 flex-shrink-0"
                             />
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                              <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
                                 {item.canonical_name}
                               </span>
-                              <span className="text-sm text-gray-500 ml-2">
+                              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                                 {item.rounded_quantity} {item.rounded_unit}
                               </span>
                             </div>
                             <button
                               onClick={() => handleBought(item)}
                               disabled={upsertMutation.isPending}
-                              className="text-xs text-emerald-600 hover:text-emerald-800 font-medium whitespace-nowrap disabled:opacity-40"
+                              className="text-xs text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-400 font-medium whitespace-nowrap disabled:opacity-40"
                             >
                               Bought
                             </button>
@@ -299,7 +301,7 @@ export default function PlannerPage() {
                 ))}
 
                 {Object.keys(shoppingList.zones).length === 0 && (
-                  <div className="text-center py-12 text-gray-400">
+                  <div className="text-center py-12 text-gray-400 dark:text-gray-500">
                     <p className="text-4xl mb-2">🛒</p>
                     <p>No items yet — plan your week first!</p>
                   </div>
