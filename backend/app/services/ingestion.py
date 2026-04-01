@@ -261,11 +261,28 @@ async def confirm_recipe(
     )
     llm_out = (await db.execute(stmt)).scalar_one_or_none()
 
-    # Use the last saved image as the hero (users typically photograph the
-    # pretty front-cover last and the ingredient/step side first).
+    # Use the LLM's front_cover_index to pick the hero image.
+    # Falls back to the last image if the field is absent or out of range.
     job_dir = Path(job.image_dir)
     image_paths = sorted(job_dir.glob("image_*"))
-    hero_image_path = str(image_paths[-1]) if image_paths else None
+    if image_paths:
+        llm_stmt_hero = (
+            select(LlmOutput)
+            .where(LlmOutput.ingest_job_id == job_id)
+            .order_by(LlmOutput.created_at.desc())
+            .limit(1)
+        )
+        llm_out_hero = (await db.execute(llm_stmt_hero)).scalar_one_or_none()
+        front_idx = None
+        if llm_out_hero and llm_out_hero.parsed_result:
+            raw_idx = llm_out_hero.parsed_result.get("front_cover_index")
+            if isinstance(raw_idx, int) and 0 <= raw_idx < len(image_paths):
+                front_idx = raw_idx
+        if front_idx is None:
+            front_idx = len(image_paths) - 1  # fallback: last image
+        hero_image_path = str(image_paths[front_idx])
+    else:
+        hero_image_path = None
 
     recipe = Recipe(
         title=recipe_data.title,

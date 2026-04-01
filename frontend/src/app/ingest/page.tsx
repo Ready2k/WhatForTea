@@ -6,6 +6,8 @@ import { useIngestRecipe } from '@/lib/hooks';
 
 const MAX_DIMENSION = 1500;
 const JPEG_QUALITY = 0.85;
+const FINGERPRINT_SIZE = 16; // px — tiny canvas used for duplicate detection
+const DUPLICATE_THRESHOLD = 0.92; // fraction of pixels that must match to flag as duplicate
 
 // ── Card bounds detection (Sobel + projection) ────────────────────────────────
 
@@ -115,6 +117,34 @@ async function processImage(file: File): Promise<File> {
   });
 }
 import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
+// ── Duplicate detection ───────────────────────────────────────────────────────
+// Decodes a File to a tiny FINGERPRINT_SIZE×FINGERPRINT_SIZE canvas and
+// returns the flattened RGBA pixel array for similarity comparison.
+
+async function fingerprintImage(file: File): Promise<Uint8ClampedArray> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const c = document.createElement('canvas');
+  c.width = FINGERPRINT_SIZE;
+  c.height = FINGERPRINT_SIZE;
+  c.getContext('2d')!.drawImage(bitmap, 0, 0, FINGERPRINT_SIZE, FINGERPRINT_SIZE);
+  bitmap.close();
+  return c.getContext('2d')!.getImageData(0, 0, FINGERPRINT_SIZE, FINGERPRINT_SIZE).data;
+}
+
+function pixelSimilarity(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
+  const TOLERANCE = 20; // per-channel delta allowed before counting as "different"
+  let matches = 0;
+  const pixels = a.length / 4;
+  for (let i = 0; i < a.length; i += 4) {
+    if (
+      Math.abs(a[i] - b[i]) <= TOLERANCE &&
+      Math.abs(a[i + 1] - b[i + 1]) <= TOLERANCE &&
+      Math.abs(a[i + 2] - b[i + 2]) <= TOLERANCE
+    ) matches++;
+  }
+  return matches / pixels;
+}
+
 import type { IngestReviewPayload } from '@/lib/types';
 
 type FlowState = 'upload' | 'processing' | 'review' | 'done';
@@ -258,7 +288,22 @@ export default function IngestPage() {
   }, []);
 
   async function handleUpload() {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length !== 2) return;
+
+    // Duplicate check — compare pixel fingerprints before paying for a Bedrock call
+    try {
+      const [fpA, fpB] = await Promise.all(selectedFiles.map(fingerprintImage));
+      const similarity = pixelSimilarity(fpA, fpB);
+      if (similarity >= DUPLICATE_THRESHOLD) {
+        setProcessingError(
+          'Both photos look like the same side of the card. Please take one photo of the front and one of the back.',
+        );
+        return;
+      }
+    } catch {
+      // If fingerprinting fails for any reason, proceed anyway
+    }
+
     const fd = new FormData();
     selectedFiles.forEach((f) => fd.append('images', f));
 
@@ -311,7 +356,7 @@ export default function IngestPage() {
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Scan Recipe Card</h1>
-          <p className="text-sm text-gray-500 mt-1">Take the recipe back first, then the front cover</p>
+          <p className="text-sm text-gray-500 mt-1">You need both sides of the card — back first, then front</p>
         </div>
 
         {processingError && (
@@ -382,12 +427,17 @@ export default function IngestPage() {
           </div>
         )}
 
+        {selectedFiles.length === 1 && (
+          <p className="text-sm text-center text-amber-600 font-medium">
+            Add the other side of the card to continue
+          </p>
+        )}
         <button
           onClick={handleUpload}
-          disabled={selectedFiles.length === 0 || ingestMutation.isPending}
+          disabled={selectedFiles.length !== 2 || ingestMutation.isPending}
           className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          {ingestMutation.isPending ? 'Uploading...' : 'Upload & Process'}
+          {ingestMutation.isPending ? 'Uploading...' : selectedFiles.length === 2 ? 'Upload & Process' : `${selectedFiles.length}/2 photos — add ${2 - selectedFiles.length} more`}
         </button>
       </main>
     );
