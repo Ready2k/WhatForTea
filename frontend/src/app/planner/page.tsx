@@ -85,6 +85,7 @@ export default function PlannerPage() {
   }
 
   async function handleBought(item: ShoppingListItem) {
+    if (!item.ingredient_id) return; // can't add unresolved items to pantry
     try {
       await upsertMutation.mutateAsync({
         ingredient_id: item.ingredient_id,
@@ -321,34 +322,43 @@ export default function PlannerPage() {
                       {zone} ({items.length})
                     </summary>
                     <ul className="divide-y divide-gray-50 dark:divide-gray-700">
-                      {items.map((item) => {
-                        const isChecked = checkedItems.has(item.ingredient_id);
+                      {items.map((item, itemIdx) => {
+                        // Use ingredient_id if available; fall back to name+index for unresolved items
+                        const itemKey = item.ingredient_id ?? `${zone}-${item.canonical_name}-${itemIdx}`;
+                        const isChecked = !!(item.ingredient_id && checkedItems.has(item.ingredient_id));
+                        const isUnresolved = !item.ingredient_id;
                         return (
                           <li
-                            key={item.ingredient_id}
+                            key={itemKey}
                             className={`flex items-center gap-3 px-4 py-3 transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50 opacity-60' : ''}`}
                           >
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              onChange={() => toggleItem(item.ingredient_id)}
-                              className="w-4 h-4 accent-emerald-600 flex-shrink-0"
+                              onChange={() => item.ingredient_id && toggleItem(item.ingredient_id)}
+                              disabled={isUnresolved}
+                              className="w-4 h-4 accent-emerald-600 flex-shrink-0 disabled:opacity-40"
                             />
                             <div className="flex-1 min-w-0">
                               <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
                                 {item.canonical_name}
+                                {isUnresolved && (
+                                  <span className="ml-1.5 text-xs text-amber-500 dark:text-amber-400 font-normal">(unmatched)</span>
+                                )}
                               </span>
                               <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
                                 {item.rounded_quantity} {item.rounded_unit}
                               </span>
                             </div>
-                            <button
-                              onClick={() => handleBought(item)}
-                              disabled={upsertMutation.isPending}
-                              className="text-xs text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-400 font-medium whitespace-nowrap disabled:opacity-40"
-                            >
-                              Bought
-                            </button>
+                            {!isUnresolved && (
+                              <button
+                                onClick={() => handleBought(item)}
+                                disabled={upsertMutation.isPending}
+                                className="text-xs text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-400 font-medium whitespace-nowrap disabled:opacity-40"
+                              >
+                                Bought
+                              </button>
+                            )}
                           </li>
                         );
                       })}
