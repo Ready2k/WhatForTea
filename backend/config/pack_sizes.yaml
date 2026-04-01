@@ -32,7 +32,7 @@ lime:             [1, 2]
 # ── Produce (g) ──────────────────────────────────────────────────────────────
 tomato:           [200, 400, 600]
 potato:           [250, 500, 1000]
-spinach:          [100, 200]
+# spinach is typically sold by the bag — leave to discrete unit path
 
 # ── Pantry ────────────────────────────────────────────────────────────────────
 pasta:            [250, 500]

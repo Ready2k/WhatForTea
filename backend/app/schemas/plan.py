@@ -40,12 +40,13 @@ class MealPlan(BaseModel):
 
 
 class ShoppingListItem(BaseModel):
-    ingredient_id: uuid.UUID
+    ingredient_id: Optional[uuid.UUID] = None
     canonical_name: str
     quantity: float        # exact shortfall
     unit: str
     rounded_quantity: float  # rounded up to nearest pack size
     rounded_unit: str
+    is_unresolved: bool = False  # True if ingredient was not normalised to DB canonical
 
 
 class ShoppingList(BaseModel):

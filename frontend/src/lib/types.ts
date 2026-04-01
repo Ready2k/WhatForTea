@@ -107,12 +107,13 @@ export interface MealPlan {
 }
 
 export interface ShoppingListItem {
-  ingredient_id: string;
+  ingredient_id?: string;
   canonical_name: string;
   quantity: number;
   unit: string;
   rounded_quantity: number;
   rounded_unit: string;
+  is_unresolved?: boolean;
 }
 
 export interface ShoppingList {

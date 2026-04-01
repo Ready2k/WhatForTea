@@ -51,9 +51,27 @@ def round_to_pack_size(required: float, canonical_name: str, unit: str) -> float
     Tries: exact canonical name → any word in the name → unit default.
     Returns required as-is if it exceeds all defined pack sizes (buy in bulk).
     Returns 0.0 for zero or negative required quantities.
+
+    NOTE: Discrete non-metric units (bag, pack, sachet, bunch, pot, tub) are
+    returned as-is — pack size lookup only applies to g/ml/count-based units.
+    Recipe measurement units (tbsp, tsp, oz, etc.) are also returned as-is.
     """
     if required <= 0:
         return 0.0
+
+    unit_lower = (unit or "").lower().strip()
+
+    # Discrete purchase units: recipe quantity IS the buy quantity (1 bag, 1 sachet, etc.)
+    DISCRETE_UNITS = {"bag", "pack", "bunch", "sachet", "pot", "tub", "jar", "tin", "can"}
+    if unit_lower in DISCRETE_UNITS:
+        return float(required)
+
+    # Metric/count units where pack-size rounding makes sense
+    METRIC_UNITS = {"g", "kg", "ml", "l", "count", ""}
+    if unit_lower not in METRIC_UNITS:
+        # Recipe measurement unit (tbsp, tsp, oz, pinch, clove, etc.)
+        # These can't be meaningfully rounded to a pack size — return as-is
+        return float(required)
 
     sizes = _load_pack_sizes()
     name_lower = canonical_name.lower()
@@ -66,7 +84,6 @@ def round_to_pack_size(required: float, canonical_name: str, unit: str) -> float
                 chosen = sizes[word]
                 break
     if chosen is None:
-        unit_lower = (unit or "").lower()
         if unit_lower in ("g", "kg"):
             chosen = sizes.get("default_g", [100, 250, 500, 1000])
         elif unit_lower in ("ml", "l"):
@@ -74,7 +91,7 @@ def round_to_pack_size(required: float, canonical_name: str, unit: str) -> float
         elif unit_lower in ("count", ""):
             chosen = sizes.get("default_count", [1, 2, 4, 6])
         else:
-            return required  # unknown unit — return as-is
+            return required  # should not reach here given METRIC_UNITS guard above
 
     for size in sorted(chosen):
         if size >= math.ceil(required):
@@ -256,11 +273,16 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
     """
     Build the shopping list for the given week:
       required − available → round up to pack size → group by zone.
+
+    Ingredients with no canonical ingredient_id (unresolved) are included
+    verbatim under an 'Other' zone so they are never silently dropped.
     """
     plan = await get_plan(week_start, db)
 
-    # Aggregate required quantities per (ingredient_id, unit)
+    # Aggregate required quantities per (ingredient_id, unit) for resolved ingredients
     aggregated: dict[tuple[uuid.UUID, str], float] = {}
+    # Track unresolved ingredients: key = (raw_name, unit) → qty
+    unresolved: dict[tuple[str, str], float] = {}
 
     for entry in plan.entries:
         # Use explicit select to avoid identity-map cache returning Recipe without ingredients
@@ -275,12 +297,15 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
         scale = ((entry.servings or recipe.base_servings) / recipe.base_servings)
 
         for ri in recipe.ingredients:
-            if ri.ingredient_id is None:
-                continue
             qty = float(ri.quantity) * scale
             unit = (ri.unit or "count").lower()
-            key = (ri.ingredient_id, unit)
-            aggregated[key] = aggregated.get(key, 0.0) + qty
+            if ri.ingredient_id is None:
+                # Unresolved — track by raw name + unit
+                key = (ri.raw_name, unit)
+                unresolved[key] = unresolved.get(key, 0.0) + qty
+            else:
+                key = (ri.ingredient_id, unit)
+                aggregated[key] = aggregated.get(key, 0.0) + qty
 
     # Get pantry availability
     from app.services.pantry import get_available
@@ -319,6 +344,20 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
         )
         zone = _zone(ingredient.category.value)
         shopping_items.append((zone, item))
+
+    # Add unresolved ingredients verbatim (can't subtract pantry without ingredient_id)
+    for (raw_name, unit), qty in unresolved.items():
+        rounded = round_to_pack_size(qty, raw_name, unit)
+        item = ShoppingListItem(
+            ingredient_id=None,
+            canonical_name=raw_name,
+            quantity=round(qty, 3),
+            unit=unit,
+            rounded_quantity=rounded,
+            rounded_unit=unit,
+            is_unresolved=True,
+        )
+        shopping_items.append(("Other", item))
 
     # Group into zones, sorted alphabetically within each
     zones: dict[str, list[ShoppingListItem]] = {}
