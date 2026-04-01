@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem, useIngredients } from '@/lib/hooks';
+import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem, useIngredients, useCreateIngredient } from '@/lib/hooks';
 import { ConfidenceBar } from '@/components/ConfidenceBar';
 import type { Ingredient } from '@/lib/types';
 
@@ -21,10 +21,13 @@ export default function PantryPage() {
   const upsertMutation = useUpsertPantryItem();
   const deleteMutation = useDeletePantryItem();
 
+  const createIngredientMutation = useCreateIngredient();
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [form, setForm] = useState<AddItemForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
+  const [newIngForm, setNewIngForm] = useState<{ category: string; dimension: string; unit: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const suggestions = useMemo(() => {
@@ -126,8 +129,19 @@ export default function PantryPage() {
                   </li>
                 ))}
                 {noResults && (
-                  <li className="px-3 py-2 text-sm text-gray-400 italic">
-                    No ingredient found for "{form.search.trim()}"
+                  <li className="px-3 py-2 text-sm text-gray-500">
+                    <span className="italic">No match for "{form.search.trim()}"</span>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setInputFocused(false);
+                        setNewIngForm({ category: 'other', dimension: 'count', unit: '' });
+                      }}
+                      className="ml-2 text-emerald-600 font-medium hover:underline"
+                    >
+                      + Create it
+                    </button>
                   </li>
                 )}
               </ul>
@@ -136,6 +150,84 @@ export default function PantryPage() {
               <p className="text-xs text-emerald-600 mt-1">✓ {form.ingredient.canonical_name}</p>
             )}
           </div>
+
+          {/* Inline new-ingredient creation */}
+          {newIngForm && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+              <p className="text-xs font-semibold text-emerald-800">
+                Creating "{form.search.trim()}" as a new ingredient
+              </p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Category</label>
+                  <select
+                    value={newIngForm.category}
+                    onChange={(e) => setNewIngForm((f) => f && ({ ...f, category: e.target.value }))}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  >
+                    {['produce','dairy','meat','fish','pantry','spice','bakery','other'].map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Dimension</label>
+                  <select
+                    value={newIngForm.dimension}
+                    onChange={(e) => setNewIngForm((f) => f && ({ ...f, dimension: e.target.value }))}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  >
+                    {['mass','volume','count','pack'].map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                  <input
+                    type="text"
+                    value={newIngForm.unit}
+                    onChange={(e) => setNewIngForm((f) => f && ({ ...f, unit: e.target.value }))}
+                    placeholder="ml / g / unit"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const name = form.search.trim();
+                    if (!name) return;
+                    try {
+                      const ing = await createIngredientMutation.mutateAsync({
+                        canonical_name: name,
+                        category: newIngForm.category,
+                        dimension: newIngForm.dimension,
+                        typical_unit: newIngForm.unit || 'unit',
+                      });
+                      selectIngredient(ing);
+                      setNewIngForm(null);
+                      setForm((f) => ({ ...f, unit: ing.typical_unit || '' }));
+                    } catch (err: any) {
+                      setFormError(err.message ?? 'Failed to create ingredient');
+                    }
+                  }}
+                  disabled={createIngredientMutation.isPending}
+                  className="flex-1 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {createIngredientMutation.isPending ? 'Creating...' : 'Create & Select'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewIngForm(null)}
+                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="block text-xs text-gray-500 mb-1">Quantity</label>

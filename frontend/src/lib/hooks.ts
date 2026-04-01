@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchIngredients,
+  createIngredient,
   fetchRecipes,
   fetchRecipe,
   fetchMatches,
@@ -20,6 +21,14 @@ export function useIngredients() {
     queryKey: ['ingredients'],
     queryFn: fetchIngredients,
     staleTime: 5 * 60 * 1000, // ingredient list changes infrequently
+  });
+}
+
+export function useCreateIngredient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createIngredient,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ingredients'] }),
   });
 }
 

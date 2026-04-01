@@ -13,6 +13,7 @@ from app.database import get_db
 from app.errors import AppError, ErrorCode
 from app.schemas.ingredient import (
     Ingredient as IngredientSchema,
+    IngredientCreate,
     OverrideRequest,
     ResolveRequest,
     ResolveResponse,
@@ -82,6 +83,30 @@ async def override(
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
+    return IngredientSchema.model_validate(ingredient)
+
+
+@router.post("", response_model=IngredientSchema, status_code=status.HTTP_201_CREATED)
+async def create_ingredient(
+    body: IngredientCreate,
+    db: AsyncSession = Depends(get_db),
+) -> IngredientSchema:
+    """Create a new canonical ingredient."""
+    from sqlalchemy import select
+    from app.models.ingredient import Ingredient
+
+    # Reject duplicates
+    existing = (
+        await db.execute(select(Ingredient).where(Ingredient.canonical_name == body.canonical_name))
+    ).scalar_one_or_none()
+    if existing:
+        return IngredientSchema.model_validate(existing)
+
+    ingredient = Ingredient(**body.model_dump())
+    db.add(ingredient)
+    await db.commit()
+    await db.refresh(ingredient)
+    logger.info("ingredient created", extra={"id": str(ingredient.id), "name": ingredient.canonical_name})
     return IngredientSchema.model_validate(ingredient)
 
 

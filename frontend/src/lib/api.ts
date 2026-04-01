@@ -90,6 +90,20 @@ export function fetchIngredients(): Promise<Ingredient[]> {
   return request<Ingredient[]>('/api/v1/ingredients');
 }
 
+export function createIngredient(data: {
+  canonical_name: string;
+  category: string;
+  dimension: string;
+  typical_unit: string;
+  aliases?: string[];
+}): Promise<Ingredient> {
+  return request<Ingredient>('/api/v1/ingredients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ aliases: [], ...data }),
+  });
+}
+
 export function fetchRecipes(): Promise<RecipeSummary[]> {
   return request<RecipeSummary[]>('/api/v1/recipes');
 }
