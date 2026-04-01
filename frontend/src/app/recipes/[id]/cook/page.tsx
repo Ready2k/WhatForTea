@@ -11,23 +11,19 @@ import type { Step } from '@/lib/types';
 type SubStep = { text: string; label: string; type: 'task' | 'important' | 'tip' };
 
 type StepTimerState = {
-  remaining: number;       // seconds remaining right now
-  total: number;           // original duration in seconds
+  remaining: number;
+  total: number;
   running: boolean;
   done: boolean;
   halfwayAlerted: boolean;
-  stepNumber: number;      // 1-indexed, for alert messages
+  ringing: boolean;   // true briefly when done or halfway — drives bell shake
+  stepNumber: number;
 };
 
-type Toast = {
-  id: string;
-  message: string;
-  variant: 'halfway' | 'done';
-};
+type Toast = { id: string; message: string; variant: 'halfway' | 'done' };
 
 // ── Sub-step parser ────────────────────────────────────────────────────────────
 function parseSubSteps(raw: string): SubStep[] {
-  // 1. Try lettered sub-steps: "a) ...  b) ...  c) ..."
   const lettered = raw.split(/(?=\b[a-z]\)\s)/);
   if (lettered.length > 1) {
     return lettered.map((s) => s.trim()).filter(Boolean).map((s) => {
@@ -35,26 +31,32 @@ function parseSubSteps(raw: string): SubStep[] {
       return { label: m ? m[1].toUpperCase() : '', text: m ? s.slice(m[0].length) : s, type: 'task' };
     });
   }
-
-  // 2. Split on sentence boundaries: ". " followed by uppercase letter
   const sentences: string[] = [];
   let buf = '';
   for (let i = 0; i < raw.length; i++) {
     buf += raw[i];
     if (raw[i] === '.' && raw[i + 1] === ' ' && raw[i + 2] && /[A-Z]/.test(raw[i + 2])) {
-      sentences.push(buf.trim());
-      buf = '';
-      i++;
+      sentences.push(buf.trim()); buf = ''; i++;
     }
   }
   if (buf.trim()) sentences.push(buf.trim());
   if (sentences.length <= 1) return [{ label: '', text: raw, type: 'task' }];
-
   return sentences.map((s) => {
     if (/^IMPORTANT:/i.test(s)) return { label: '!', text: s.replace(/^IMPORTANT:\s*/i, ''), type: 'important' };
-    if (/^TIP:/i.test(s))       return { label: '💡', text: s.replace(/^TIP:\s*/i, ''),       type: 'tip'       };
+    if (/^TIP:/i.test(s))       return { label: '💡', text: s.replace(/^TIP:\s*/i, ''),     type: 'tip' };
     return { label: '', text: s, type: 'task' };
   });
+}
+
+// ── Bell icon SVG ─────────────────────────────────────────────────────────────
+function BellIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+      />
+    </svg>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -69,11 +71,15 @@ export default function CookingModePage() {
   const touchStartX = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
 
+  // KEY FIX: keep a ref so the setInterval closure always reads fresh timer state
+  // without needing setState's functional-updater pattern (which can't produce side effects)
+  const timerStatesRef = useRef<Record<string, StepTimerState>>({});
+
   const steps: Step[] = recipe ? [...recipe.steps].sort((a, b) => a.order - b.order) : [];
   const total = steps.length;
   const currentStep = steps[currentIndex];
 
-  // ── Initialise timer states once recipe loads ────────────────────────────
+  // ── Initialise timer states ──────────────────────────────────────────────
   useEffect(() => {
     if (!recipe || steps.length === 0) return;
     const initial: Record<string, StepTimerState> = {};
@@ -85,108 +91,130 @@ export default function CookingModePage() {
           running: false,
           done: false,
           halfwayAlerted: false,
+          ringing: false,
           stepNumber: idx + 1,
         };
       }
     });
+    timerStatesRef.current = initial;
     setTimerStates(initial);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipe?.id]);
 
   // ── Global timer tick ────────────────────────────────────────────────────
-  // One interval drives ALL step timers so they keep running when you navigate.
+  // Reads/writes timerStatesRef directly so no stale closure.
+  // Calls setTimerStates + setToasts after computing the new state imperatively.
   useEffect(() => {
     const interval = setInterval(() => {
+      const current = timerStatesRef.current;
+      const next: Record<string, StepTimerState> = { ...current };
       const pendingToasts: Toast[] = [];
+      const ringingIds: string[] = [];
+      let changed = false;
 
-      setTimerStates((prev) => {
-        const next = { ...prev };
-        let changed = false;
+      Object.entries(current).forEach(([sid, state]) => {
+        if (!state.running || state.done) return;
+        changed = true;
+        const newRemaining = Math.max(0, state.remaining - 1);
+        const isHalfway = !state.halfwayAlerted
+          && newRemaining <= Math.floor(state.total / 2)
+          && newRemaining > 0;
+        const isDone = newRemaining === 0;
 
-        Object.entries(next).forEach(([sid, state]) => {
-          if (!state.running || state.done) return;
-          changed = true;
-          const newRemaining = Math.max(0, state.remaining - 1);
-          const isHalfway = !state.halfwayAlerted && newRemaining <= Math.floor(state.total / 2) && newRemaining > 0;
-          const isDone = newRemaining === 0;
+        if (isHalfway) {
+          pendingToasts.push({
+            id: `halfway-${sid}-${Date.now()}`,
+            message: `⏰ Step ${state.stepNumber} — halfway through!`,
+            variant: 'halfway',
+          });
+          ringingIds.push(sid);
+        }
+        if (isDone) {
+          pendingToasts.push({
+            id: `done-${sid}-${Date.now()}`,
+            message: `✅ Step ${state.stepNumber} timer finished!`,
+            variant: 'done',
+          });
+          ringingIds.push(sid);
+        }
 
-          if (isHalfway) {
-            pendingToasts.push({
-              id: `halfway-${sid}-${Date.now()}`,
-              message: `⏰ Step ${state.stepNumber} timer — halfway there!`,
-              variant: 'halfway',
-            });
-          }
-          if (isDone) {
-            pendingToasts.push({
-              id: `done-${sid}-${Date.now()}`,
-              message: `✅ Step ${state.stepNumber} timer finished!`,
-              variant: 'done',
-            });
-          }
-
-          next[sid] = {
-            ...state,
-            remaining: newRemaining,
-            done: isDone,
-            running: !isDone,
-            halfwayAlerted: state.halfwayAlerted || isHalfway,
-          };
-        });
-
-        return changed ? next : prev;
+        next[sid] = {
+          ...state,
+          remaining: newRemaining,
+          done: isDone,
+          running: !isDone,
+          halfwayAlerted: state.halfwayAlerted || isHalfway,
+          ringing: isHalfway || isDone,
+        };
       });
 
+      if (changed) {
+        timerStatesRef.current = next;
+        setTimerStates({ ...next });
+      }
+
       if (pendingToasts.length > 0) {
-        // Vibrate if supported
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]);
+          navigator.vibrate([300, 150, 300, 150, 300]);
         }
         setToasts((prev) => [...prev, ...pendingToasts]);
-        // Auto-dismiss after 6s
         pendingToasts.forEach((t) => {
-          setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 6000);
+          setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 7000);
         });
+      }
+
+      // Clear ringing flag after 5s
+      if (ringingIds.length > 0) {
+        setTimeout(() => {
+          const cleared = { ...timerStatesRef.current };
+          ringingIds.forEach((sid) => {
+            if (cleared[sid]) cleared[sid] = { ...cleared[sid], ringing: false };
+          });
+          timerStatesRef.current = cleared;
+          setTimerStates({ ...cleared });
+        }, 5000);
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []); // run once — state is read via the functional update pattern
+  }, []); // runs once — all state access via ref
 
   // ── Timer callbacks ──────────────────────────────────────────────────────
   const handleTimerStart = useCallback((stepId: string) => {
-    setTimerStates((prev) => prev[stepId]
-      ? { ...prev, [stepId]: { ...prev[stepId], running: true } }
-      : prev
-    );
+    const s = timerStatesRef.current[stepId];
+    if (!s) return;
+    const updated = { ...timerStatesRef.current, [stepId]: { ...s, running: true } };
+    timerStatesRef.current = updated;
+    setTimerStates({ ...updated });
   }, []);
 
   const handleTimerPause = useCallback((stepId: string) => {
-    setTimerStates((prev) => prev[stepId]
-      ? { ...prev, [stepId]: { ...prev[stepId], running: false } }
-      : prev
-    );
+    const s = timerStatesRef.current[stepId];
+    if (!s) return;
+    const updated = { ...timerStatesRef.current, [stepId]: { ...s, running: false } };
+    timerStatesRef.current = updated;
+    setTimerStates({ ...updated });
   }, []);
 
   const handleTimerReset = useCallback((stepId: string) => {
-    setTimerStates((prev) => prev[stepId]
-      ? { ...prev, [stepId]: { ...prev[stepId], remaining: prev[stepId].total, running: false, done: false, halfwayAlerted: false } }
-      : prev
-    );
+    const s = timerStatesRef.current[stepId];
+    if (!s) return;
+    const reset: StepTimerState = { ...s, remaining: s.total, running: false, done: false, halfwayAlerted: false, ringing: false };
+    const updated = { ...timerStatesRef.current, [stepId]: reset };
+    timerStatesRef.current = updated;
+    setTimerStates({ ...updated });
   }, []);
 
   // ── Navigation ───────────────────────────────────────────────────────────
   const goNext = useCallback(() => setCurrentIndex((i) => Math.min(i + 1, total - 1)), [total]);
   const goPrev = useCallback(() => setCurrentIndex((i) => Math.max(i - 1, 0)), []);
 
-  // Voice commands
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) return;
     const r = new SR();
-    r.continuous = true;
-    r.lang = 'en-US';
+    r.continuous = true; r.lang = 'en-US';
     r.onresult = (e: any) => {
       const t = e.results[e.results.length - 1][0].transcript.toLowerCase();
       if (t.includes('next')) goNext();
@@ -198,7 +226,6 @@ export default function CookingModePage() {
     return () => { try { r.stop(); } catch {} };
   }, [currentIndex, goNext, goPrev]);
 
-  // Swipe gesture
   function handleTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX; }
   function handleTouchEnd(e: React.TouchEvent) {
     if (touchStartX.current === null) return;
@@ -207,24 +234,18 @@ export default function CookingModePage() {
     touchStartX.current = null;
   }
 
-  // ── Loading / error states ───────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-gray-500 dark:text-gray-400 text-lg animate-pulse">Loading recipe…</div>
-      </div>
-    );
-  }
-  if (isError || !recipe || steps.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4 px-6">
-        <p className="text-xl text-gray-800 dark:text-white">Could not load recipe steps.</p>
-        <button onClick={() => router.back()} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-500">
-          Go Back
-        </button>
-      </div>
-    );
-  }
+  // ── Loading / error ──────────────────────────────────────────────────────
+  if (isLoading) return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="text-gray-500 dark:text-gray-400 text-lg animate-pulse">Loading recipe…</div>
+    </div>
+  );
+  if (isError || !recipe || steps.length === 0) return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center gap-4 px-6">
+      <p className="text-xl text-gray-800 dark:text-white">Could not load recipe steps.</p>
+      <button onClick={() => router.back()} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-500">Go Back</button>
+    </div>
+  );
 
   const progressPct = total > 1 ? (currentIndex / (total - 1)) * 100 : 100;
   const isLast = currentIndex === total - 1;
@@ -237,18 +258,42 @@ export default function CookingModePage() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Top progress bar ── */}
+      {/* CSS for bell ring animation */}
+      <style>{`
+        @keyframes bellRing {
+          0%,100% { transform: rotate(0deg); }
+          10%      { transform: rotate(-20deg); }
+          20%      { transform: rotate(20deg); }
+          30%      { transform: rotate(-18deg); }
+          40%      { transform: rotate(18deg); }
+          50%      { transform: rotate(-12deg); }
+          60%      { transform: rotate(12deg); }
+          70%      { transform: rotate(-6deg); }
+          80%      { transform: rotate(6deg); }
+        }
+        .bell-ring {
+          animation: bellRing 0.6s ease-in-out infinite;
+          transform-origin: top center;
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .toast-enter { animation: slideUp 0.3s ease-out forwards; }
+      `}</style>
+
+      {/* Top progress bar */}
       <div className="w-full h-1 bg-gray-200 dark:bg-gray-700">
         <div className="h-1 bg-emerald-500 transition-all duration-500 ease-out" style={{ width: `${progressPct}%` }} />
       </div>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700/60">
         <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[70%]">{recipe.title}</span>
         <Link
           href={`/recipes/${id}`}
           className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
-          aria-label="Exit cooking mode"
+          aria-label="Exit"
         >
           <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -256,25 +301,53 @@ export default function CookingModePage() {
         </Link>
       </header>
 
-      {/* ── Step dot navigator (with timer indicators) ── */}
-      <div className="flex items-center justify-center gap-2 py-3 px-4">
+      {/* Step navigator — dots for plain steps, bell icons for timed steps */}
+      <div className="flex items-center justify-center gap-2.5 py-3 px-4">
         {steps.map((step, i) => {
           const ts = step.timer_seconds ? timerStates[step.id] : undefined;
           const hasActiveTimer = ts?.running === true;
           const timerDone = ts?.done === true;
+          const isRinging = ts?.ringing === true;
+          const isCurrent = i === currentIndex;
 
+          if (ts) {
+            // Bell icon for steps that have a timer
+            return (
+              <button
+                key={i}
+                onClick={() => setCurrentIndex(i)}
+                aria-label={`Step ${i + 1} (has timer)`}
+                className={`relative w-7 h-7 flex items-center justify-center rounded-full transition-all ${
+                  isCurrent ? 'bg-emerald-500/15 dark:bg-emerald-500/20' : ''
+                }`}
+              >
+                <BellIcon
+                  className={`w-4.5 h-4.5 transition-colors ${
+                    isRinging    ? 'bell-ring text-orange-500 drop-shadow-[0_0_6px_rgba(249,115,22,0.8)]' :
+                    timerDone    ? 'text-emerald-500' :
+                    hasActiveTimer ? 'text-orange-400 animate-pulse' :
+                    isCurrent    ? 'text-emerald-500' :
+                    i < currentIndex ? 'text-emerald-300 dark:text-emerald-700' :
+                    'text-gray-400 dark:text-gray-600'
+                  }`}
+                />
+                {/* Small pulsing halo when running */}
+                {hasActiveTimer && !isRinging && (
+                  <span className="absolute inset-0 rounded-full border-2 border-orange-400 animate-ping opacity-60" />
+                )}
+              </button>
+            );
+          }
+
+          // Plain dot for steps without a timer
           return (
             <button
               key={i}
               onClick={() => setCurrentIndex(i)}
-              aria-label={`Step ${i + 1}${hasActiveTimer ? ' (timer running)' : ''}`}
-              className={`relative rounded-full transition-all duration-300 ${
-                i === currentIndex
-                  ? `w-6 h-2.5 ${hasActiveTimer ? 'bg-orange-400' : 'bg-emerald-500'}`
-                  : hasActiveTimer
-                  ? 'w-3 h-3 bg-orange-400 animate-pulse'
-                  : timerDone
-                  ? 'w-2.5 h-2.5 bg-emerald-400'
+              aria-label={`Step ${i + 1}`}
+              className={`rounded-full transition-all duration-300 ${
+                isCurrent
+                  ? 'w-6 h-2.5 bg-emerald-500'
                   : i < currentIndex
                   ? 'w-2 h-2 bg-emerald-300 dark:bg-emerald-700'
                   : 'w-2 h-2 bg-gray-300 dark:bg-gray-600'
@@ -284,10 +357,8 @@ export default function CookingModePage() {
         })}
       </div>
 
-      {/* ── Step content ── */}
+      {/* Step content */}
       <div className="flex-1 flex flex-col px-4 pb-2 max-w-lg mx-auto w-full overflow-y-auto">
-
-        {/* Step badge */}
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-500/30">
             <span className="text-white font-bold text-sm">{currentIndex + 1}</span>
@@ -297,28 +368,20 @@ export default function CookingModePage() {
           </p>
         </div>
 
-        {/* Sub-steps */}
         <div className="space-y-3">
           {subSteps.map((sub, si) => {
             const isImportant = sub.type === 'important';
             const isTip = sub.type === 'tip';
             return (
-              <div
-                key={si}
-                className={`flex gap-3 p-4 rounded-2xl border ${
-                  isImportant
-                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/60'
-                    : isTip
-                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                }`}
-              >
+              <div key={si} className={`flex gap-3 p-4 rounded-2xl border ${
+                isImportant ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/60'
+                  : isTip   ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60'
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+              }`}>
                 {sub.label && (
                   <span className={`flex-shrink-0 w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 ${
-                    isImportant
-                      ? 'bg-red-100 dark:bg-red-800/50 text-red-700 dark:text-red-300'
-                      : isTip
-                      ? 'bg-amber-100 dark:bg-amber-800/50 text-amber-700 dark:text-amber-300 text-base'
+                    isImportant ? 'bg-red-100 dark:bg-red-800/50 text-red-700 dark:text-red-300'
+                      : isTip   ? 'bg-amber-100 dark:bg-amber-800/50 text-amber-700 dark:text-amber-300 text-base'
                       : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300'
                   }`}>
                     {sub.label.replace(')', '')}
@@ -338,7 +401,6 @@ export default function CookingModePage() {
           })}
         </div>
 
-        {/* Timer — only shown if this step has one */}
         {currentTimerState && (
           <div className="mt-5 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <StepTimer
@@ -354,20 +416,16 @@ export default function CookingModePage() {
         )}
       </div>
 
-      {/* ── Navigation footer ── */}
+      {/* Navigation footer */}
       <footer className="px-4 pb-8 pt-3 max-w-lg mx-auto w-full space-y-3">
         {isLast && (
-          <Link
-            href={`/recipes/${id}`}
-            className="block w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-md shadow-emerald-500/30"
-          >
+          <Link href={`/recipes/${id}`} className="block w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-md shadow-emerald-500/30">
             🎉 Finish Cooking
           </Link>
         )}
         <div className="flex gap-3">
           <button
-            onClick={goPrev}
-            disabled={currentIndex === 0}
+            onClick={goPrev} disabled={currentIndex === 0}
             className="flex-1 py-3.5 rounded-2xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed font-semibold text-gray-700 dark:text-gray-200 transition-colors flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -389,30 +447,30 @@ export default function CookingModePage() {
         </div>
       </footer>
 
-      {/* ── Toast alerts ── */}
-      <div className="fixed bottom-20 left-0 right-0 flex flex-col items-center gap-2 z-50 pointer-events-none px-4">
+      {/* Toast alerts */}
+      <div className="fixed bottom-24 left-0 right-0 flex flex-col items-center gap-2 z-[9998] pointer-events-none px-6">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`
-              flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white
-              animate-bounce-in pointer-events-auto
-              ${toast.variant === 'done' ? 'bg-emerald-500' : 'bg-orange-500'}
-            `}
-            style={{ animation: 'slideUp 0.3s ease-out' }}
+            className={`toast-enter w-full max-w-sm flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white font-semibold pointer-events-auto ${
+              toast.variant === 'done' ? 'bg-emerald-500' : 'bg-orange-500'
+            }`}
           >
-            {toast.variant === 'done' ? '✅' : '⏰'} {toast.message}
+            <span className="text-2xl flex-shrink-0">
+              {toast.variant === 'done' ? '✅' : '⏰'}
+            </span>
+            <span className="text-sm leading-snug">{toast.message}</span>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+              className="ml-auto flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         ))}
       </div>
-
-      {/* Slide-up keyframe */}
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
