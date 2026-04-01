@@ -41,7 +41,7 @@ async def list_available(db: AsyncSession = Depends(get_db)):
     return await get_available(db)
 
 
-@router.get("/", response_model=list[PantryItemSchema])
+@router.get("", response_model=list[PantryItemSchema])
 async def list_pantry(db: AsyncSession = Depends(get_db)):
     """List all pantry items (raw quantities, without availability calculation)."""
     stmt = select(PantryItem).order_by(PantryItem.ingredient_id)
@@ -49,7 +49,7 @@ async def list_pantry(db: AsyncSession = Depends(get_db)):
     return rows
 
 
-@router.post("/", response_model=PantryItemSchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PantryItemSchema, status_code=status.HTTP_201_CREATED)
 async def add_pantry_item(body: PantryItemCreate, db: AsyncSession = Depends(get_db)):
     """
     Add a new pantry item or update the quantity for an existing ingredient.

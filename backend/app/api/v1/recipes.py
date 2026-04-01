@@ -193,7 +193,7 @@ async def confirm_ingest(
 
 # ── Recipe list / detail ──────────────────────────────────────────────────────
 
-@router.get("/", response_model=list[RecipeSummary])
+@router.get("", response_model=list[RecipeSummary])
 async def list_recipes(
     db: AsyncSession = Depends(get_db),
     skip: int = 0,
