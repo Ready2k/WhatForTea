@@ -65,17 +65,19 @@ export function StepTimer({ seconds, autoStart = false, onComplete }: StepTimerP
   const pct = seconds > 0 ? ((seconds - remaining) / seconds) * 100 : 100;
 
   return (
-    <div className="flex flex-col items-center gap-3 p-4 bg-gray-900/80 rounded-2xl backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-3">
       {done ? (
-        <p className="text-3xl font-bold text-emerald-400">Done!</p>
+        <p className="text-3xl font-bold text-emerald-500">✅ Done!</p>
       ) : (
-        <p className="text-4xl font-mono font-bold text-white tabular-nums">{formatTime(remaining)}</p>
+        <p className="text-4xl font-mono font-bold text-gray-900 dark:text-white tabular-nums">
+          {formatTime(remaining)}
+        </p>
       )}
 
-      {/* Progress ring-style bar */}
-      <div className="w-full bg-gray-700 rounded-full h-1.5">
+      {/* Progress bar */}
+      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
         <div
-          className="bg-emerald-400 h-1.5 rounded-full transition-all duration-1000"
+          className="bg-emerald-500 h-2 rounded-full transition-all duration-1000"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -84,14 +86,14 @@ export function StepTimer({ seconds, autoStart = false, onComplete }: StepTimerP
         {!done && (
           <button
             onClick={() => setRunning((r) => !r)}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-colors"
+            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors"
           >
             {running ? 'Pause' : 'Start'}
           </button>
         )}
         <button
           onClick={handleReset}
-          className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-medium text-sm transition-colors"
+          className="px-4 py-2 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold text-sm transition-colors"
         >
           Reset
         </button>
