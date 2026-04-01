@@ -164,6 +164,7 @@ async def get_available(db: AsyncSession) -> list[PantryAvailability]:
         available = max(0.0, effective - reserved)
 
         result.append(PantryAvailability(
+            pantry_item_id=item.id,
             ingredient=item.ingredient,
             total_quantity=float(item.quantity),
             reserved_quantity=reserved,

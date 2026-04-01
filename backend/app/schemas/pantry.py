@@ -37,6 +37,7 @@ class PantryItem(PantryItemBase):
 
 class PantryAvailability(BaseModel):
     """Result of GET /api/v1/pantry/available"""
+    pantry_item_id: uuid.UUID
     ingredient: Ingredient
     total_quantity: float
     reserved_quantity: float
