@@ -66,6 +66,7 @@ class RecipeCreate(RecipeBase):
 class Recipe(RecipeBase):
     id: uuid.UUID
     hero_image_path: Optional[str] = None
+    image_count: int = 1  # number of scanned images (1 = front only, 2 = front + back)
     created_at: datetime
     ingredients: list[RecipeIngredient] = []
     steps: list[Step] = []

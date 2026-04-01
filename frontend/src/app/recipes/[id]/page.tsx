@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import type { IngredientMatchDetail } from '@/lib/types';
@@ -33,6 +34,10 @@ export default function RecipeDetailPage() {
   const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [servings, setServings] = useState<number>(2);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isFlipping, setIsFlipping] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { data: matches } = useMatches();
   const deleteMutation = useDeleteRecipe();
@@ -42,6 +47,27 @@ export default function RecipeDetailPage() {
   useEffect(() => {
     if (recipe) setServings(recipe.base_servings ?? 2);
   }, [recipe?.id]);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Close lightbox on Escape
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [lightboxOpen]);
+
+  function handleFlip() {
+    if (isFlipping || !recipe || recipe.image_count < 2) return;
+    setIsFlipping(true);
+    setTimeout(() => {
+      setLightboxIndex((i) => (i === 0 ? 1 : 0));
+      setIsFlipping(false);
+    }, 150); // flip at mid-point of animation
+  }
 
   // Build ingredient score map
   const scoreMap = new Map<string, IngredientMatchDetail>();
@@ -85,15 +111,29 @@ export default function RecipeDetailPage() {
   const sortedSteps = [...recipe.steps].sort((a, b) => a.order - b.order);
 
   return (
+    <>
     <main className="max-w-lg mx-auto pb-8">
-      {/* Hero */}
+      {/* Hero — clickable to open lightbox */}
       <div className="relative w-full aspect-video bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 flex items-center justify-center">
         {recipe.hero_image_path ? (
-          <img
-            src={`/api/v1/recipes/${recipe.id}/image`}
-            alt={recipe.title}
-            className="w-full h-full object-cover"
-          />
+          <button
+            onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
+            className="w-full h-full focus:outline-none group relative overflow-hidden"
+            aria-label="View full-size image"
+          >
+            <img
+              src={`/api/v1/recipes/${recipe.id}/image?index=0`}
+              alt={recipe.title}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            {/* Expand hint */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm text-white text-sm font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                {recipe.image_count > 1 ? 'View card (front + back)' : 'View full size'}
+              </span>
+            </div>
+          </button>
         ) : (
           <span className="text-7xl">🍽️</span>
         )}
@@ -244,5 +284,85 @@ export default function RecipeDetailPage() {
         </Link>
       </div>
     </main>
+
+    {/* Lightbox Modal — rendered via portal so it sits above the nav bar */}
+    {lightboxOpen && mounted && createPortal(
+      <div
+        className="fixed inset-0 z-[9999] bg-black/90"
+        onClick={() => setLightboxOpen(false)}
+      >
+        {/* Close button — top right, always visible */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }}
+          className="absolute top-4 right-4 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/20 shadow-lg transition-colors"
+          aria-label="Close"
+          style={{ WebkitTapHighlightColor: 'transparent' }}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Side label — top left */}
+        {recipe.image_count > 1 && (
+          <div className="absolute top-4 left-4 z-10 bg-black/60 border border-white/20 text-white/80 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
+            {lightboxIndex === 0 ? '① Front' : '② Back'}
+          </div>
+        )}
+
+        {/* Image — fills viewport, clicking stops propagation to backdrop */}
+        <div
+          className="absolute inset-0 flex items-center justify-center p-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <img
+            key={lightboxIndex}
+            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}`}
+            alt={`${recipe.title} — ${lightboxIndex === 0 ? 'front' : 'back'}`}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            style={{
+              transition: 'opacity 0.2s ease, transform 0.2s ease',
+              opacity: isFlipping ? 0 : 1,
+              transform: isFlipping ? 'scale(0.95)' : 'scale(1)',
+            }}
+          />
+        </div>
+
+        {/* Bottom controls — flip + dots, floating above image */}
+        {recipe.image_count > 1 && (
+          <div
+            className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleFlip}
+              disabled={isFlipping}
+              className="flex items-center gap-2 bg-black/70 hover:bg-black/90 disabled:opacity-40 text-white text-sm font-semibold px-5 py-2.5 rounded-full border border-white/20 shadow-lg transition-colors"
+              aria-label="Flip card"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+              Flip to {lightboxIndex === 0 ? 'Back' : 'Front'}
+            </button>
+            <div className="flex gap-2">
+              {[0, 1].map((i) => (
+                <button
+                  key={i}
+                  onClick={() => setLightboxIndex(i)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                    lightboxIndex === i ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'
+                  }`}
+                  aria-label={i === 0 ? 'Front' : 'Back'}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>,
+      document.body
+    )}
+    </>
   );
 }

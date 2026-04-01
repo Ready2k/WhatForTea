@@ -220,7 +220,17 @@ async def get_recipe(
     recipe = (await db.execute(stmt)).scalar_one_or_none()
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    return recipe
+
+    # Count how many scanned images exist so the frontend can show a flip button
+    image_count = 1
+    if recipe.hero_image_path:
+        img_dir = Path(recipe.hero_image_path).parent
+        if img_dir.exists():
+            image_count = len(list(img_dir.glob("image_*")))
+
+    result = RecipeSchema.model_validate(recipe)
+    result.image_count = image_count
+    return result
 
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -263,13 +273,27 @@ async def delete_recipe(
 @router.get("/{recipe_id}/image")
 async def get_recipe_image(
     recipe_id: uuid.UUID,
+    index: int = 0,
     db: AsyncSession = Depends(get_db),
 ):
-    """Serve the hero image for a recipe."""
+    """
+    Serve a scanned recipe card image by index.
+    index=0 → front (hero), index=1 → back of card.
+    """
     recipe = await db.get(Recipe, recipe_id)
     if recipe is None or not recipe.hero_image_path:
         raise HTTPException(status_code=404, detail="Image not found")
-    path = Path(recipe.hero_image_path)
+
+    if index == 0:
+        path = Path(recipe.hero_image_path)
+    else:
+        # Derive the image directory from hero_image_path and find the nth image
+        img_dir = Path(recipe.hero_image_path).parent
+        all_images = sorted(img_dir.glob("image_*"))
+        if index >= len(all_images):
+            raise HTTPException(status_code=404, detail=f"Image index {index} not found")
+        path = all_images[index]
+
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image file not found")
     return FileResponse(path)

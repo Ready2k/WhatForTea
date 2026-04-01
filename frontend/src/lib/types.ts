@@ -32,6 +32,7 @@ export interface Recipe {
   id: string;
   title: string;
   hero_image_path?: string;
+  image_count: number;
   cooking_time_mins?: number;
   base_servings: number;
   source_type: string;
