@@ -3,7 +3,7 @@
 # The API server reads this file at startup (and on each LLM call).
 
 # ── Model ─────────────────────────────────────────────────────────────────────
-model_id: us.anthropic.claude-sonnet-4-5-20250929-v1:0
+model_id: us.anthropic.claude-sonnet-4-6
 temperature: 0.2
 max_tokens: 4096
 
