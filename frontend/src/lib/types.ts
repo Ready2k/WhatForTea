@@ -16,6 +16,7 @@ export interface RecipeIngredient {
   unit?: string;
   normalized_quantity?: number;
   normalized_unit?: string;
+  servings_quantities?: Record<string, number>;
 }
 
 export interface Step {
@@ -24,6 +25,7 @@ export interface Step {
   order: number;
   text: string;
   timer_seconds?: number;
+  image_description?: string | null;
 }
 
 export interface Recipe {

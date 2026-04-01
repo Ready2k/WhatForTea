@@ -72,22 +72,76 @@ function detectCardBounds(
   };
 }
 
+// ── EXIF parser ───────────────────────────────────────────────────────────────
+// Reads the orientation tag directly from the JPEG binary.
+// Returns 1 (no rotation) when orientation cannot be determined.
+
+function readExifOrientation(buffer: ArrayBuffer): number {
+  const view = new DataView(buffer);
+  if (view.byteLength < 12 || view.getUint16(0, false) !== 0xFFD8) return 1;
+  let offset = 2;
+  while (offset + 4 < view.byteLength) {
+    const marker = view.getUint16(offset, false);
+    const segLen = view.getUint16(offset + 2, false);
+    if (marker === 0xFFE1) {
+      if (view.getUint32(offset + 4, false) !== 0x45786966) break; // not "Exif"
+      const tiff = offset + 10;
+      const le = view.getUint16(tiff, false) === 0x4949;
+      const get16 = (o: number) => view.getUint16(o, le);
+      const get32 = (o: number) => view.getUint32(o, le);
+      const ifd0 = tiff + get32(tiff + 4);
+      const entries = get16(ifd0);
+      for (let i = 0; i < entries; i++) {
+        const e = ifd0 + 2 + i * 12;
+        if (e + 12 > view.byteLength) break;
+        if (get16(e) === 0x0112) return get16(e + 8); // Orientation tag
+      }
+      break;
+    }
+    offset += 2 + segLen;
+  }
+  return 1;
+}
+
 // ── Main image pipeline ───────────────────────────────────────────────────────
-// createImageBitmap with imageOrientation:'from-image' applies EXIF rotation
-// before we ever touch canvas — the most reliable cross-browser approach.
-// (Chrome 84+, Firefox 90+, Safari 15+)
+// Reads EXIF orientation from the raw bytes then applies the correct canvas
+// transform manually — the only approach that works reliably on all browsers.
 
 async function processImage(file: File): Promise<File> {
-  // Decode with EXIF orientation already applied
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const w = bitmap.width;
-  const h = bitmap.height;
+  const buffer = await file.arrayBuffer();
+  const orientation = readExifOrientation(buffer);
 
-  // Draw at natural (post-rotation) size
+  // Load raw pixels without any browser-applied EXIF correction
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'none' } as ImageBitmapOptions);
+  } catch {
+    bitmap = await createImageBitmap(file);
+  }
+  const rawW = bitmap.width;
+  const rawH = bitmap.height;
+
+  // Orientations 5–8 swap width ↔ height
+  const swap = orientation >= 5;
+  const fullW = swap ? rawH : rawW;
+  const fullH = swap ? rawW : rawH;
+
   const full = document.createElement('canvas');
-  full.width = w;
-  full.height = h;
-  full.getContext('2d')!.drawImage(bitmap, 0, 0, w, h);
+  full.width = fullW;
+  full.height = fullH;
+  const ctx = full.getContext('2d')!;
+
+  // Apply the EXIF rotation matrix before drawing
+  switch (orientation) {
+    case 2: ctx.transform(-1,  0,  0,  1, fullW,     0); break;
+    case 3: ctx.transform(-1,  0,  0, -1, fullW, fullH); break;
+    case 4: ctx.transform( 1,  0,  0, -1,     0, fullH); break;
+    case 5: ctx.transform( 0,  1,  1,  0,     0,     0); break;
+    case 6: ctx.transform( 0,  1, -1,  0, fullH,     0); break;
+    case 7: ctx.transform( 0, -1, -1,  0, fullH, fullW); break;
+    case 8: ctx.transform( 0, -1,  1,  0,     0, fullW); break;
+  }
+  ctx.drawImage(bitmap, 0, 0, rawW, rawH);
   bitmap.close();
 
   // Detect card bounds and crop

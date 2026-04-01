@@ -11,6 +11,7 @@ class StepBase(BaseModel):
     order: int
     text: str
     timer_seconds: Optional[int] = None
+    image_description: Optional[str] = None
     # image_crop_path intentionally excluded from create/response — not populated in v1
 
 
@@ -30,6 +31,7 @@ class RecipeIngredientBase(BaseModel):
     raw_name: str
     quantity: float
     unit: Optional[str] = None
+    servings_quantities: Optional[dict[str, float]] = None
 
 
 class RecipeIngredientCreate(RecipeIngredientBase):

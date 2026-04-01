@@ -304,6 +304,7 @@ async def confirm_recipe(
             raw_name=ing_data.raw_name,
             quantity=ing_data.quantity,
             unit=ing_data.unit,
+            servings_quantities=ing_data.servings_quantities,
         ))
 
     for step_data in recipe_data.steps:
@@ -312,6 +313,7 @@ async def confirm_recipe(
             order=step_data.order,
             text=step_data.text,
             timer_seconds=step_data.timer_seconds,
+            image_description=step_data.image_description,
         ))
 
     if llm_out:

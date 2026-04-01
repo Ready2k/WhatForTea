@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import type { IngredientMatchDetail } from '@/lib/types';
@@ -32,11 +32,16 @@ export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [servings, setServings] = useState<number>(2);
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { data: matches } = useMatches();
   const deleteMutation = useDeleteRecipe();
 
   const matchData = matches?.find((m) => m.recipe.id === id);
+
+  useEffect(() => {
+    if (recipe) setServings(recipe.base_servings ?? 2);
+  }, [recipe?.id]);
 
   // Build ingredient score map
   const scoreMap = new Map<string, IngredientMatchDetail>();
@@ -161,7 +166,26 @@ export default function RecipeDetailPage() {
 
         {/* Ingredients */}
         <div>
-          <h2 className="text-base font-semibold text-gray-900 mb-2">Ingredients</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-semibold text-gray-900">Ingredients</h2>
+            {recipe.ingredients.some((i) => i.servings_quantities) && (
+              <div className="flex gap-1">
+                {[2, 3, 4].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setServings(n)}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                      servings === n
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {n}P
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <ul className="space-y-1.5">
             {recipe.ingredients.map((ing) => {
               const detail = scoreMap.get(ing.ingredient_id);
@@ -170,7 +194,7 @@ export default function RecipeDetailPage() {
                   <span className="text-sm text-gray-800">{ing.raw_name}</span>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <span>
-                      {ing.quantity} {ing.unit ?? ''}
+                      {ing.servings_quantities?.[String(servings)] ?? ing.quantity} {ing.unit ?? ''}
                     </span>
                     <IngredientScore detail={detail} name={ing.raw_name} />
                   </div>
@@ -191,6 +215,9 @@ export default function RecipeDetailPage() {
                 </span>
                 <div className="flex-1 pt-0.5">
                   <p className="text-sm text-gray-800 leading-relaxed">{step.text}</p>
+                  {step.image_description && (
+                    <p className="text-xs text-gray-400 italic mt-1">{step.image_description}</p>
+                  )}
                   {step.timer_seconds && (
                     <span className="inline-block mt-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
                       ⏱ {Math.round(step.timer_seconds / 60)} min timer

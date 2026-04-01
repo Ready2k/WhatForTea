@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Enum, ForeignKey, Integer, Numeric, SmallInteger, Text, func
-from sqlalchemy.dialects.postgresql import ARRAY, TIMESTAMP, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -69,6 +69,7 @@ class RecipeIngredient(Base):
     # Populated after the normalisation pass
     normalized_quantity: Mapped[Optional[float]] = mapped_column(Numeric(12, 4), nullable=True)
     normalized_unit: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    servings_quantities: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     # Relationships
     recipe: Mapped["Recipe"] = relationship(back_populates="ingredients")
@@ -87,6 +88,7 @@ class Step(Base):
     timer_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     # Nullable in v1 — automatic crop extraction is a future enhancement, not implemented
     image_crop_path: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    image_description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Relationships
     recipe: Mapped["Recipe"] = relationship(back_populates="steps")
