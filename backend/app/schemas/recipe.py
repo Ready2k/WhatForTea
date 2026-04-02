@@ -63,6 +63,14 @@ class RecipeCreate(RecipeBase):
     steps: list[StepCreate] = []
 
 
+class RecipeIngredientUpdate(RecipeIngredientBase):
+    pass
+
+
+class RecipeUpdate(BaseModel):
+    ingredients: list[RecipeIngredientUpdate]
+
+
 class Recipe(RecipeBase):
     id: uuid.UUID
     hero_image_path: Optional[str] = None

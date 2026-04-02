@@ -209,6 +209,14 @@ export function resolveRecipeIngredient(
   });
 }
 
+export function updateRecipe(recipeId: string, payload: any): Promise<Recipe> {
+  return request<Recipe>(`/api/v1/recipes/${recipeId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
 export function rotateRecipePhoto(recipeId: string, index = 0): Promise<void> {
   return request<void>(`/api/v1/recipes/${recipeId}/photo/rotate?index=${index}`, {
     method: 'POST',

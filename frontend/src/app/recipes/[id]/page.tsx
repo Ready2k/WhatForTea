@@ -8,7 +8,9 @@ import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
 import { rotateRecipePhoto, uploadRecipePhoto } from '@/lib/api';
-import type { IngredientMatchDetail } from '@/lib/types';
+import type { IngredientMatchDetail, RecipeIngredient, Recipe } from '@/lib/types';
+import { updateRecipe } from '@/lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 function IngredientScore({ detail }: { detail: IngredientMatchDetail | undefined; name: string }) {
   if (!detail) return <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>;
@@ -43,6 +45,22 @@ export default function RecipeDetailPage() {
   const [imageVersion, setImageVersion] = useState(0);
   const [isRotating, setIsRotating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Edit State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editIngredients, setEditIngredients] = useState<RecipeIngredient[]>([]);
+  const queryClient = useQueryClient();
+  const updateMutation = useMutation({
+    mutationFn: (payload: { ingredients: Partial<RecipeIngredient>[] }) => updateRecipe(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipe', id] });
+      setIsEditing(false);
+    },
+    onError: (err) => {
+      alert(`Failed to update recipe: ${err.message}`);
+    }
+  });
+
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { data: matches } = useMatches();
   const deleteMutation = useDeleteRecipe();
@@ -273,8 +291,38 @@ export default function RecipeDetailPage() {
         {/* Ingredients */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Ingredients</h2>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Ingredients</h2>
+              {!isEditing ? (
+                <button
+                  onClick={() => {
+                    setEditIngredients(JSON.parse(JSON.stringify(recipe.ingredients)));
+                    setIsEditing(true);
+                  }}
+                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 px-2 py-0.5 rounded transition-colors"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => updateMutation.mutate({ ingredients: editIngredients })}
+                    disabled={updateMutation.isPending}
+                    className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                  >
+                    {updateMutation.isPending ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    disabled={updateMutation.isPending}
+                    className="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 px-2 py-0.5 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className={`flex items-center gap-1.5 transition-opacity ${isEditing ? 'opacity-30 pointer-events-none' : ''}`}>
               <span className="text-xs text-gray-400 dark:text-gray-500 mr-0.5">Servings:</span>
               {[1, 2, 3, 4, 6, 8].map((n) => (
                 <button
@@ -292,32 +340,106 @@ export default function RecipeDetailPage() {
             </div>
           </div>
           <ul className="space-y-1.5">
-            {recipe.ingredients.map((ing) => {
-              const detail = ing.ingredient_id ? scoreMap.get(ing.ingredient_id) : undefined;
-              // Scaling logic: pre-calculated ? use it : (base_qty / base_servings) * servings
-              let displayQty = ing.servings_quantities?.[String(servings)];
-              if (displayQty === undefined) {
-                const scale = servings / (recipe.base_servings || 2);
-                displayQty = Math.round(ing.quantity * scale * 100) / 100;
-              }
-
-              return (
-                <li key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                  <span className="text-sm text-gray-800 dark:text-gray-200">{ing.raw_name}</span>
-                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span>
-                      {displayQty} {ing.unit ?? ''}
-                    </span>
-                    <IngredientScore detail={detail} name={ing.raw_name} />
-                  </div>
+            {isEditing ? (
+              // EDIT MODE
+              <>
+                {editIngredients.map((ing, idx) => (
+                  <li key={idx} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0 group">
+                    <input
+                      type="text"
+                      value={ing.raw_name}
+                      onChange={(e) => {
+                        const next = [...editIngredients];
+                        next[idx].raw_name = e.target.value;
+                        setEditIngredients(next);
+                      }}
+                      className="flex-1 min-w-0 bg-transparent text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="Ingredient name"
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      value={ing.quantity || ''}
+                      onChange={(e) => {
+                        const next = [...editIngredients];
+                        next[idx].quantity = parseFloat(e.target.value) || 0;
+                        setEditIngredients(next);
+                      }}
+                      className="w-16 bg-transparent text-sm text-right text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="Qty"
+                    />
+                    <input
+                      type="text"
+                      value={ing.unit || ''}
+                      onChange={(e) => {
+                        const next = [...editIngredients];
+                        next[idx].unit = e.target.value;
+                        setEditIngredients(next);
+                      }}
+                      className="w-16 bg-transparent text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="Unit"
+                    />
+                    <button
+                      onClick={() => {
+                        const next = [...editIngredients];
+                        next.splice(idx, 1);
+                        setEditIngredients(next);
+                      }}
+                      className="w-7 h-7 flex-shrink-0 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors opacity-100 sm:opacity-50 sm:group-hover:opacity-100"
+                      aria-label="Remove ingredient"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </li>
+                ))}
+                <li>
+                  <button
+                    onClick={() => {
+                      setEditIngredients([...editIngredients, {
+                        id: crypto.randomUUID(),
+                        recipe_id: recipe.id,
+                        raw_name: '',
+                        quantity: 1,
+                        unit: '',
+                      } as unknown as RecipeIngredient]);
+                    }}
+                    className="w-full py-2 mt-2 border-2 border-dashed border-emerald-500/30 text-emerald-600 dark:text-emerald-500 text-sm font-semibold rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    Add Ingredient
+                  </button>
                 </li>
-              );
-            })}
+              </>
+            ) : (
+              // READ MODE
+              recipe.ingredients.map((ing) => {
+                const detail = ing.ingredient_id ? scoreMap.get(ing.ingredient_id) : undefined;
+                let displayQty = ing.servings_quantities?.[String(servings)];
+                if (displayQty === undefined) {
+                  const scale = servings / (recipe.base_servings || 2);
+                  displayQty = Math.round(ing.quantity * scale * 100) / 100;
+                }
+
+                return (
+                  <li key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0 relative">
+                    <span className="text-sm text-gray-800 dark:text-gray-200">{ing.raw_name}</span>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span>
+                        {displayQty} {ing.unit ?? ''}
+                      </span>
+                      <IngredientScore detail={detail} name={ing.raw_name} />
+                    </div>
+                  </li>
+                );
+              })
+            )}
           </ul>
           
-          <div className="mt-4">
-            <FixIngredients recipeId={recipe.id} ingredients={recipe.ingredients} />
-          </div>
+          {!isEditing && (
+            <div className="mt-4">
+              <FixIngredients recipeId={recipe.id} ingredients={recipe.ingredients} />
+            </div>
+          )}
         </div>
 
         {/* Steps */}

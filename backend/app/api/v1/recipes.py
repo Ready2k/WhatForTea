@@ -297,6 +297,74 @@ async def get_recipe(
     return result
 
 
+@router.put("/{recipe_id}", response_model=RecipeSchema)
+async def update_recipe(
+    recipe_id: uuid.UUID,
+    body: RecipeUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update an existing recipe. Currently supports updating the ingredients list.
+    Replaces all existing ingredients with the provided list and triggers the normaliser.
+    """
+    from sqlalchemy.orm import selectinload
+    from app.models.recipe import RecipeIngredient as RI
+    from app.services.normaliser import extract_unit_and_quantity, normalise_ingredient_name
+
+    # Verify recipe exists
+    stmt = (
+        select(Recipe)
+        .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
+        .where(Recipe.id == recipe_id)
+    )
+    recipe = (await db.execute(stmt)).scalar_one_or_none()
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # 1. Delete existing ingredients
+    await db.execute(RI.__table__.delete().where(RI.recipe_id == recipe_id))
+    
+    # 2. Insert new ingredients and run normaliser logic (from ingestion.py)
+    new_ingredients = []
+    for idx, ing_update in enumerate(body.ingredients):
+        db_ing = RI(
+            recipe_id=recipe_id,
+            raw_name=ing_update.raw_name,
+            quantity=ing_update.quantity,
+            unit=ing_update.unit,
+            servings_quantities=ing_update.servings_quantities,
+        )
+        
+        # Apply layer 1 & 2 normalisation
+        norm_name = normalise_ingredient_name(db_ing.raw_name)
+        match_id = await db_ing.find_canonical_match(db, norm_name)
+        if match_id:
+            db_ing.ingredient_id = match_id
+            
+        unit_info = extract_unit_and_quantity(db_ing.raw_name, db_ing.quantity, db_ing.unit)
+        db_ing.normalized_quantity = unit_info.quantity
+        db_ing.normalized_unit = unit_info.unit
+        
+        new_ingredients.append(db_ing)
+        db.add(db_ing)
+
+    await db.commit()
+    await db.refresh(recipe)
+    
+    logger.info("recipe ingredients updated", extra={"recipe_id": str(recipe_id), "count": len(new_ingredients)})
+    
+    # Return updated recipe matching the GET schema
+    image_count = 1
+    if recipe.hero_image_path:
+        img_dir = Path(recipe.hero_image_path).parent
+        if img_dir.exists():
+            image_count = len(list(img_dir.glob("image_*")))
+
+    result = RecipeSchema.model_validate(recipe)
+    result.image_count = image_count
+    return result
+
+
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recipe(
     recipe_id: uuid.UUID,
