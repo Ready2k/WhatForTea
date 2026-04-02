@@ -103,72 +103,14 @@ function readExifOrientation(buffer: ArrayBuffer): number {
   return 1;
 }
 
-// ── Main image pipeline ───────────────────────────────────────────────────────
-// Reads EXIF orientation from the raw bytes then applies the correct canvas
-// transform manually — the only approach that works reliably on all browsers.
-
+/**
+ * LIGHTWEIGHT IMAGE PIPELINE
+ * To prevent memory crashes on mobile devices, we skip the heavy Sobel-edge detection 
+ * and large canvas rotations during ingestion. 
+ * Users can rotate the final image on the recipe detail page if needed.
+ */
 async function processImage(file: File): Promise<File> {
-  const buffer = await file.arrayBuffer();
-  const orientation = readExifOrientation(buffer);
-
-  // Load raw pixels without any browser-applied EXIF correction
-  let bitmap: ImageBitmap;
-  try {
-    bitmap = await createImageBitmap(file, { imageOrientation: 'none' } as ImageBitmapOptions);
-  } catch {
-    bitmap = await createImageBitmap(file);
-  }
-  const rawW = bitmap.width;
-  const rawH = bitmap.height;
-
-  // Orientations 5–8 swap width ↔ height
-  const swap = orientation >= 5;
-  const fullW = swap ? rawH : rawW;
-  const fullH = swap ? rawW : rawH;
-
-  const full = document.createElement('canvas');
-  full.width = fullW;
-  full.height = fullH;
-  const ctx = full.getContext('2d')!;
-
-  // Apply the EXIF rotation matrix before drawing
-  switch (orientation) {
-    case 2: ctx.transform(-1,  0,  0,  1, fullW,     0); break;
-    case 3: ctx.transform(-1,  0,  0, -1, fullW, fullH); break;
-    case 4: ctx.transform( 1,  0,  0, -1,     0, fullH); break;
-    case 5: ctx.transform( 0,  1,  1,  0,     0,     0); break;
-    case 6: ctx.transform( 0,  1, -1,  0, fullH,     0); break;
-    case 7: ctx.transform( 0, -1, -1,  0, fullH, fullW); break;
-    case 8: ctx.transform( 0, -1,  1,  0,     0, fullW); break;
-  }
-  ctx.drawImage(bitmap, 0, 0, rawW, rawH);
-  bitmap.close();
-
-  // Detect card bounds and crop
-  const crop = detectCardBounds(full);
-  const cropW = crop.x2 - crop.x1;
-  const cropH = crop.y2 - crop.y1;
-
-  // Resize so longest edge ≤ MAX_DIMENSION
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(cropW, cropH));
-  const outW = Math.round(cropW * scale);
-  const outH = Math.round(cropH * scale);
-
-  const out = document.createElement('canvas');
-  out.width = outW;
-  out.height = outH;
-  out.getContext('2d')!.drawImage(full, crop.x1, crop.y1, cropW, cropH, 0, 0, outW, outH);
-
-  return new Promise((resolve, reject) => {
-    out.toBlob(
-      (blob) => {
-        if (!blob) { reject(new Error('toBlob failed')); return; }
-        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
-      },
-      'image/jpeg',
-      JPEG_QUALITY,
-    );
-  });
+  return file;
 }
 import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
 // ── Duplicate detection ───────────────────────────────────────────────────────
@@ -277,38 +219,46 @@ export default function IngestPage() {
 
   // File picker: replaces all selected files (supports multi-select)
   async function handleFilesSelected(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const raw = Array.from(files).slice(0, 2);
-    const resized = await Promise.all(raw.map(processImage));
-    
-    setCapturedPhotos((prev) => {
-      prev.forEach((p) => URL.revokeObjectURL(p.url));
-      return resized.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
-    });
+    try {
+      if (!files || files.length === 0) return;
+      const raw = Array.from(files).slice(0, 2);
+      const resized = await Promise.all(raw.map(processImage));
+      
+      setCapturedPhotos((prev) => {
+        prev.forEach((p) => URL.revokeObjectURL(p.url));
+        return resized.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
+      });
+    } catch (err: any) {
+      alert(`Photo capture error: ${err.message || 'Unknown error'}`);
+    }
   }
 
   // Camera: accumulates up to 2 photos (each capture = one photo)
   async function handleCameraCapture(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    // Reset the input so the same button can be pressed again
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-    const [raw] = Array.from(files);
-    let processed: File;
     try {
-      processed = await processImage(raw);
-    } catch {
-      processed = raw;
-    }
-    
-    setCapturedPhotos((prev) => {
-      const newItem = { file: processed, url: URL.createObjectURL(processed) };
-      if (prev.length >= 2) {
-        // Replace second photo
-        URL.revokeObjectURL(prev[1].url);
-        return [prev[0], newItem];
+      if (!files || files.length === 0) return;
+      // Reset the input so the same button can be pressed again
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      const [raw] = Array.from(files);
+      let processed: File;
+      try {
+        processed = await processImage(raw);
+      } catch {
+        processed = raw;
       }
-      return [...prev, newItem];
-    });
+      
+      setCapturedPhotos((prev) => {
+        const newItem = { file: processed, url: URL.createObjectURL(processed) };
+        if (prev.length >= 2) {
+          // Replace second photo
+          URL.revokeObjectURL(prev[1].url);
+          return [prev[0], newItem];
+        }
+        return [...prev, newItem];
+      });
+    } catch (err: any) {
+      alert(`Camera error: ${err.message || 'Unknown error'}`);
+    }
   }
 
   const startPolling = useCallback((id: string) => {
