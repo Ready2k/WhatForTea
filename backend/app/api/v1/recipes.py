@@ -205,6 +205,69 @@ async def list_recipes(
     return rows
 
 
+
+@router.patch("/{recipe_id}/ingredients/{ri_id}/resolve", response_model=None)
+async def resolve_recipe_ingredient(
+    recipe_id: uuid.UUID,
+    ri_id: uuid.UUID,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Link an unresolved RecipeIngredient to a canonical Ingredient.
+
+    Also appends the ingredient's raw_name to ingredient.aliases so future
+    ingestion scans will match it at Layer 1 (exact lookup) automatically.
+
+    Body: { "ingredient_id": "<uuid>" }
+    """
+    from app.models.recipe import RecipeIngredient as RI
+    from app.models.ingredient import Ingredient
+
+    ri = await db.get(RI, ri_id)
+    if ri is None or ri.recipe_id != recipe_id:
+        raise HTTPException(status_code=404, detail="RecipeIngredient not found")
+
+    ingredient_id = body.get("ingredient_id")
+    if not ingredient_id:
+        raise HTTPException(status_code=422, detail="ingredient_id is required")
+
+    try:
+        canonical_id = uuid.UUID(str(ingredient_id))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="ingredient_id must be a valid UUID")
+
+    ingredient = await db.get(Ingredient, canonical_id)
+    if ingredient is None:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+
+    # Link the RecipeIngredient
+    ri.ingredient_id = canonical_id
+
+    # Add raw_name as an alias so the normaliser auto-matches future scans
+    normalised_raw = ri.raw_name.strip().lower()
+    existing_aliases = [a.lower() for a in (ingredient.aliases or [])]
+    if normalised_raw not in existing_aliases and normalised_raw != ingredient.canonical_name.lower():
+        ingredient.aliases = list(ingredient.aliases or []) + [ri.raw_name.strip()]
+        logger.info(
+            "alias added to ingredient",
+            extra={"alias": ri.raw_name, "canonical": ingredient.canonical_name},
+        )
+
+    await db.commit()
+    await db.refresh(ri)
+
+    logger.info(
+        "recipe ingredient resolved",
+        extra={
+            "ri_id": str(ri_id),
+            "ingredient_id": str(canonical_id),
+            "canonical_name": ingredient.canonical_name,
+            "raw_name": ri.raw_name,
+        },
+    )
+    return {"id": str(ri.id), "ingredient_id": str(ri.ingredient_id), "raw_name": ri.raw_name}
+
 @router.get("/{recipe_id}", response_model=RecipeSchema)
 async def get_recipe(
     recipe_id: uuid.UUID,

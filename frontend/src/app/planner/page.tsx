@@ -227,8 +227,7 @@ export default function PlannerPage() {
                           key={r.id}
                           onClick={() => {
                             setDayPlan((p) => ({ ...p, [idx]: r.id }));
-                            // Reset servings to recipe base servings when recipe changes
-                            setServingsPlan((p) => ({ ...p, [idx]: r.base_servings || 2 }));
+                            setServingsPlan((p) => ({ ...p, [idx]: 2 }));
                             setShowPickerFor(null);
                           }}
                           className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"

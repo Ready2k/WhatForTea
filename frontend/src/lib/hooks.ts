@@ -15,13 +15,14 @@ import {
   setWeekPlan,
   fetchShoppingList,
   ingestRecipe,
+  resolveRecipeIngredient,
 } from './api';
 
-export function useIngredients() {
+export function useIngredients(q?: string) {
   return useQuery({
-    queryKey: ['ingredients'],
-    queryFn: fetchIngredients,
-    staleTime: 5 * 60 * 1000, // ingredient list changes infrequently
+    queryKey: ['ingredients', q ?? ''],
+    queryFn: () => fetchIngredients(q),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -144,5 +145,18 @@ export function useSetWeekPlan() {
 export function useIngestRecipe() {
   return useMutation({
     mutationFn: ingestRecipe,
+  });
+}
+
+export function useResolveRecipeIngredient(recipeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ riId, ingredientId }: { riId: string; ingredientId: string }) =>
+      resolveRecipeIngredient(recipeId, riId, ingredientId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['recipe', recipeId] });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+      qc.invalidateQueries({ queryKey: ['shopping-list'] });
+    },
   });
 }

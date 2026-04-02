@@ -86,8 +86,9 @@ export async function logout(): Promise<void> {
   window.location.href = '/login';
 }
 
-export function fetchIngredients(): Promise<Ingredient[]> {
-  return request<Ingredient[]>('/api/v1/ingredients');
+export function fetchIngredients(q?: string): Promise<Ingredient[]> {
+  const params = q ? `?q=${encodeURIComponent(q)}` : '';
+  return request<Ingredient[]>(`/api/v1/ingredients${params}`);
 }
 
 export function createIngredient(data: {
@@ -193,5 +194,17 @@ export function confirmIngest(jobId: string, recipe: any): Promise<Recipe> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ recipe }),
+  });
+}
+
+export function resolveRecipeIngredient(
+  recipeId: string,
+  riId: string,
+  ingredientId: string,
+): Promise<{ id: string; ingredient_id: string; raw_name: string }> {
+  return request(`/api/v1/recipes/${recipeId}/ingredients/${riId}/resolve`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredient_id: ingredientId }),
   });
 }

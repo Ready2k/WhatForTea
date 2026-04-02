@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
+import { FixIngredients } from '@/components/FixIngredients';
 import type { IngredientMatchDetail } from '@/lib/types';
 
 function IngredientScore({ detail }: { detail: IngredientMatchDetail | undefined; name: string }) {
@@ -227,7 +228,7 @@ export default function RecipeDetailPage() {
           </div>
           <ul className="space-y-1.5">
             {recipe.ingredients.map((ing) => {
-              const detail = scoreMap.get(ing.ingredient_id);
+              const detail = ing.ingredient_id ? scoreMap.get(ing.ingredient_id) : undefined;
               // Scaling logic: pre-calculated ? use it : (base_qty / base_servings) * servings
               let displayQty = ing.servings_quantities?.[String(servings)];
               if (displayQty === undefined) {
@@ -248,6 +249,10 @@ export default function RecipeDetailPage() {
               );
             })}
           </ul>
+          
+          <div className="mt-4">
+            <FixIngredients recipeId={recipe.id} ingredients={recipe.ingredients} />
+          </div>
         </div>
 
         {/* Steps */}

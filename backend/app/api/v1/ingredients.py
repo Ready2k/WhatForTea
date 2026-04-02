@@ -112,13 +112,17 @@ async def create_ingredient(
 
 @router.get("", response_model=list[IngredientSchema])
 async def list_ingredients(
+    q: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ) -> list[IngredientSchema]:
-    """List all canonical ingredients."""
+    """List canonical ingredients. Pass ?q= to filter by name (case-insensitive substring)."""
     from sqlalchemy import select
     from app.models.ingredient import Ingredient
 
-    result = await db.execute(select(Ingredient).order_by(Ingredient.canonical_name))
+    stmt = select(Ingredient).order_by(Ingredient.canonical_name)
+    if q:
+        stmt = stmt.where(Ingredient.canonical_name.ilike(f"%{q}%"))
+    result = await db.execute(stmt)
     return [IngredientSchema.model_validate(i) for i in result.scalars().all()]
 
 
