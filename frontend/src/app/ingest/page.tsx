@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useIngestRecipe } from '@/lib/hooks';
+import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
+import type { IngestReviewPayload } from '@/lib/types';
 
 const MAX_DIMENSION = 1500;
 const JPEG_QUALITY = 0.85;
@@ -112,7 +114,7 @@ function readExifOrientation(buffer: ArrayBuffer): number {
 async function processImage(file: File): Promise<File> {
   return file;
 }
-import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
+
 // ── Duplicate detection ───────────────────────────────────────────────────────
 // Decodes a File to a tiny FINGERPRINT_SIZE×FINGERPRINT_SIZE canvas and
 // returns the flattened RGBA pixel array for similarity comparison.
@@ -140,8 +142,6 @@ function pixelSimilarity(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
   }
   return matches / pixels;
 }
-
-import type { IngestReviewPayload } from '@/lib/types';
 
 type FlowState = 'upload' | 'processing' | 'review' | 'done';
 type ApiStatus = 'uploading' | 'queued' | 'processing' | 'review';
@@ -223,11 +223,12 @@ export default function IngestPage() {
       if (!files || files.length === 0) return;
       const raw = Array.from(files).slice(0, 2);
       const resized = await Promise.all(raw.map(processImage));
-      
-      setCapturedPhotos((prev) => {
-        prev.forEach((p) => URL.revokeObjectURL(p.url));
-        return resized.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
-      });
+      // Revoke old URLs and create new ones outside the state updater —
+      // side effects inside state updaters can throw outside your try/catch
+      // and trigger React's error boundary (the "Application error" screen).
+      capturedPhotos.forEach((p) => URL.revokeObjectURL(p.url));
+      const newPhotos = resized.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
+      setCapturedPhotos(newPhotos);
     } catch (err: any) {
       alert(`Photo capture error: ${err.message || 'Unknown error'}`);
     }
@@ -246,16 +247,18 @@ export default function IngestPage() {
       } catch {
         processed = raw;
       }
-      
-      setCapturedPhotos((prev) => {
-        const newItem = { file: processed, url: URL.createObjectURL(processed) };
-        if (prev.length >= 2) {
-          // Replace second photo
-          URL.revokeObjectURL(prev[1].url);
-          return [prev[0], newItem];
-        }
-        return [...prev, newItem];
-      });
+      // Create the URL and update state outside of a state-updater callback.
+      // URL.createObjectURL / revokeObjectURL inside a setState updater run
+      // during React's render cycle — if they throw, React's error boundary
+      // catches it instead of your try/catch, causing the "Application error" screen.
+      const newUrl = URL.createObjectURL(processed);
+      const newItem = { file: processed, url: newUrl };
+      if (capturedPhotos.length >= 2) {
+        URL.revokeObjectURL(capturedPhotos[1].url);
+        setCapturedPhotos([capturedPhotos[0], newItem]);
+      } else {
+        setCapturedPhotos([...capturedPhotos, newItem]);
+      }
     } catch (err: any) {
       alert(`Camera error: ${err.message || 'Unknown error'}`);
     }
