@@ -29,6 +29,7 @@ from app.schemas.ingest import (
     IngestStatusResponse,
 )
 from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary
+from app.services.images import rotate_image, save_manual_photo
 from app.services.ingestion import confirm_recipe, save_images
 
 logger = logging.getLogger(__name__)
@@ -354,9 +355,65 @@ async def get_recipe_image(
         img_dir = Path(recipe.hero_image_path).parent
         all_images = sorted(img_dir.glob("image_*"))
         if index >= len(all_images):
-            raise HTTPException(status_code=404, detail=f"Image index {index} not found")
+            all_images = sorted(img_dir.glob("manual_hero_*")) + all_images
+            if index >= len(all_images):
+                raise HTTPException(status_code=404, detail=f"Image index {index} not found")
         path = all_images[index]
 
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image file not found")
     return FileResponse(path)
+
+
+@router.post("/{recipe_id}/photo/rotate")
+async def rotate_recipe_photo(
+    recipe_id: uuid.UUID,
+    index: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    """Rotate a recipe photo by 90 degrees clockwise."""
+    recipe = await db.get(Recipe, recipe_id)
+    if recipe is None or not recipe.hero_image_path:
+        raise HTTPException(status_code=404, detail="Recipe or image not found")
+
+    if index == 0:
+        image_path = Path(recipe.hero_image_path)
+    else:
+        img_dir = Path(recipe.hero_image_path).parent
+        all_images = sorted(img_dir.glob("image_*"))
+        if index >= len(all_images):
+            raise HTTPException(status_code=404, detail="Image index not found")
+        image_path = all_images[index]
+
+    success = await rotate_image(image_path)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to rotate image")
+
+    return {"status": "ok"}
+
+
+@router.post("/{recipe_id}/photo")
+async def upload_recipe_photo(
+    recipe_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a new hero photo for a recipe."""
+    recipe = await db.get(Recipe, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # If no hero exists (manual recipe), create the directory
+    if recipe.hero_image_path:
+        recipe_dir = Path(recipe.hero_image_path).parent
+    else:
+        recipe_dir = _RECIPES_DIR / str(recipe_id)
+
+    path = await save_manual_photo(recipe_id, file, recipe_dir)
+    if not path:
+        raise HTTPException(status_code=500, detail="Failed to save image")
+
+    recipe.hero_image_path = str(path)
+    await db.commit()
+
+    return {"status": "ok", "hero_image_path": str(path)}

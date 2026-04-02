@@ -208,3 +208,18 @@ export function resolveRecipeIngredient(
     body: JSON.stringify({ ingredient_id: ingredientId }),
   });
 }
+
+export function rotateRecipePhoto(recipeId: string, index = 0): Promise<void> {
+  return request<void>(`/api/v1/recipes/${recipeId}/photo/rotate?index=${index}`, {
+    method: 'POST',
+  });
+}
+
+export function uploadRecipePhoto(recipeId: string, file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<void>(`/api/v1/recipes/${recipeId}/photo`, {
+    method: 'POST',
+    body: formData,
+  });
+}

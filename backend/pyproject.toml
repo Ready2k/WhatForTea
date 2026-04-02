@@ -26,6 +26,7 @@ apscheduler = "^3.11"
 python-json-logger = "^3.2"
 prometheus-fastapi-instrumentator = "^7.0"
 argon2-cffi = "^25.1.0"
+Pillow = "^10.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

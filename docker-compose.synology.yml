@@ -54,6 +54,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  worker:
+    image: ready2k/whatsfortea-api:latest
+    command: ["poetry", "run", "arq", "app.worker.WorkerSettings"]
+    volumes:
+      - /volume1/docker/whatsfortea/recipes:/data/recipes
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-whatsfortea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-whatsfortea}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     image: ready2k/whatsfortea-frontend:latest
     ports:

@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
+import { rotateRecipePhoto, uploadRecipePhoto } from '@/lib/api';
 import type { IngredientMatchDetail } from '@/lib/types';
 
 function IngredientScore({ detail }: { detail: IngredientMatchDetail | undefined; name: string }) {
@@ -39,6 +40,9 @@ export default function RecipeDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [imageVersion, setImageVersion] = useState(0);
+  const [isRotating, setIsRotating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { data: matches } = useMatches();
   const deleteMutation = useDeleteRecipe();
@@ -68,6 +72,38 @@ export default function RecipeDetailPage() {
       setLightboxIndex((i) => (i === 0 ? 1 : 0));
       setIsFlipping(false);
     }, 150); // flip at mid-point of animation
+  }
+
+  async function handleRotate(index: number) {
+    if (isRotating) return;
+    setIsRotating(true);
+    try {
+      await rotateRecipePhoto(id, index);
+      setImageVersion(v => v + 1);
+    } catch (err) {
+      alert('Failed to rotate image');
+      console.error(err);
+    } finally {
+      setIsRotating(false);
+    }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || isUploading) return;
+    
+    setIsUploading(true);
+    try {
+      await uploadRecipePhoto(id, file);
+      setImageVersion(v => v + 1);
+      refetch(); // New hero path might have changed
+    } catch (err) {
+      alert('Failed to upload image');
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+      e.target.value = ''; // Reset input
+    }
   }
 
   // Build ingredient score map
@@ -117,26 +153,55 @@ export default function RecipeDetailPage() {
       {/* Hero — clickable to open lightbox */}
       <div className="relative w-full aspect-video bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 flex items-center justify-center">
         {recipe.hero_image_path ? (
-          <button
-            onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
-            className="w-full h-full focus:outline-none group relative overflow-hidden"
-            aria-label="View full-size image"
-          >
-            <img
-              src={`/api/v1/recipes/${recipe.id}/image?index=0`}
-              alt={recipe.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            {/* Expand hint */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm text-white text-sm font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                {recipe.image_count > 1 ? 'View card (front + back)' : 'View full size'}
-              </span>
+          <div className="relative w-full h-full group">
+            <button
+              onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
+              className="w-full h-full focus:outline-none relative overflow-hidden"
+              aria-label="View full-size image"
+            >
+              <img
+                src={`/api/v1/recipes/${recipe.id}/image?index=0&v=${imageVersion}`}
+                alt={recipe.title}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              {/* Expand hint */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-sm text-white text-sm font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                  {recipe.image_count > 1 ? 'View card (front + back)' : 'View full size'}
+                </span>
+              </div>
+            </button>
+
+            {/* Photo Controls */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => handleRotate(0)}
+                disabled={isRotating}
+                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:bg-white/40 transition-colors shadow-lg"
+                title="Rotate image"
+              >
+                <svg className={`w-5 h-5 ${isRotating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+              <label className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:bg-white/40 transition-colors shadow-lg cursor-pointer">
+                <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={isUploading} />
+                <svg className={`w-5 h-5 ${isUploading ? 'animate-pulse' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </label>
             </div>
-          </button>
+          </div>
         ) : (
-          <span className="text-7xl">🍽️</span>
+          <div className="flex flex-col items-center gap-4">
+            <span className="text-7xl">🍽️</span>
+            <label className="px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-xl text-white text-sm font-medium hover:bg-white/30 transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500">
+              <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={isUploading} />
+              {isUploading ? 'Uploading...' : 'Add Photo'}
+            </label>
+          </div>
         )}
         <button
           onClick={() => router.back()}
@@ -321,8 +386,8 @@ export default function RecipeDetailPage() {
           onClick={(e) => e.stopPropagation()}
         >
           <img
-            key={lightboxIndex}
-            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}`}
+            key={`${lightboxIndex}-${imageVersion}`}
+            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}&v=${imageVersion}`}
             alt={`${recipe.title} — ${lightboxIndex === 0 ? 'front' : 'back'}`}
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             style={{
