@@ -41,7 +41,16 @@ export default function Dashboard() {
   const { data: allMatches, isLoading } = useMatches();
 
   const cookNowCount = allMatches?.filter((m) => m.category === 'cook_now').length ?? 0;
-  const topMatches = allMatches?.slice(0, 3) ?? [];
+  
+  // Filter matches based on mode
+  const filteredMatches = allMatches?.filter(m => {
+    if (mode === 'hangry') {
+      return m.category === 'cook_now';
+    }
+    return true; // Show all in planning mode
+  }) ?? [];
+
+  const topMatches = filteredMatches.slice(0, 3);
 
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-6">
@@ -86,30 +95,36 @@ export default function Dashboard() {
           <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">My Pantry</div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage ingredients</div>
         </Link>
+        
+        {mode !== 'hangry' && (
+          <>
+            <Link
+              href="/planner"
+              className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="text-3xl">📅</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">This Week</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal plan & shopping</div>
+            </Link>
 
-        <Link
-          href="/planner"
-          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="text-3xl">📅</div>
-          <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">This Week</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal plan & shopping</div>
-        </Link>
-
-        <Link
-          href="/ingest"
-          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
-        >
-          <div className="text-3xl">📷</div>
-          <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">Scan Card</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Add new recipe</div>
-        </Link>
+            <Link
+              href="/ingest"
+              className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="text-3xl">📷</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">Scan Card</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Add new recipe</div>
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Top recipes */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Top Matches</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+            {mode === 'hangry' ? '🔥 Quick Matches' : '📅 Top Matches'}
+          </h2>
           <Link href="/recipes" className="text-sm text-emerald-600 font-medium hover:underline">
             See all
           </Link>
@@ -128,9 +143,18 @@ export default function Dashboard() {
             ))}
           </div>
         ) : topMatches.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 dark:text-gray-500">
-            <p className="text-4xl mb-2">🍽️</p>
-            <p className="text-sm">No recipes yet. Scan your first card!</p>
+          <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+            <p className="text-4xl mb-3">🧊</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 px-8">
+              {mode === 'hangry' 
+                ? "No recipes ready to cook right now. Try updating your pantry!" 
+                : "No recipes yet. Scan your first card!"}
+            </p>
+            {mode === 'hangry' && (
+              <Link href="/pantry" className="inline-block mt-4 text-xs font-bold text-orange-600 hover:text-orange-500 uppercase tracking-wider">
+                Update Pantry →
+              </Link>
+            )}
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
