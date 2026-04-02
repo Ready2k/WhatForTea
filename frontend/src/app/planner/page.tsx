@@ -85,16 +85,19 @@ export default function PlannerPage() {
   }
 
   async function handleBought(item: ShoppingListItem) {
-    if (!item.ingredient_id) return; // can't add unresolved items to pantry
-    const itemKey = item.ingredient_id ?? item.canonical_name;
-    try {
-      await upsertMutation.mutateAsync({
-        ingredient_id: item.ingredient_id,
-        quantity: item.rounded_quantity,
-        unit: item.rounded_unit,
-      });
-      toggleItem(itemKey);
-    } catch {}
+    const checkedKey = item.ingredient_id ?? item.canonical_name;
+    if (item.ingredient_id) {
+      // Matched item → add to pantry, then tick box
+      try {
+        await upsertMutation.mutateAsync({
+          ingredient_id: item.ingredient_id,
+          quantity: item.rounded_quantity,
+          unit: item.rounded_unit,
+        });
+      } catch { /* pantry update failed — still tick the box */ }
+    }
+    // Always tick the box (works for both matched and unmatched items)
+    toggleItem(checkedKey);
   }
 
   return (
@@ -348,15 +351,13 @@ export default function PlannerPage() {
                                 {item.rounded_quantity} {item.rounded_unit}
                               </span>
                             </div>
-                            {item.ingredient_id && (
-                              <button
+                             <button
                                 onClick={() => handleBought(item)}
-                                disabled={upsertMutation.isPending}
+                                disabled={upsertMutation.isPending && !!item.ingredient_id}
                                 className="text-xs text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-400 font-medium whitespace-nowrap disabled:opacity-40"
                               >
                                 Bought
                               </button>
-                            )}
                           </li>
                         );
                       })}
