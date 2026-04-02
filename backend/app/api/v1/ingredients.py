@@ -5,6 +5,7 @@ All routes prefixed /api/v1/ via the router include in main.py.
 """
 import logging
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
