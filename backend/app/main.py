@@ -8,6 +8,7 @@ from app.config import settings
 from app.errors import register_exception_handlers
 from app.logging_config import setup_logging
 from app.api.v1.auth import router as auth_router
+from app.api.v1.cooking import router as cooking_router
 from app.api.v1.health import router as health_router
 from app.api.v1.ingredients import router as ingredients_router
 from app.api.v1.matcher import router as matcher_router
@@ -54,6 +55,7 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_sch
 
 app.include_router(auth_router)
 app.include_router(health_router, tags=["health"])
+app.include_router(cooking_router)
 app.include_router(ingredients_router)
 app.include_router(pantry_router)
 app.include_router(planner_router)

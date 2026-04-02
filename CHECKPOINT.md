@@ -4,6 +4,22 @@ Use this document to resume work across sessions. Update it as each phase comple
 
 ---
 
+## Post-v1 Feature Progress
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| 1.4 — Inline Step Editing | ✅ Complete | `RecipeUpdate` accepts optional `steps[]`; edit UI mirrors ingredient editor with reorder arrows, add/remove, timer (min) input |
+| 1.1 — Zero-Waste Suggestions | ✅ Complete | `zero_waste_suggestions()` implemented; computes leftover = rounded_qty − required; scores recipes against leftover map; endpoint live |
+| 1.2 — Ingredient Substitution | ✅ Complete | `_check_substitutes()` in matcher; seeded 7 common substitutes via migration `b2c3d4e5f6a7`; `substitute_used` shown in recipe detail |
+| 1.3 — Cooking Session Persistence | ✅ Complete | New `/api/v1/cooking/sessions` CRUD; cook page creates/patches/ends sessions; resume banner on dashboard |
+| 2.1 — Cook History & Recipe Log | Pending | |
+| 2.2 — Ratings & Notes | Pending | Depends on 2.1 |
+| 2.3 — "Use It Up" Mode | Pending | |
+| 2.4 — Duplicate Recipe Detection | Pending | |
+| 2.5 — Batch Pantry Refresh | Pending | |
+
+---
+
 ## Current Status
 
 | Phase | Status | Notes |

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useRecipe } from '@/lib/hooks';
 import { StepTimer } from '@/components/StepTimer';
+import { createCookingSession, patchCookingSession, endCookingSession } from '@/lib/api';
 import type { Step } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -82,6 +83,8 @@ export default function CookingModePage() {
   const [timerStates, setTimerStates] = useState<Record<string, StepTimerState>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const sessionIdRef = useRef<string | null>(null);
+  const patchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -115,6 +118,42 @@ export default function CookingModePage() {
     setTimerStates(initial);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipe?.id]);
+
+  // ── Session lifecycle ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!recipe) return;
+    // Create a session when the recipe loads; fire-and-forget
+    createCookingSession(recipe.id)
+      .then((s) => { sessionIdRef.current = s.id; })
+      .catch(() => {}); // non-critical — session tracking is best-effort
+
+    return () => {
+      // End the session if the component unmounts (browser nav, tab close)
+      if (sessionIdRef.current) {
+        endCookingSession(sessionIdRef.current).catch(() => {});
+      }
+      if (patchTimerRef.current) clearTimeout(patchTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipe?.id]);
+
+  // ── Persist step progress (debounced) ─────────────────────────────────────
+  useEffect(() => {
+    if (!sessionIdRef.current) return;
+    if (patchTimerRef.current) clearTimeout(patchTimerRef.current);
+    patchTimerRef.current = setTimeout(() => {
+      if (!sessionIdRef.current) return;
+      const stepOrder = steps[currentIndex]?.order ?? currentIndex + 1;
+      const completedOrders = steps
+        .slice(0, currentIndex)
+        .map((s) => s.order);
+      patchCookingSession(sessionIdRef.current, {
+        current_step: stepOrder,
+        completed_steps: completedOrders,
+      }).catch(() => {});
+    }, 3000); // debounce — only persist if user stays on the step for 3s
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex]);
 
   // ── Global timer tick ────────────────────────────────────────────────────
   // Reads/writes timerStatesRef directly so no stale closure.
@@ -331,15 +370,21 @@ export default function CookingModePage() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700/60">
         <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[70%]">{recipe.title}</span>
-        <Link
-          href={`/recipes/${id}`}
+        <button
+          onClick={async () => {
+            if (sessionIdRef.current) {
+              await endCookingSession(sessionIdRef.current).catch(() => {});
+              sessionIdRef.current = null;
+            }
+            router.push(`/recipes/${id}`);
+          }}
           className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
           aria-label="Exit"
         >
           <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </Link>
+        </button>
       </header>
 
       {/* Step navigator — dots for plain steps, bell icons for timed steps */}
@@ -473,9 +518,18 @@ export default function CookingModePage() {
       {/* Navigation footer */}
       <footer className="px-4 pb-8 pt-3 max-w-lg mx-auto w-full space-y-3">
         {isLast && (
-          <Link href={`/recipes/${id}`} className="block w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-md shadow-emerald-500/30">
-            🎉 Finish Cooking
-          </Link>
+          <button
+            onClick={async () => {
+              if (sessionIdRef.current) {
+                await endCookingSession(sessionIdRef.current).catch(() => {});
+                sessionIdRef.current = null;
+              }
+              router.push(`/recipes/${id}`);
+            }}
+            className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-md shadow-emerald-500/30"
+          >
+            Finish Cooking
+          </button>
         )}
         <div className="flex gap-3">
           <button

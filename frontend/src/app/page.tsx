@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useMatches } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
+import { getActiveCookingSession } from '@/lib/api';
 import type { RecipeMatchResult } from '@/lib/types';
+import type { CookingSession } from '@/lib/api';
 
 type Mode = 'planning' | 'hangry';
 
@@ -39,6 +41,13 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
 export default function Dashboard() {
   const [mode, setMode] = useState<Mode>('planning');
   const { data: allMatches, isLoading } = useMatches();
+  const [activeSession, setActiveSession] = useState<CookingSession | null>(null);
+
+  useEffect(() => {
+    getActiveCookingSession()
+      .then((s) => setActiveSession(s))
+      .catch(() => {});
+  }, []);
 
   const cookNowCount = allMatches?.filter((m) => m.category === 'cook_now').length ?? 0;
   
@@ -54,6 +63,28 @@ export default function Dashboard() {
 
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-6">
+      {/* Resume cooking banner */}
+      {activeSession && (
+        <Link
+          href={`/recipes/${activeSession.recipe_id}/cook`}
+          className="flex items-center gap-3 w-full px-4 py-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700/50 rounded-2xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+          onClick={() => setActiveSession(null)}
+        >
+          <span className="text-2xl flex-shrink-0">👨‍🍳</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 truncate">
+              Resume cooking
+            </p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
+              {activeSession.recipe_title ?? 'Continue where you left off'} — step {activeSession.current_step}
+            </p>
+          </div>
+          <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

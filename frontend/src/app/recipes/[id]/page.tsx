@@ -438,14 +438,19 @@ export default function RecipeDetailPage() {
                 }
 
                 return (
-                  <li key={ing.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0 relative">
-                    <span className="text-sm text-gray-800 dark:text-gray-200">{ing.raw_name}</span>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      <span>
-                        {displayQty} {ing.unit ?? ''}
-                      </span>
-                      <IngredientScore detail={detail} name={ing.raw_name} />
+                  <li key={ing.id} className="py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-800 dark:text-gray-200">{ing.raw_name}</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>{displayQty} {ing.unit ?? ''}</span>
+                        <IngredientScore detail={detail} name={ing.raw_name} />
+                      </div>
                     </div>
+                    {detail?.substitute_used && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                        Using {detail.substitute_used} instead
+                      </p>
+                    )}
                   </li>
                 );
               })

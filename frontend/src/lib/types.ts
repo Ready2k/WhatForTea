@@ -72,6 +72,7 @@ export interface PantryAvailability {
 }
 
 export interface IngredientMatchDetail {
+  substitute_used?: string | null;
   ingredient_id?: string;
   raw_name: string;
   required_qty: number;

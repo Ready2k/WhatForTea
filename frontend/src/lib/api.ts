@@ -217,6 +217,48 @@ export function updateRecipe(recipeId: string, payload: any): Promise<Recipe> {
   });
 }
 
+// ── Cooking Sessions ──────────────────────────────────────────────────────────
+
+export interface CookingSession {
+  id: string;
+  recipe_id: string;
+  current_step: number;
+  completed_steps: number[];
+  timers: Record<string, { remaining_seconds: number; running: boolean }>;
+  started_at: string;
+  ended_at?: string | null;
+  recipe_title?: string | null;
+}
+
+export function createCookingSession(recipeId: string): Promise<CookingSession> {
+  return request<CookingSession>('/api/v1/cooking/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipe_id: recipeId }),
+  });
+}
+
+export function getActiveCookingSession(): Promise<CookingSession | null> {
+  return request<CookingSession | null>('/api/v1/cooking/sessions/active');
+}
+
+export function patchCookingSession(
+  sessionId: string,
+  data: { current_step?: number; completed_steps?: number[]; timers?: Record<string, unknown> },
+): Promise<CookingSession> {
+  return request<CookingSession>(`/api/v1/cooking/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function endCookingSession(sessionId: string): Promise<CookingSession> {
+  return request<CookingSession>(`/api/v1/cooking/sessions/${sessionId}/end`, {
+    method: 'POST',
+  });
+}
+
 export function rotateRecipePhoto(recipeId: string, index = 0): Promise<void> {
   return request<void>(`/api/v1/recipes/${recipeId}/photo/rotate?index=${index}`, {
     method: 'POST',
