@@ -48,6 +48,19 @@ function parseSubSteps(raw: string): SubStep[] {
   });
 }
 
+// ── Speaker icon SVG ──────────────────────────────────────────────────────────
+function SpeakerIcon({ muted, className }: { muted: boolean; className?: string }) {
+  return muted ? (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+    </svg>
+  ) : (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+    </svg>
+  );
+}
+
 // ── Bell icon SVG ─────────────────────────────────────────────────────────────
 function BellIcon({ className }: { className?: string }) {
   return (
@@ -68,8 +81,10 @@ export default function CookingModePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timerStates, setTimerStates] = useState<Record<string, StepTimerState>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
+  const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
   // KEY FIX: keep a ref so the setInterval closure always reads fresh timer state
   // without needing setState's functional-updater pattern (which can't produce side effects)
@@ -204,6 +219,32 @@ export default function CookingModePage() {
     timerStatesRef.current = updated;
     setTimerStates({ ...updated });
   }, []);
+
+  // ── Text-to-speech ────────────────────────────────────────────────────────
+  function speakStep() {
+    if (!hasSpeechSynth || !currentStep) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(currentStep.text);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopSpeaking() {
+    if (!hasSpeechSynth) return;
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  }
+
+  // Cancel speech when the user moves to a different step
+  useEffect(() => {
+    if (hasSpeechSynth) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex]);
 
   // ── Navigation ───────────────────────────────────────────────────────────
   const goNext = useCallback(() => setCurrentIndex((i) => Math.min(i + 1, total - 1)), [total]);
@@ -363,9 +404,22 @@ export default function CookingModePage() {
           <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-500/30">
             <span className="text-white font-bold text-sm">{currentIndex + 1}</span>
           </div>
-          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">
+          <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide flex-1">
             Step {currentIndex + 1} of {total}
           </p>
+          {hasSpeechSynth && (
+            <button
+              onClick={isSpeaking ? stopSpeaking : speakStep}
+              aria-label={isSpeaking ? 'Stop reading' : 'Read step aloud'}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                isSpeaking
+                  ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <SpeakerIcon muted={!isSpeaking} className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         <div className="space-y-3">
