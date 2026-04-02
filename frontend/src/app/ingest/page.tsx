@@ -238,9 +238,10 @@ export default function IngestPage() {
   async function handleCameraCapture(files: FileList | null) {
     try {
       if (!files || files.length === 0) return;
-      // Reset the input so the same button can be pressed again
+      // Extract the file BEFORE resetting the input — iOS Safari invalidates
+      // the FileList when input.value is cleared, turning files[0] into undefined.
+      const raw = files[0];
       if (cameraInputRef.current) cameraInputRef.current.value = '';
-      const [raw] = Array.from(files);
       let processed: File;
       try {
         processed = await processImage(raw);
