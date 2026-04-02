@@ -281,8 +281,11 @@ export default function IngestPage() {
     if (!files || files.length === 0) return;
     const raw = Array.from(files).slice(0, 2);
     const resized = await Promise.all(raw.map(processImage));
-    setSelectedFiles(resized);
+    
+    // Clear old previews
     previews.forEach((url) => URL.revokeObjectURL(url));
+    
+    setSelectedFiles(resized);
     setPreviews(resized.map((f) => URL.createObjectURL(f)));
   }
 
@@ -298,15 +301,17 @@ export default function IngestPage() {
     } catch {
       processed = raw;
     }
-    setSelectedFiles((prev) => {
-      const next = prev.length >= 2 ? [prev[0], processed] : [...prev, processed];
-      // Revoke old previews for replaced slot, create new ones
-      setPreviews((oldPreviews) => {
-        oldPreviews.forEach((u) => URL.revokeObjectURL(u));
-        return next.map((f) => URL.createObjectURL(f));
-      });
-      return next;
-    });
+    
+    const nextFiles = selectedFiles.length >= 2 
+      ? [selectedFiles[0], processed] 
+      : [...selectedFiles, processed];
+
+    // Update both states sequentially outside of callbacks
+    setSelectedFiles(nextFiles);
+    
+    // Revoke old previews and create new ones for the full set
+    previews.forEach((u) => URL.revokeObjectURL(u));
+    setPreviews(nextFiles.map((f) => URL.createObjectURL(f)));
   }
 
   const startPolling = useCallback((id: string) => {
