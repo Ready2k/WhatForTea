@@ -28,7 +28,7 @@ from app.schemas.ingest import (
     IngestReviewPayload,
     IngestStatusResponse,
 )
-from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary
+from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary, RecipeUpdate
 from app.services.images import rotate_image, save_manual_photo
 from app.services.ingestion import confirm_recipe, save_images
 
