@@ -31,6 +31,8 @@ FROM deps AS builder
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_RELEASE_ID=unknown
+ENV NEXT_PUBLIC_RELEASE_ID=${NEXT_PUBLIC_RELEASE_ID}
 RUN npm run build
 
 # ── Production ────────────────────────────────────────────────────────────────

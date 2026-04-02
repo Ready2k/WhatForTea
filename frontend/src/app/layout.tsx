@@ -36,6 +36,12 @@ export default function RootLayout({
             {children}
           </div>
           <Nav />
+          {/* Release version info */}
+          <div className="fixed bottom-16 left-2 z-40 p-1">
+            <span className="text-[10px] font-mono text-gray-300 dark:text-gray-600 select-none opacity-50 hover:opacity-100 transition-opacity">
+              {process.env.NEXT_PUBLIC_RELEASE_ID || 'dev'}
+            </span>
+          </div>
         </Providers>
       </body>
     </html>

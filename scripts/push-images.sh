@@ -103,6 +103,8 @@ build_and_push() {
         --target "${BUILD_TARGET}"
         --tag "${image}:${VERSION}"
         --build-arg "BUILD_SHA=${build_sha}"
+        --build-arg "RELEASE_ID=${VERSION}"
+        --build-arg "NEXT_PUBLIC_RELEASE_ID=${VERSION}"
         --push
     )
 
