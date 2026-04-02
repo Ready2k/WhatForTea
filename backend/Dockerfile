@@ -49,5 +49,4 @@ COPY . .
 RUN poetry install --only main --no-root
 
 EXPOSE 8000
-CMD ["poetry", "run", "uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["/bin/sh", "-c", "poetry run alembic upgrade head && poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
