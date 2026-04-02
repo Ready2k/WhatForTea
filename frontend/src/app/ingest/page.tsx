@@ -239,8 +239,7 @@ const FUN_MESSAGES: Record<ApiStatus, string[]> = {
 
 export default function IngestPage() {
   const [flowState, setFlowState] = useState<FlowState>('upload');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [capturedPhotos, setCapturedPhotos] = useState<{ file: File; url: string }[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [reviewPayload, setReviewPayload] = useState<IngestReviewPayload | null>(null);
   const [savedRecipeId, setSavedRecipeId] = useState<string | null>(null);
@@ -258,19 +257,11 @@ export default function IngestPage() {
   // Revoke preview URLs on unmount
   useEffect(() => {
     return () => {
-      previews.forEach((url) => URL.revokeObjectURL(url));
+      capturedPhotos.forEach((p) => URL.revokeObjectURL(p.url));
       if (pollRef.current) clearInterval(pollRef.current);
       if (tickerRef.current) clearInterval(tickerRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Synchronize previews with selectedFiles
-  useEffect(() => {
-    setPreviews((old) => {
-      old.forEach((url) => URL.revokeObjectURL(url));
-      return selectedFiles.map((f) => URL.createObjectURL(f));
-    });
-  }, [selectedFiles]);
 
   // Cycle fun messages while processing
   useEffect(() => {
@@ -289,7 +280,11 @@ export default function IngestPage() {
     if (!files || files.length === 0) return;
     const raw = Array.from(files).slice(0, 2);
     const resized = await Promise.all(raw.map(processImage));
-    setSelectedFiles(resized);
+    
+    setCapturedPhotos((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.url));
+      return resized.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
+    });
   }
 
   // Camera: accumulates up to 2 photos (each capture = one photo)
@@ -305,10 +300,14 @@ export default function IngestPage() {
       processed = raw;
     }
     
-    setSelectedFiles((prev) => {
-      return prev.length >= 2 
-        ? [prev[0], processed] 
-        : [...prev, processed];
+    setCapturedPhotos((prev) => {
+      const newItem = { file: processed, url: URL.createObjectURL(processed) };
+      if (prev.length >= 2) {
+        // Replace second photo
+        URL.revokeObjectURL(prev[1].url);
+        return [prev[0], newItem];
+      }
+      return [...prev, newItem];
     });
   }
 
@@ -345,11 +344,11 @@ export default function IngestPage() {
   }, []);
 
   async function handleUpload() {
-    if (selectedFiles.length !== 2) return;
+    if (capturedPhotos.length !== 2) return;
 
     // Duplicate check — compare pixel fingerprints before paying for a Bedrock call
     try {
-      const [fpA, fpB] = await Promise.all(selectedFiles.map(fingerprintImage));
+      const [fpA, fpB] = await Promise.all(capturedPhotos.map((p) => fingerprintImage(p.file)));
       const similarity = pixelSimilarity(fpA, fpB);
       if (similarity >= DUPLICATE_THRESHOLD) {
         setProcessingError(
@@ -362,7 +361,7 @@ export default function IngestPage() {
     }
 
     const fd = new FormData();
-    selectedFiles.forEach((f) => fd.append('images', f));
+    capturedPhotos.forEach((p) => fd.append('images', p.file));
 
     try {
       setApiStatus('uploading');
@@ -396,9 +395,10 @@ export default function IngestPage() {
     if (pollRef.current) clearInterval(pollRef.current);
     if (tickerRef.current) clearInterval(tickerRef.current);
     setFlowState('upload');
-    setSelectedFiles([]);
-    previews.forEach((url) => URL.revokeObjectURL(url));
-    setPreviews([]);
+    setCapturedPhotos((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.url));
+      return [];
+    });
     setJobId(null);
     setReviewPayload(null);
     setSavedRecipeId(null);
@@ -430,7 +430,7 @@ export default function IngestPage() {
           >
             <span className="text-3xl">📷</span>
             <span className="text-sm font-medium">
-              {selectedFiles.length === 0 ? 'Take Photo' : selectedFiles.length === 1 ? 'Add 2nd Photo' : 'Retake Photo'}
+              {capturedPhotos.length === 0 ? 'Take Photo' : capturedPhotos.length === 1 ? 'Add 2nd Photo' : 'Retake Photo'}
             </span>
           </button>
           <button
@@ -460,16 +460,15 @@ export default function IngestPage() {
         </div>
 
         {/* Previews */}
-        {previews.length > 0 && (
+        {capturedPhotos.length > 0 && (
           <div className="flex gap-3">
-            {previews.map((url, i) => (
+            {capturedPhotos.map((p, i) => (
               <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
-                <img src={url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                <img src={p.url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
                 <button
                   onClick={() => {
-                    URL.revokeObjectURL(url);
-                    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== i));
-                    setPreviews((prev) => prev.filter((_, idx) => idx !== i));
+                    URL.revokeObjectURL(p.url);
+                    setCapturedPhotos((prev) => prev.filter((_, idx) => idx !== i));
                   }}
                   className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-black/70"
                   aria-label="Remove photo"
@@ -484,17 +483,17 @@ export default function IngestPage() {
           </div>
         )}
 
-        {selectedFiles.length === 1 && (
+        {capturedPhotos.length === 1 && (
           <p className="text-sm text-center text-amber-600 dark:text-amber-400 font-medium">
             Add the other side of the card to continue
           </p>
         )}
         <button
           onClick={handleUpload}
-          disabled={selectedFiles.length !== 2 || ingestMutation.isPending}
+          disabled={capturedPhotos.length !== 2 || ingestMutation.isPending}
           className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          {ingestMutation.isPending ? 'Uploading...' : selectedFiles.length === 2 ? 'Upload & Process' : `${selectedFiles.length}/2 photos — add ${2 - selectedFiles.length} more`}
+          {ingestMutation.isPending ? 'Uploading...' : capturedPhotos.length === 2 ? 'Upload & Process' : `${capturedPhotos.length}/2 photos — add ${2 - capturedPhotos.length} more`}
         </button>
       </main>
     );
