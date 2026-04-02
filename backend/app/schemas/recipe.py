@@ -67,8 +67,15 @@ class RecipeIngredientUpdate(RecipeIngredientBase):
     pass
 
 
+class StepUpdate(BaseModel):
+    order: int
+    text: str
+    timer_seconds: Optional[int] = None
+
+
 class RecipeUpdate(BaseModel):
-    ingredients: list[RecipeIngredientUpdate]
+    ingredients: Optional[list[RecipeIngredientUpdate]] = None
+    steps: Optional[list[StepUpdate]] = None
 
 
 class Recipe(RecipeBase):

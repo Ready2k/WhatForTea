@@ -18,6 +18,7 @@ class IngredientMatchDetail(BaseModel):
     available_qty: float    # 0.0 if not in pantry
     score: float            # 0.0–1.0
     confidence: float       # pantry item live confidence; 0.0 if not in pantry
+    substitute_used: Optional[str] = None  # canonical name of substitute ingredient, if any
 
 
 class RecipeMatchResult(BaseModel):

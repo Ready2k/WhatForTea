@@ -387,13 +387,98 @@ def _format_text_export(zones: dict[str, list[ShoppingListItem]]) -> str:
     return "\n".join(lines).rstrip()
 
 
-# ── Zero-waste suggestions (scaffold) ─────────────────────────────────────────
+# ── Zero-waste suggestions ────────────────────────────────────────────────────
 
-async def zero_waste_suggestions(week_start: date, db: AsyncSession) -> list[dict]:
+async def zero_waste_suggestions(
+    week_start: date,
+    db: AsyncSession,
+    limit: int = 5,
+    min_coverage: float = 0.1,
+) -> list[dict]:
     """
-    Suggest recipes that use up pack-size leftovers.
-    Phase 6 scaffold — returns empty list; full logic in a future phase.
+    Suggest recipes that use up pack-size leftovers from this week's shopping.
+
+    Algorithm:
+    1. Generate the shopping list to find rounded_quantity − required_quantity
+       per ingredient (the amount bought that exceeds what the recipe needs).
+    2. Build a synthetic availability map from those leftover quantities.
+    3. Score every recipe not already in the week plan against that map.
+    4. Return the top `limit` recipes sorted by number of matching ingredients
+       then by coverage score (descending).
     """
-    # TODO: compute leftovers (rounded_quantity − required) and score remaining
-    #       recipes against those ingredients using the matcher
-    return []
+    from app.models.ingredient import Ingredient
+    from app.schemas.ingredient import Ingredient as IngredientSchema
+    from app.schemas.pantry import PantryAvailability
+    from app.services.matcher import get_category, score_recipe
+
+    # Generate the shopping list; silently return [] if no plan exists yet
+    try:
+        shopping_list = await generate_shopping_list(week_start, db)
+    except ValueError:
+        return []
+
+    # Build leftover map: ingredient_id → PantryAvailability (synthetic)
+    leftover_map: dict[uuid.UUID, PantryAvailability] = {}
+    for zone_items in shopping_list.zones.values():
+        for item in zone_items:
+            if item.ingredient_id is None or item.is_unresolved:
+                continue
+            leftover = item.rounded_quantity - item.quantity
+            if leftover < 0.01:
+                continue
+            ingredient = await db.get(Ingredient, item.ingredient_id)
+            if ingredient is None:
+                continue
+            leftover_map[item.ingredient_id] = PantryAvailability(
+                pantry_item_id=uuid.uuid4(),  # synthetic — no real pantry row
+                ingredient=IngredientSchema.model_validate(ingredient),
+                total_quantity=leftover,
+                reserved_quantity=0.0,
+                available_quantity=leftover,
+                confidence=1.0,
+                unit=item.unit,
+            )
+
+    if not leftover_map:
+        return []
+
+    # Collect recipe IDs already in the week plan so we can exclude them
+    try:
+        plan = await get_plan(week_start, db)
+        planned_ids = {entry.recipe_id for entry in plan.entries}
+    except ValueError:
+        planned_ids = set()
+
+    # Score every unplanned recipe against the leftover availability
+    stmt = select(Recipe).options(selectinload(Recipe.ingredients))
+    recipes = (await db.execute(stmt)).scalars().all()
+
+    suggestions = []
+    for recipe in recipes:
+        if recipe.id in planned_ids:
+            continue
+        # Quick pre-filter: skip recipes with no overlapping ingredients
+        leftover_hits = sum(
+            1 for ri in recipe.ingredients
+            if ri.ingredient_id and ri.ingredient_id in leftover_map
+        )
+        if leftover_hits == 0:
+            continue
+
+        result = await score_recipe(recipe, leftover_map, db)
+        if result.score < min_coverage * 100:
+            continue
+
+        suggestions.append({
+            "recipe": result.recipe.model_dump(),
+            "leftover_score": round(result.score, 1),
+            "leftover_ingredient_count": leftover_hits,
+            "category": get_category(result.score),
+        })
+
+    # Sort: most leftover ingredients used first, then by score
+    suggestions.sort(
+        key=lambda x: (x["leftover_ingredient_count"], x["leftover_score"]),
+        reverse=True,
+    )
+    return suggestions[:limit]

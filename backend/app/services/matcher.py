@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.metrics import match_score_histogram
-from app.models.ingredient import UnitConversion
+from app.models.ingredient import IngredientSubstitute, UnitConversion
 from app.models.recipe import Recipe
 from app.schemas.matcher import IngredientMatchDetail, RecipeMatchResult
 from app.schemas.pantry import PantryAvailability
@@ -80,6 +80,59 @@ async def _conversion_factor(
     return float(row.factor) if row else None
 
 
+# ── Substitute checking ───────────────────────────────────────────────────────
+
+async def _check_substitutes(
+    ingredient_id: Optional[uuid.UUID],
+    raw_name: str,
+    required_qty: float,
+    required_unit: Optional[str],
+    avail_map: dict[uuid.UUID, "PantryAvailability"],
+    db: AsyncSession,
+) -> Optional[IngredientMatchDetail]:
+    """
+    Look for a known substitute in the pantry when the primary ingredient is missing.
+    Returns the best-scoring IngredientMatchDetail with penalty applied, or None.
+    """
+    if ingredient_id is None:
+        return None
+
+    sub_stmt = select(IngredientSubstitute).where(
+        IngredientSubstitute.ingredient_id == ingredient_id
+    )
+    substitutes = (await db.execute(sub_stmt)).scalars().all()
+    if not substitutes:
+        return None
+
+    best_score = 0.0
+    best_detail: Optional[IngredientMatchDetail] = None
+
+    for sub in substitutes:
+        sub_avail = avail_map.get(sub.substitute_ingredient_id)
+        if sub_avail is None:
+            continue
+        factor = await _conversion_factor(required_unit, sub_avail.unit, db)
+        if factor is None:
+            continue
+        required_in_sub_units = required_qty * factor
+        s = ingredient_score(sub_avail.available_quantity, required_in_sub_units)
+        s_penalised = s * (1.0 - float(sub.penalty_score))
+        if s_penalised > best_score:
+            best_score = s_penalised
+            best_detail = IngredientMatchDetail(
+                ingredient_id=ingredient_id,
+                raw_name=raw_name,
+                required_qty=required_in_sub_units,
+                required_unit=sub_avail.unit,
+                available_qty=sub_avail.available_quantity,
+                score=round(s_penalised, 4),
+                confidence=sub_avail.confidence,
+                substitute_used=sub_avail.ingredient.canonical_name,
+            )
+
+    return best_detail if best_score > 0.0 else None
+
+
 # ── Core scoring ──────────────────────────────────────────────────────────────
 
 async def score_recipe(
@@ -101,7 +154,21 @@ async def score_recipe(
         required_unit = ri.normalized_unit or ri.unit
 
         if avail is None:
-            # Ingredient not in pantry at all
+            # Check for a known substitute in the pantry before marking as hard_missing
+            substitute_detail = await _check_substitutes(
+                ingredient_id=ri.ingredient_id,
+                raw_name=ri.raw_name,
+                required_qty=required_qty,
+                required_unit=required_unit,
+                avail_map=avail_map,
+                db=db,
+            )
+            if substitute_detail is not None:
+                scores.append(substitute_detail.score)
+                partial.append(substitute_detail)
+                continue
+
+            # Truly missing — no substitute available
             detail = IngredientMatchDetail(
                 ingredient_id=ri.ingredient_id,
                 raw_name=ri.raw_name,

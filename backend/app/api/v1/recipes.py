@@ -309,7 +309,9 @@ async def update_recipe(
     """
     from sqlalchemy.orm import selectinload
     from app.models.recipe import RecipeIngredient as RI
-    from app.services.normaliser import extract_unit_and_quantity, normalise_ingredient_name
+    from app.services.normaliser import resolve_ingredient
+
+    from app.models.recipe import Step as StepModel
 
     # Verify recipe exists
     stmt = (
@@ -321,39 +323,55 @@ async def update_recipe(
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    # 1. Delete existing ingredients
-    await db.execute(RI.__table__.delete().where(RI.recipe_id == recipe_id))
-    
-    # 2. Insert new ingredients and run normaliser logic (from ingestion.py)
-    new_ingredients = []
-    for idx, ing_update in enumerate(body.ingredients):
-        db_ing = RI(
-            recipe_id=recipe_id,
-            raw_name=ing_update.raw_name,
-            quantity=ing_update.quantity,
-            unit=ing_update.unit,
-            servings_quantities=ing_update.servings_quantities,
-        )
-        
-        # Apply layer 1 & 2 normalisation
-        norm_name = normalise_ingredient_name(db_ing.raw_name)
-        match_id = await db_ing.find_canonical_match(db, norm_name)
-        if match_id:
-            db_ing.ingredient_id = match_id
-            
-        unit_info = extract_unit_and_quantity(db_ing.raw_name, db_ing.quantity, db_ing.unit)
-        db_ing.normalized_quantity = unit_info.quantity
-        db_ing.normalized_unit = unit_info.unit
-        
-        new_ingredients.append(db_ing)
-        db.add(db_ing)
+    if body.ingredients is not None:
+        # Delete existing ingredients and replace
+        await db.execute(RI.__table__.delete().where(RI.recipe_id == recipe_id))
+        new_ingredients = []
+        for ing_update in body.ingredients:
+            # Re-run the normaliser against the new string.
+            # We skip LLM here for speed; if it's a completely new ingredient
+            # it will be added as unresolved and matched later if the user adds an alias.
+            match_result = await resolve_ingredient(
+                raw_name=ing_update.raw_name,
+                db=db,
+                use_llm=False
+            )
 
+            db_ing = RI(
+                recipe_id=recipe_id,
+                ingredient_id=match_result.ingredient.id if match_result.ingredient else None,
+                raw_name=ing_update.raw_name,
+                quantity=ing_update.quantity,
+                unit=ing_update.unit,
+                servings_quantities=ing_update.servings_quantities,
+            )
+            new_ingredients.append(db_ing)
+            db.add(db_ing)
+        logger.info("recipe ingredients updated", extra={"recipe_id": str(recipe_id), "count": len(new_ingredients)})
+
+    if body.steps is not None:
+        # Delete existing steps and replace
+        await db.execute(StepModel.__table__.delete().where(StepModel.recipe_id == recipe_id))
+        for step_update in body.steps:
+            db.add(StepModel(
+                recipe_id=recipe_id,
+                order=step_update.order,
+                text=step_update.text,
+                timer_seconds=step_update.timer_seconds,
+            ))
+        logger.info("recipe steps updated", extra={"recipe_id": str(recipe_id), "count": len(body.steps)})
+
+    await db.flush()
     await db.commit()
-    await db.refresh(recipe)
-    
-    logger.info("recipe ingredients updated", extra={"recipe_id": str(recipe_id), "count": len(new_ingredients)})
-    
-    # Return updated recipe matching the GET schema
+
+    # Re-fetch with fresh relationships
+    stmt2 = (
+        select(Recipe)
+        .options(selectinload(Recipe.ingredients), selectinload(Recipe.steps))
+        .where(Recipe.id == recipe_id)
+    )
+    recipe = (await db.execute(stmt2)).scalar_one()
+
     image_count = 1
     if recipe.hero_image_path:
         img_dir = Path(recipe.hero_image_path).parent

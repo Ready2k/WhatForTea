@@ -46,9 +46,14 @@ export default function RecipeDetailPage() {
   const [isRotating, setIsRotating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  // Edit State
+  // Ingredient edit state
   const [isEditing, setIsEditing] = useState(false);
   const [editIngredients, setEditIngredients] = useState<RecipeIngredient[]>([]);
+
+  // Step edit state
+  const [isEditingSteps, setIsEditingSteps] = useState(false);
+  const [editSteps, setEditSteps] = useState<Array<{ order: number; text: string; timer_seconds?: number }>>([]);
+
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (payload: { ingredients: Partial<RecipeIngredient>[] }) => updateRecipe(id, payload),
@@ -59,6 +64,18 @@ export default function RecipeDetailPage() {
     onError: (err) => {
       alert(`Failed to update recipe: ${err.message}`);
     }
+  });
+
+  const updateStepsMutation = useMutation({
+    mutationFn: (payload: { steps: Array<{ order: number; text: string; timer_seconds?: number }> }) =>
+      updateRecipe(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipe', id] });
+      setIsEditingSteps(false);
+    },
+    onError: (err) => {
+      alert(`Failed to update steps: ${(err as Error).message}`);
+    },
   });
 
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
@@ -444,27 +461,153 @@ export default function RecipeDetailPage() {
 
         {/* Steps */}
         <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Method</h2>
-          <ol className="space-y-3">
-            {sortedSteps.map((step, idx) => (
-              <li key={step.id} className="flex gap-3">
-                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-bold text-sm flex items-center justify-center">
-                  {idx + 1}
-                </span>
-                <div className="flex-1 pt-0.5">
-                  <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step.text}</p>
-                  {step.image_description && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1">{step.image_description}</p>
-                  )}
-                  {step.timer_seconds && (
-                    <span className="inline-block mt-1 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
-                      ⏱ {Math.round(step.timer_seconds / 60)} min timer
-                    </span>
-                  )}
-                </div>
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Method</h2>
+            {!isEditingSteps ? (
+              <button
+                onClick={() => {
+                  setEditSteps(sortedSteps.map((s) => ({ order: s.order, text: s.text, timer_seconds: s.timer_seconds })));
+                  setIsEditingSteps(true);
+                }}
+                disabled={isEditing}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 px-2 py-0.5 rounded transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              >
+                Edit
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => updateStepsMutation.mutate({ steps: editSteps })}
+                  disabled={updateStepsMutation.isPending}
+                  className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                >
+                  {updateStepsMutation.isPending ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => setIsEditingSteps(false)}
+                  disabled={updateStepsMutation.isPending}
+                  className="text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 px-2 py-0.5 rounded transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isEditingSteps ? (
+            <ol className="space-y-3">
+              {editSteps.map((step, idx) => (
+                <li key={idx} className="flex gap-2 items-start">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-bold text-sm flex items-center justify-center mt-1">
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 space-y-1.5">
+                    <textarea
+                      value={step.text}
+                      onChange={(e) => {
+                        const next = [...editSteps];
+                        next[idx] = { ...next[idx], text: e.target.value };
+                        setEditSteps(next);
+                      }}
+                      rows={3}
+                      className="w-full text-sm text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none leading-relaxed"
+                      placeholder="Step instructions"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                        <span>⏱</span>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="Timer (min)"
+                          value={step.timer_seconds ? Math.round(step.timer_seconds / 60) : ''}
+                          onChange={(e) => {
+                            const mins = parseFloat(e.target.value);
+                            const next = [...editSteps];
+                            next[idx] = { ...next[idx], timer_seconds: mins > 0 ? Math.round(mins * 60) : undefined };
+                            setEditSteps(next);
+                          }}
+                          className="w-24 bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        />
+                        <span>min</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 flex-shrink-0 mt-1">
+                    <button
+                      onClick={() => {
+                        if (idx === 0) return;
+                        const next = [...editSteps];
+                        [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                        next.forEach((s, i) => { s.order = i + 1; });
+                        setEditSteps(next);
+                      }}
+                      disabled={idx === 0}
+                      className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-20 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      aria-label="Move step up"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (idx === editSteps.length - 1) return;
+                        const next = [...editSteps];
+                        [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                        next.forEach((s, i) => { s.order = i + 1; });
+                        setEditSteps(next);
+                      }}
+                      disabled={idx === editSteps.length - 1}
+                      className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-20 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      aria-label="Move step down"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const next = editSteps.filter((_, i) => i !== idx);
+                        next.forEach((s, i) => { s.order = i + 1; });
+                        setEditSteps(next);
+                      }}
+                      className="w-6 h-6 flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      aria-label="Remove step"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                </li>
+              ))}
+              <li>
+                <button
+                  onClick={() => setEditSteps([...editSteps, { order: editSteps.length + 1, text: '' }])}
+                  className="w-full py-2 mt-1 border-2 border-dashed border-emerald-500/30 text-emerald-600 dark:text-emerald-500 text-sm font-semibold rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  Add Step
+                </button>
               </li>
-            ))}
-          </ol>
+            </ol>
+          ) : (
+            <ol className="space-y-3">
+              {sortedSteps.map((step, idx) => (
+                <li key={step.id} className="flex gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-bold text-sm flex items-center justify-center">
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 pt-0.5">
+                    <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step.text}</p>
+                    {step.image_description && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1">{step.image_description}</p>
+                    )}
+                    {step.timer_seconds && (
+                      <span className="inline-block mt-1 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
+                        ⏱ {Math.round(step.timer_seconds / 60)} min timer
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
 
         {/* CTA */}
