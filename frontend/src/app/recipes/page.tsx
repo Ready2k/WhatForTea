@@ -16,7 +16,7 @@ const FILTER_TABS = [
 ] as const;
 
 // ── Recipe card ───────────────────────────────────────────────────────────────
-function RecipeGridCard({ match, query }: { match: RecipeMatchResult; query: string }) {
+function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResult; query: string; showUrgency?: boolean }) {
   // Highlight matching text in title
   const title = match.recipe.title;
   const lq = query.toLowerCase();
@@ -58,6 +58,14 @@ function RecipeGridCard({ match, query }: { match: RecipeMatchResult; query: str
               ⏱ {match.recipe.cooking_time_mins} min
             </span>
           )}
+          {match.recipe.last_cooked_at && (() => {
+            const days = Math.floor((Date.now() - new Date(match.recipe.last_cooked_at!).getTime()) / 86400000);
+            return (
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                Cooked {days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`}
+              </span>
+            );
+          })()}
         </div>
 
         {match.recipe.mood_tags?.length > 0 && (
@@ -70,7 +78,14 @@ function RecipeGridCard({ match, query }: { match: RecipeMatchResult; query: str
           </div>
         )}
 
-        <MatchBadge score={match.score} category={match.category} />
+        {showUrgency && match.at_risk_ingredients && match.at_risk_ingredients.length > 0 ? (
+          <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
+            <span>⚠</span>
+            <span>Uses {match.at_risk_ingredients.length} expiring item{match.at_risk_ingredients.length > 1 ? 's' : ''}</span>
+          </div>
+        ) : (
+          <MatchBadge score={match.score} category={match.category} />
+        )}
       </div>
     </Link>
   );
@@ -94,12 +109,17 @@ function SkeletonCard() {
 function RecipesContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category') ?? undefined;
+  const initialSort = searchParams.get('sort');
 
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(initialCategory);
   const [query, setQuery] = useState('');
   const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
+  const [useItUp, setUseItUp] = useState(initialSort === 'use_it_up');
 
-  const { data: matches, isLoading, isError, refetch } = useMatches(selectedCategory);
+  const { data: matches, isLoading, isError, refetch } = useMatches(
+    selectedCategory,
+    useItUp ? 'use_it_up' : undefined,
+  );
 
   // Collect unique mood tags from current category results
   const allMoodTags = useMemo(() => {
@@ -179,6 +199,21 @@ function RecipesContent() {
             {tab.label}
           </button>
         ))}
+      </div>
+
+      {/* ── Use it up toggle ────────────────────────────────────────────────── */}
+      <div className="mb-3">
+        <button
+          onClick={() => setUseItUp((v) => !v)}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            useItUp
+              ? 'bg-orange-500 text-white shadow-sm shadow-orange-400/30'
+              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          }`}
+        >
+          <span>⚠</span>
+          Use it up
+        </button>
       </div>
 
       {/* ── Mood tag pills ───────────────────────────────────────────────────── */}
@@ -271,7 +306,7 @@ function RecipesContent() {
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {filtered.map((match) => (
-            <RecipeGridCard key={match.recipe.id} match={match} query={query.trim()} />
+            <RecipeGridCard key={match.recipe.id} match={match} query={query.trim()} showUrgency={useItUp} />
           ))}
         </div>
       )}

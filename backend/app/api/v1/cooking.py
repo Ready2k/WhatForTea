@@ -1,18 +1,20 @@
 """
-Cooking Session API — create, track, and end cooking sessions.
+Cooking Session API — create, track, end, and review cooking history.
 """
 import logging
 import uuid
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.session import CookingSession, CookingSessionCreate, CookingSessionPatch
+from app.schemas.session import CookingSession, CookingSessionCreate, CookingSessionEnd, CookingSessionPatch
 from app.services.cooking import (
     create_session,
     end_session,
     get_active_session,
+    get_history,
     patch_session,
 )
 
@@ -34,11 +36,21 @@ async def start_cooking_session(
 
 @router.get("/sessions/active", response_model=CookingSession | None)
 async def get_active_cooking_session(db: AsyncSession = Depends(get_db)):
-    """
-    Return the most recent active (non-ended) cooking session, or null.
-    Used on the dashboard to offer a resume prompt.
-    """
+    """Return the most recent active (non-ended) cooking session, or null."""
     return await get_active_session(db)
+
+
+@router.get("/history", response_model=list[CookingSession])
+async def get_cooking_history(
+    recipe_id: Optional[uuid.UUID] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return confirmed cooking sessions, newest first.
+    Optionally filter by recipe_id.
+    """
+    return await get_history(db, recipe_id=recipe_id, limit=limit)
 
 
 @router.patch("/sessions/{session_id}", response_model=CookingSession)
@@ -47,7 +59,7 @@ async def update_cooking_session(
     body: CookingSessionPatch,
     db: AsyncSession = Depends(get_db),
 ):
-    """Update step progress and timer state for an active cooking session."""
+    """Update step progress, notes, or rating for an active cooking session."""
     try:
         return await patch_session(session_id, body, db)
     except ValueError as exc:
@@ -57,10 +69,14 @@ async def update_cooking_session(
 @router.post("/sessions/{session_id}/end", response_model=CookingSession)
 async def finish_cooking_session(
     session_id: uuid.UUID,
+    body: CookingSessionEnd = CookingSessionEnd(),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark a cooking session as ended."""
+    """
+    End a cooking session.
+    Pass confirmed=true to consume pantry ingredients and record as a cook.
+    """
     try:
-        return await end_session(session_id, db)
+        return await end_session(session_id, body, db)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

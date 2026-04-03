@@ -12,11 +12,11 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 1.1 — Zero-Waste Suggestions | ✅ Complete | `zero_waste_suggestions()` implemented; computes leftover = rounded_qty − required; scores recipes against leftover map; endpoint live |
 | 1.2 — Ingredient Substitution | ✅ Complete | `_check_substitutes()` in matcher; seeded 7 common substitutes via migration `b2c3d4e5f6a7`; `substitute_used` shown in recipe detail |
 | 1.3 — Cooking Session Persistence | ✅ Complete | New `/api/v1/cooking/sessions` CRUD; cook page creates/patches/ends sessions; resume banner on dashboard |
-| 2.1 — Cook History & Recipe Log | Pending | |
-| 2.2 — Ratings & Notes | Pending | Depends on 2.1 |
-| 2.3 — "Use It Up" Mode | Pending | |
-| 2.4 — Duplicate Recipe Detection | Pending | |
-| 2.5 — Batch Pantry Refresh | Pending | |
+| 2.1 — Cook History & Recipe Log | ✅ Complete | `GET /cooking/history`; cook history section on recipe detail page |
+| 2.2 — Ratings & Notes | ✅ Complete | 5-star overlay + notes textarea at cook end; shown on recipe detail |
+| 2.3 — "Use It Up" Mode | ✅ Complete | `score_all_recipes_use_it_up()`; orange toggle on recipes page; dashboard banner |
+| 2.4 — Duplicate Recipe Detection | ✅ Complete | dHash fingerprint on confirm; 409 with "Save anyway" modal; `force=true` bypass |
+| 2.5 — Batch Pantry Refresh | ✅ Complete | `POST /pantry/bulk-confirm`; shopping list is tap-to-tick with floating "Mark N as bought" / "I bought everything" bar |
 
 ---
 

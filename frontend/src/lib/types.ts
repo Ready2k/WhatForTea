@@ -40,6 +40,10 @@ export interface Recipe {
   created_at: string;
   ingredients: RecipeIngredient[];
   steps: Step[];
+  total_cooks: number;
+  average_rating?: number | null;
+  recent_notes: string[];
+  last_cooked_at?: string | null;
 }
 
 export interface RecipeSummary {
@@ -48,6 +52,7 @@ export interface RecipeSummary {
   hero_image_path?: string;
   cooking_time_mins?: number;
   mood_tags: string[];
+  last_cooked_at?: string | null;
 }
 
 export interface PantryItem {

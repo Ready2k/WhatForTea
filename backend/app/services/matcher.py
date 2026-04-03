@@ -243,6 +243,61 @@ async def score_recipe(
     )
 
 
+async def score_all_recipes_use_it_up(db: AsyncSession) -> list[RecipeMatchResult]:
+    """
+    Score recipes by how many at-risk (low-confidence) pantry ingredients they consume.
+    Returns results sorted by urgency_score descending.
+    """
+    from functools import lru_cache
+    from pathlib import Path
+    import yaml
+
+    settings_path = Path(__file__).parent.parent.parent / "agent_config" / "agent_settings.yaml"
+    with open(settings_path) as f:
+        cfg = yaml.safe_load(f)
+    threshold = float(cfg.get("use_it_up_confidence_threshold", 0.5))
+
+    from app.services.pantry import get_available
+    availability = await get_available(db)
+    avail_map: dict[uuid.UUID, PantryAvailability] = {a.ingredient.id: a for a in availability}
+
+    # Identify at-risk ingredients
+    at_risk: dict[uuid.UUID, PantryAvailability] = {
+        iid: a for iid, a in avail_map.items() if a.confidence < threshold
+    }
+
+    stmt = select(Recipe).options(selectinload(Recipe.ingredients))
+    recipes = (await db.execute(stmt)).scalars().all()
+
+    results = []
+    for recipe in recipes:
+        result = await score_recipe(recipe, avail_map, db)
+
+        # Compute urgency: which at-risk ingredients does this recipe use?
+        hits = [
+            ri for ri in recipe.ingredients
+            if ri.ingredient_id and ri.ingredient_id in at_risk
+        ]
+        if not hits:
+            result.urgency_score = 0.0
+            result.at_risk_ingredients = []
+        else:
+            # Urgency = sum of (required / pantry_total) for at-risk ingredients, normalised to 100
+            urgency = sum(
+                min(float(ri.quantity) / max(at_risk[ri.ingredient_id].total_quantity, 0.001), 1.0)
+                for ri in hits
+                if ri.ingredient_id
+            )
+            result.urgency_score = round(min(urgency / len(hits) * 100, 100.0), 1)
+            result.at_risk_ingredients = [ri.raw_name for ri in hits]
+
+        results.append(result)
+
+    # Sort by number of at-risk ingredients used (desc), then urgency score (desc)
+    results.sort(key=lambda r: (len(r.at_risk_ingredients), r.urgency_score), reverse=True)
+    return results
+
+
 async def score_all_recipes(db: AsyncSession) -> list[RecipeMatchResult]:
     """
     Score every recipe in the database against the current pantry availability.

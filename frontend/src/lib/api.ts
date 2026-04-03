@@ -113,9 +113,12 @@ export function fetchRecipe(id: string): Promise<Recipe> {
   return request<Recipe>(`/api/v1/recipes/${id}`);
 }
 
-export function fetchMatches(category?: string): Promise<RecipeMatchResult[]> {
-  const params = category ? `?category=${encodeURIComponent(category)}` : '';
-  return request<RecipeMatchResult[]>(`/api/v1/recipes/match${params}`);
+export function fetchMatches(category?: string, sort?: 'use_it_up'): Promise<RecipeMatchResult[]> {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (sort) params.set('sort', sort);
+  const qs = params.toString();
+  return request<RecipeMatchResult[]>(`/api/v1/recipes/match${qs ? `?${qs}` : ''}`);
 }
 
 export function fetchPantry(): Promise<PantryItem[]> {
@@ -136,6 +139,14 @@ export function upsertPantryItem(data: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+  });
+}
+
+export function bulkConfirmPantry(items: Array<{ ingredient_id: string; quantity: number; unit: string }>): Promise<PantryItem[]> {
+  return request<PantryItem[]>('/api/v1/pantry/bulk-confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
   });
 }
 
@@ -189,12 +200,23 @@ export function getIngestReview(jobId: string): Promise<IngestReviewPayload> {
   return request<IngestReviewPayload>(`/api/v1/recipes/ingest/${jobId}/review`);
 }
 
-export function confirmIngest(jobId: string, recipe: any): Promise<Recipe> {
-  return request<Recipe>(`/api/v1/recipes/ingest/confirm/${jobId}`, {
+export async function confirmIngest(jobId: string, recipe: any, force = false): Promise<Recipe> {
+  const url = `/api/v1/recipes/ingest/confirm/${jobId}${force ? '?force=true' : ''}`;
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ recipe }),
   });
+  if (!res.ok) {
+    let body: any = {};
+    try { body = await res.json(); } catch { /* ignore */ }
+    const err: any = new Error(body?.error?.message ?? `HTTP ${res.status}`);
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+  return res.json() as Promise<Recipe>;
 }
 
 export function resolveRecipeIngredient(
@@ -253,10 +275,21 @@ export function patchCookingSession(
   });
 }
 
-export function endCookingSession(sessionId: string): Promise<CookingSession> {
+export function endCookingSession(
+  sessionId: string,
+  data: { confirmed?: boolean; servings_cooked?: number } = {},
+): Promise<CookingSession> {
   return request<CookingSession>(`/api/v1/cooking/sessions/${sessionId}/end`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
   });
+}
+
+export function getCookingHistory(recipeId?: string, limit = 20): Promise<CookingSession[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (recipeId) params.set('recipe_id', recipeId);
+  return request<CookingSession[]>(`/api/v1/cooking/history?${params}`);
 }
 
 export function rotateRecipePhoto(recipeId: string, index = 0): Promise<void> {

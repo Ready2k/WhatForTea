@@ -14,12 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.pantry import PantryItem
 from app.schemas.pantry import (
+    BulkPantryConfirmRequest,
     PantryAvailability,
     PantryItem as PantryItemSchema,
     PantryItemCreate,
     PantryItemUpdate,
 )
 from app.services.pantry import (
+    bulk_confirm_pantry,
     confirm_pantry_item,
     delete_pantry_item,
     get_available,
@@ -81,6 +83,16 @@ async def confirm_item(item_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
         return await confirm_pantry_item(item_id, db)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/bulk-confirm", response_model=list[PantryItemSchema], status_code=status.HTTP_200_OK)
+async def bulk_confirm(body: BulkPantryConfirmRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Upsert multiple pantry items in a single call.
+    Used by the shopping list batch "Mark as bought" action.
+    Items without a pantry entry are created; existing items are updated with confidence reset to 1.0.
+    """
+    return await bulk_confirm_pantry(body.items, db)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

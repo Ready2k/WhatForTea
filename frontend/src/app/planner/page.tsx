@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useCurrentPlan, useRecipes, useSetWeekPlan, useShoppingList, useUpsertPantryItem } from '@/lib/hooks';
+import { useState, useMemo } from 'react';
+import { useCurrentPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -30,7 +30,7 @@ export default function PlannerPage() {
   const { data: recipes } = useRecipes();
   const setWeekPlanMutation = useSetWeekPlan();
   const { data: shoppingList, isLoading: shopLoading, isError: shopError, refetch: refetchShopping } = useShoppingList();
-  const upsertMutation = useUpsertPantryItem();
+  const bulkConfirmMutation = useBulkConfirmPantry();
 
   // Merge server plan with local overrides
   const resolvedPlan: Record<number, string | null> = {};
@@ -75,6 +75,12 @@ export default function PlannerPage() {
     }
   }
 
+  // Flat list of all shopping items for bulk operations
+  const allItems = useMemo<ShoppingListItem[]>(() => {
+    if (!shoppingList) return [];
+    return Object.values(shoppingList.zones).flat();
+  }, [shoppingList]);
+
   function toggleItem(key: string) {
     setCheckedItems((prev) => {
       const next = new Set(prev);
@@ -84,20 +90,36 @@ export default function PlannerPage() {
     });
   }
 
-  async function handleBought(item: ShoppingListItem) {
-    const checkedKey = item.ingredient_id ?? item.canonical_name;
-    if (item.ingredient_id) {
-      // Matched item → add to pantry, then tick box
-      try {
-        await upsertMutation.mutateAsync({
-          ingredient_id: item.ingredient_id,
-          quantity: item.rounded_quantity,
-          unit: item.rounded_unit,
-        });
-      } catch { /* pantry update failed — still tick the box */ }
+  function itemKey(item: ShoppingListItem) {
+    return item.ingredient_id ?? item.canonical_name;
+  }
+
+  async function handleMarkCheckedAsBought() {
+    const toConfirm = allItems.filter(
+      (item) => item.ingredient_id && checkedItems.has(itemKey(item)),
+    ).map((item) => ({
+      ingredient_id: item.ingredient_id!,
+      quantity: item.rounded_quantity,
+      unit: item.rounded_unit,
+    }));
+    if (toConfirm.length > 0) {
+      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* show nothing extra */ }
     }
-    // Always tick the box (works for both matched and unmatched items)
-    toggleItem(checkedKey);
+  }
+
+  async function handleMarkAllAsBought() {
+    const allKeys = new Set(allItems.map(itemKey));
+    setCheckedItems(allKeys);
+    const toConfirm = allItems
+      .filter((item) => item.ingredient_id)
+      .map((item) => ({
+        ingredient_id: item.ingredient_id!,
+        quantity: item.rounded_quantity,
+        unit: item.rounded_unit,
+      }));
+    if (toConfirm.length > 0) {
+      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* show nothing extra */ }
+    }
   }
 
   return (
@@ -318,7 +340,7 @@ export default function PlannerPage() {
               </div>
 
               {/* Zones */}
-              <div className="space-y-4">
+              <div className="space-y-4 pb-24">
                 {Object.entries(shoppingList.zones).map(([zone, items]) => (
                   <details key={zone} open className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                     <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 select-none capitalize">
@@ -326,21 +348,20 @@ export default function PlannerPage() {
                     </summary>
                     <ul className="divide-y divide-gray-50 dark:divide-gray-700">
                       {items.map((item, itemIdx) => {
-                        // Stable key: prefer ingredient_id, fall back to zone+name+index
-                        const itemKey = item.ingredient_id ?? `${zone}-${item.canonical_name}-${itemIdx}`;
-                        // Checked state uses same key so all items are tick-able regardless of match status
-                        const checkedKey = item.ingredient_id ?? item.canonical_name;
-                        const isChecked = checkedItems.has(checkedKey);
+                        const key = item.ingredient_id ?? `${zone}-${item.canonical_name}-${itemIdx}`;
+                        const ck = itemKey(item);
+                        const isChecked = checkedItems.has(ck);
                         return (
                           <li
-                            key={itemKey}
-                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50 opacity-60' : ''}`}
+                            key={key}
+                            onClick={() => toggleItem(ck)}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
                           >
                             <input
                               type="checkbox"
                               checked={isChecked}
-                              onChange={() => toggleItem(checkedKey)}
-                              className="w-4 h-4 accent-emerald-600 flex-shrink-0"
+                              onChange={() => {}}
+                              className="w-4 h-4 accent-emerald-600 flex-shrink-0 pointer-events-none"
                             />
                             <div className="flex-1 min-w-0">
                               <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
@@ -350,13 +371,6 @@ export default function PlannerPage() {
                                 {item.rounded_quantity} {item.rounded_unit}
                               </span>
                             </div>
-                             <button
-                                onClick={() => handleBought(item)}
-                                disabled={upsertMutation.isPending && !!item.ingredient_id}
-                                className="text-xs text-emerald-600 hover:text-emerald-800 dark:hover:text-emerald-400 font-medium whitespace-nowrap disabled:opacity-40"
-                              >
-                                Bought
-                              </button>
                           </li>
                         );
                       })}
@@ -371,6 +385,41 @@ export default function PlannerPage() {
                   </div>
                 )}
               </div>
+
+              {/* Floating bottom bar */}
+              {allItems.length > 0 && (
+                <div className="fixed bottom-16 left-0 right-0 flex justify-center pointer-events-none">
+                  <div className="pointer-events-auto mx-4 max-w-lg w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg px-4 py-3 flex gap-2">
+                    {checkedItems.size > 0 ? (
+                      <>
+                        <button
+                          onClick={handleMarkCheckedAsBought}
+                          disabled={bulkConfirmMutation.isPending}
+                          className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                        >
+                          {bulkConfirmMutation.isPending
+                            ? 'Saving...'
+                            : `Mark ${checkedItems.size} as bought`}
+                        </button>
+                        <button
+                          onClick={() => setCheckedItems(new Set())}
+                          className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleMarkAllAsBought}
+                        disabled={bulkConfirmMutation.isPending}
+                        className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      >
+                        I bought everything
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

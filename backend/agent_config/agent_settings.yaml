@@ -20,3 +20,7 @@ retry_delay_seconds: 5
 # Fuzzy match score below which the LLM assist is triggered (0.0–1.0)
 fuzzy_threshold_auto_accept: 0.85
 fuzzy_threshold_llm_assist: 0.60
+
+# ── "Use it up" mode ──────────────────────────────────────────────────────────
+# Pantry items with confidence below this threshold are considered "at risk"
+use_it_up_confidence_threshold: 0.5

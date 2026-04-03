@@ -30,7 +30,7 @@ from app.schemas.ingest import (
 )
 from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary, RecipeUpdate
 from app.services.images import rotate_image, save_manual_photo
-from app.services.ingestion import confirm_recipe, save_images
+from app.services.ingestion import confirm_recipe, save_images, DuplicateRecipeError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/recipes", tags=["recipes"])
@@ -180,13 +180,23 @@ async def confirm_ingest(
     job_id: uuid.UUID,
     body: IngestConfirmRequest,
     db: AsyncSession = Depends(get_db),
+    force: bool = False,
 ):
     """
     Confirm the parsed recipe (optionally edited) and insert it into the database.
-    All ingredients must have ingredient_id set; return 422 for unresolved ones.
+    Pass ?force=true to save even if a near-duplicate image is detected.
     """
     try:
-        recipe = await confirm_recipe(job_id=job_id, recipe_data=body.recipe, db=db)
+        recipe = await confirm_recipe(job_id=job_id, recipe_data=body.recipe, db=db, force=force)
+    except DuplicateRecipeError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "DUPLICATE_RECIPE",
+                "duplicate_recipe_id": str(exc.recipe_id),
+                "duplicate_recipe_title": exc.recipe_title,
+            },
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     return recipe
@@ -201,9 +211,16 @@ async def list_recipes(
     limit: int = 50,
 ):
     """List all recipes (lightweight summary cards), newest first."""
+    from app.services.cooking import get_recipe_stats
     stmt = select(Recipe).order_by(Recipe.created_at.desc()).offset(skip).limit(limit)
     rows = (await db.execute(stmt)).scalars().all()
-    return rows
+    results = []
+    for recipe in rows:
+        summary = RecipeSummary.model_validate(recipe)
+        stats = await get_recipe_stats(recipe.id, db)
+        summary.last_cooked_at = stats["last_cooked_at"]
+        results.append(summary)
+    return results
 
 
 
@@ -292,8 +309,15 @@ async def get_recipe(
         if img_dir.exists():
             image_count = len(list(img_dir.glob("image_*")))
 
+    from app.services.cooking import get_recipe_stats
+    stats = await get_recipe_stats(recipe_id, db)
+
     result = RecipeSchema.model_validate(recipe)
     result.image_count = image_count
+    result.total_cooks = stats["total_cooks"]
+    result.average_rating = stats["average_rating"]
+    result.recent_notes = stats["recent_notes"]
+    result.last_cooked_at = stats["last_cooked_at"]
     return result
 
 

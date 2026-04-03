@@ -35,6 +35,10 @@ class PantryItem(PantryItemBase):
     model_config = {"from_attributes": True}
 
 
+class BulkPantryConfirmRequest(BaseModel):
+    items: list[PantryItemCreate]
+
+
 class PantryAvailability(BaseModel):
     """Result of GET /api/v1/pantry/available"""
     pantry_item_id: uuid.UUID

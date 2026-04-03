@@ -31,6 +31,7 @@ class Recipe(Base):
     )
     source_reference: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     mood_tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default="{}")
+    image_fingerprint: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

@@ -127,6 +127,40 @@ async def confirm_pantry_item(item_id: uuid.UUID, db: AsyncSession) -> PantryIte
     return item
 
 
+async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -> list[PantryItem]:
+    """
+    Upsert multiple pantry items in a single transaction.
+    Used by the shopping list "Mark as bought" batch action.
+    Returns the upserted items.
+    """
+    results = []
+    for item_data in items:
+        stmt = select(PantryItem).where(PantryItem.ingredient_id == item_data.ingredient_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing:
+            existing.quantity = item_data.quantity
+            existing.unit = item_data.unit
+            existing.confidence = 1.0
+            existing.decay_rate = item_data.decay_rate
+            existing.last_confirmed_at = datetime.now(timezone.utc)
+            results.append(existing)
+        else:
+            item = PantryItem(
+                ingredient_id=item_data.ingredient_id,
+                quantity=item_data.quantity,
+                unit=item_data.unit,
+                confidence=1.0,
+                decay_rate=item_data.decay_rate,
+                last_confirmed_at=datetime.now(timezone.utc),
+            )
+            db.add(item)
+            results.append(item)
+    await db.commit()
+    for item in results:
+        await db.refresh(item)
+    return results
+
+
 async def delete_pantry_item(item_id: uuid.UUID, db: AsyncSession) -> None:
     """Delete a pantry item. Raises ValueError if not found."""
     item = await db.get(PantryItem, item_id)

@@ -9,8 +9,8 @@ import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
 import { rotateRecipePhoto, uploadRecipePhoto } from '@/lib/api';
 import type { IngredientMatchDetail, RecipeIngredient, Recipe } from '@/lib/types';
-import { updateRecipe } from '@/lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { updateRecipe, getCookingHistory } from '@/lib/api';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 function IngredientScore({ detail }: { detail: IngredientMatchDetail | undefined; name: string }) {
   if (!detail) return <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>;
@@ -81,6 +81,11 @@ export default function RecipeDetailPage() {
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { data: matches } = useMatches();
   const deleteMutation = useDeleteRecipe();
+  const { data: cookHistory } = useQuery({
+    queryKey: ['cookHistory', id],
+    queryFn: () => getCookingHistory(id, 5),
+    enabled: !!id,
+  });
 
   const matchData = matches?.find((m) => m.recipe.id === id);
 
@@ -290,9 +295,17 @@ export default function RecipeDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{recipe.title}</h1>
             {matchData && <MatchBadge score={matchData.score} category={matchData.category} />}
           </div>
-          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
             {recipe.cooking_time_mins && <span>⏱ {recipe.cooking_time_mins} min</span>}
             <span>👥 Serves {recipe.base_servings}</span>
+            {recipe.total_cooks > 0 && (
+              <span className="flex items-center gap-1">
+                {recipe.average_rating != null ? (
+                  <span className="text-amber-500">{'★'.repeat(Math.round(recipe.average_rating))}{'☆'.repeat(5 - Math.round(recipe.average_rating))}</span>
+                ) : null}
+                <span>{recipe.total_cooks} cook{recipe.total_cooks !== 1 ? 's' : ''}</span>
+              </span>
+            )}
           </div>
           {recipe.mood_tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -614,6 +627,36 @@ export default function RecipeDetailPage() {
             </ol>
           )}
         </div>
+
+        {/* Cook history */}
+        {cookHistory && cookHistory.length > 0 && (
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Cook History</h2>
+            <ul className="space-y-2">
+              {cookHistory.map((session) => {
+                const date = new Date(session.ended_at!);
+                const daysAgo = Math.floor((Date.now() - date.getTime()) / 86400000);
+                const label = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`;
+                return (
+                  <li key={session.id} className="flex items-start gap-3 py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 w-24 flex-shrink-0 pt-0.5">{label}</span>
+                    <div className="flex-1 min-w-0">
+                      {session.rating != null && (
+                        <span className="text-amber-500 text-sm">{'★'.repeat(session.rating)}{'☆'.repeat(5 - session.rating)}</span>
+                      )}
+                      {session.servings_cooked && (
+                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{session.servings_cooked} servings</span>
+                      )}
+                      {session.notes && (
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 italic">"{session.notes}"</p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
 
         {/* CTA */}
         <Link

@@ -8,6 +8,7 @@ import {
   fetchPantry,
   fetchAvailable,
   upsertPantryItem,
+  bulkConfirmPantry,
   confirmPantryItem,
   deletePantryItem,
   deleteRecipe,
@@ -49,10 +50,10 @@ export function useRecipe(id: string) {
   });
 }
 
-export function useMatches(category?: string) {
+export function useMatches(category?: string, sort?: 'use_it_up') {
   return useQuery({
-    queryKey: ['matches', category],
-    queryFn: () => fetchMatches(category),
+    queryKey: ['matches', category, sort],
+    queryFn: () => fetchMatches(category, sort),
     staleTime: 30_000,
   });
 }
@@ -89,6 +90,18 @@ export function useUpsertPantryItem() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: upsertPantryItem,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pantry'] });
+      qc.invalidateQueries({ queryKey: ['available'] });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+export function useBulkConfirmPantry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: bulkConfirmPantry,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pantry'] });
       qc.invalidateQueries({ queryKey: ['available'] });

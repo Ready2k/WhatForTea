@@ -85,6 +85,11 @@ class Recipe(RecipeBase):
     created_at: datetime
     ingredients: list[RecipeIngredient] = []
     steps: list[Step] = []
+    # Cook stats — populated by the GET /recipes/{id} handler
+    total_cooks: int = 0
+    average_rating: Optional[float] = None
+    recent_notes: list[str] = []
+    last_cooked_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -96,5 +101,6 @@ class RecipeSummary(BaseModel):
     hero_image_path: Optional[str] = None
     cooking_time_mins: Optional[int] = None
     mood_tags: list[str] = []
+    last_cooked_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

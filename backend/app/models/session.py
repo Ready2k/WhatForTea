@@ -23,6 +23,10 @@ class CookingSession(Base):
     )
     # JSON: { "<step_order>": { "seconds_remaining": int, "started_at": iso_string } }
     timers: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
+    confirmed_cook: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
+    servings_cooked: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    rating: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

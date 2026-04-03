@@ -83,6 +83,10 @@ export default function CookingModePage() {
   const [timerStates, setTimerStates] = useState<Record<string, StepTimerState>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [pendingRating, setPendingRating] = useState(0);
+  const [pendingNotes, setPendingNotes] = useState('');
+  const [isSavingRating, setIsSavingRating] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const patchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -519,13 +523,7 @@ export default function CookingModePage() {
       <footer className="px-4 pb-8 pt-3 max-w-lg mx-auto w-full space-y-3">
         {isLast && (
           <button
-            onClick={async () => {
-              if (sessionIdRef.current) {
-                await endCookingSession(sessionIdRef.current).catch(() => {});
-                sessionIdRef.current = null;
-              }
-              router.push(`/recipes/${id}`);
-            }}
+            onClick={() => setShowRating(true)}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-md shadow-emerald-500/30"
           >
             Finish Cooking
@@ -554,6 +552,86 @@ export default function CookingModePage() {
           )}
         </div>
       </footer>
+
+      {/* Post-cook rating overlay */}
+      {showRating && (
+        <div className="fixed inset-0 z-[10000] bg-gray-900/95 flex flex-col items-center justify-center px-6 text-white">
+          <div className="w-full max-w-sm space-y-6">
+            <div className="text-center space-y-1">
+              <p className="text-4xl">🎉</p>
+              <h2 className="text-xl font-bold">Nice work!</h2>
+              <p className="text-sm text-gray-400">How did <span className="text-white font-medium">{recipe.title}</span> turn out?</p>
+            </div>
+
+            {/* Star rating */}
+            <div className="flex justify-center gap-3">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setPendingRating(star)}
+                  className={`text-4xl transition-transform hover:scale-110 active:scale-95 ${
+                    star <= pendingRating ? 'text-amber-400' : 'text-gray-600'
+                  }`}
+                  aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+
+            {/* Notes */}
+            <textarea
+              value={pendingNotes}
+              onChange={(e) => setPendingNotes(e.target.value)}
+              placeholder="Any notes for next time? (optional)"
+              rows={3}
+              className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+            />
+
+            {/* Actions */}
+            <div className="space-y-3">
+              <button
+                disabled={isSavingRating}
+                onClick={async () => {
+                  setIsSavingRating(true);
+                  try {
+                    if (sessionIdRef.current) {
+                      // Save rating and notes first
+                      if (pendingRating > 0 || pendingNotes.trim()) {
+                        await patchCookingSession(sessionIdRef.current, {
+                          rating: pendingRating > 0 ? pendingRating : undefined,
+                          notes: pendingNotes.trim() || undefined,
+                        }).catch(() => {});
+                      }
+                      await endCookingSession(sessionIdRef.current, { confirmed: true }).catch(() => {});
+                      sessionIdRef.current = null;
+                    }
+                  } finally {
+                    setIsSavingRating(false);
+                    router.push(`/recipes/${id}`);
+                  }
+                }}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold rounded-2xl transition-colors"
+              >
+                {isSavingRating ? 'Saving…' : 'Done'}
+              </button>
+              <button
+                disabled={isSavingRating}
+                onClick={async () => {
+                  if (sessionIdRef.current) {
+                    await endCookingSession(sessionIdRef.current, { confirmed: false }).catch(() => {});
+                    sessionIdRef.current = null;
+                  }
+                  router.push(`/recipes/${id}`);
+                }}
+                className="w-full py-2 text-gray-400 hover:text-gray-200 text-sm transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast alerts */}
       <div className="fixed bottom-24 left-0 right-0 flex flex-col items-center gap-2 z-[9998] pointer-events-none px-6">

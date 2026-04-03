@@ -187,6 +187,7 @@ export default function IngestPage() {
   const [savedRecipeId, setSavedRecipeId] = useState<string | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<{ id: string; title: string } | null>(null);
   const [apiStatus, setApiStatus] = useState<ApiStatus>('uploading');
   const [funMessageIdx, setFunMessageIdx] = useState(0);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -331,15 +332,22 @@ export default function IngestPage() {
     }
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(force = false) {
     if (!jobId || !reviewPayload) return;
     setConfirmLoading(true);
     try {
-      const recipe = await confirmIngest(jobId, reviewPayload.parsed_recipe);
+      const recipe = await confirmIngest(jobId, reviewPayload.parsed_recipe, force);
       setSavedRecipeId(recipe.id);
       setFlowState('done');
     } catch (err: any) {
-      setProcessingError(err.message ?? 'Confirmation failed');
+      if (err.status === 409 && err.body?.detail?.code === 'DUPLICATE_RECIPE') {
+        setDuplicateInfo({
+          id: err.body.detail.duplicate_recipe_id,
+          title: err.body.detail.duplicate_recipe_title,
+        });
+      } else {
+        setProcessingError(err.message ?? 'Confirmation failed');
+      }
     } finally {
       setConfirmLoading(false);
     }
@@ -594,12 +602,50 @@ export default function IngestPage() {
         )}
 
         <button
-          onClick={handleConfirm}
+          onClick={() => handleConfirm(false)}
           disabled={confirmLoading}
           className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
           {confirmLoading ? 'Saving...' : 'Confirm Recipe'}
         </button>
+
+        {/* Duplicate detection modal */}
+        {duplicateInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">Possible duplicate</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    This recipe card looks similar to <span className="font-medium text-gray-700 dark:text-gray-200">{duplicateInfo.title}</span> already in your library.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href={`/recipes/${duplicateInfo.id}`}
+                  className="w-full py-2.5 text-center bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors text-sm"
+                >
+                  View existing recipe
+                </Link>
+                <button
+                  onClick={() => { setDuplicateInfo(null); handleConfirm(true); }}
+                  disabled={confirmLoading}
+                  className="w-full py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm disabled:opacity-50"
+                >
+                  Save anyway
+                </button>
+                <button
+                  onClick={() => setDuplicateInfo(null)}
+                  className="w-full py-2.5 text-gray-400 dark:text-gray-500 text-sm hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }

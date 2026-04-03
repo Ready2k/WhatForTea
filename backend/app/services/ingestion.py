@@ -29,6 +29,48 @@ logger = logging.getLogger(__name__)
 _DEFAULT_RECIPES_DIR = Path("/data/recipes")
 
 
+class DuplicateRecipeError(Exception):
+    """Raised when a confirmed recipe's image hash matches an existing recipe."""
+    def __init__(self, recipe_id: uuid.UUID, recipe_title: str):
+        self.recipe_id = recipe_id
+        self.recipe_title = recipe_title
+        super().__init__(f"Duplicate of '{recipe_title}'")
+
+
+def _compute_dhash(image_path: Path, hash_size: int = 8) -> str:
+    """
+    Compute a dHash (difference hash) for an image.
+    Returns a hex string of length hash_size^2 / 4.
+    Two images are near-duplicates if their Hamming distance is ≤ 8.
+    """
+    from PIL import Image
+    with Image.open(image_path) as img:
+        img = img.convert("L").resize((hash_size + 1, hash_size), Image.LANCZOS)
+        pixels = list(img.getdata())
+
+    bits = []
+    for row in range(hash_size):
+        for col in range(hash_size):
+            left = pixels[row * (hash_size + 1) + col]
+            right = pixels[row * (hash_size + 1) + col + 1]
+            bits.append(1 if left > right else 0)
+
+    # Pack bits into an integer and return as hex
+    n = 0
+    for b in bits:
+        n = (n << 1) | b
+    return format(n, f"0{hash_size * hash_size // 4}x")
+
+
+def _hamming_distance(a: str, b: str) -> int:
+    """Hamming distance between two equal-length hex hash strings."""
+    if len(a) != len(b):
+        return 64  # treat mismatched lengths as maximally different
+    ia, ib = int(a, 16), int(b, 16)
+    xor = ia ^ ib
+    return bin(xor).count("1")
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _job_dir(job_id: uuid.UUID, recipes_dir: Path = _DEFAULT_RECIPES_DIR) -> Path:
@@ -209,6 +251,7 @@ async def confirm_recipe(
     job_id: uuid.UUID,
     recipe_data: RecipeCreate,
     db: AsyncSession,
+    force: bool = False,
 ) -> Recipe:
     """
     User-confirmed: validate, insert Recipe into the DB, and mark job COMPLETE.
@@ -284,6 +327,39 @@ async def confirm_recipe(
     else:
         hero_image_path = None
 
+    # ── Duplicate detection ───────────────────────────────────────────────────
+    fingerprint: str | None = None
+    if hero_image_path and Path(hero_image_path).exists():
+        try:
+            fingerprint = _compute_dhash(Path(hero_image_path))
+
+            if not force:
+                # Check all existing recipes for a near-duplicate image
+                existing_stmt = select(Recipe).where(Recipe.image_fingerprint.isnot(None))
+                existing = (await db.execute(existing_stmt)).scalars().all()
+                for existing_recipe in existing:
+                    if existing_recipe.image_fingerprint and \
+                            _hamming_distance(fingerprint, existing_recipe.image_fingerprint) <= 8:
+                        raise DuplicateRecipeError(existing_recipe.id, existing_recipe.title)
+        except DuplicateRecipeError:
+            raise
+        except Exception as e:
+            logger.warning("image fingerprinting failed — skipping duplicate check", extra={"error": str(e)})
+            fingerprint = None
+
+    # Fuzzy title check — soft warning only (logged, not a hard block)
+    from rapidfuzz import fuzz as rfuzz
+    title_stmt = select(Recipe.id, Recipe.title)
+    existing_titles = (await db.execute(title_stmt)).all()
+    for eid, etitle in existing_titles:
+        score = rfuzz.token_sort_ratio(recipe_data.title.lower(), etitle.lower()) / 100
+        if score >= 0.90:
+            logger.warning(
+                "similar recipe title detected — possible duplicate",
+                extra={"new_title": recipe_data.title, "existing_title": etitle, "similarity": score},
+            )
+            break
+
     recipe = Recipe(
         title=recipe_data.title,
         hello_fresh_style=recipe_data.hello_fresh_style,
@@ -293,6 +369,7 @@ async def confirm_recipe(
         source_reference=recipe_data.source_reference,
         mood_tags=recipe_data.mood_tags,
         hero_image_path=hero_image_path,
+        image_fingerprint=fingerprint,
     )
     db.add(recipe)
     await db.flush()  # get recipe.id

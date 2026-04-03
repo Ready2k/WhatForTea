@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useMatches } from '@/lib/hooks';
+import { useMatches, useAvailable } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { getActiveCookingSession } from '@/lib/api';
 import type { RecipeMatchResult } from '@/lib/types';
@@ -11,10 +11,15 @@ import type { CookingSession } from '@/lib/api';
 type Mode = 'planning' | 'hangry';
 
 function RecipeCard({ match }: { match: RecipeMatchResult }) {
+  const cookedDaysAgo = match.recipe.last_cooked_at
+    ? Math.floor((Date.now() - new Date(match.recipe.last_cooked_at).getTime()) / 86400000)
+    : null;
+  const recentlyCooked = cookedDaysAgo !== null && cookedDaysAgo <= 7;
+
   return (
     <Link
       href={`/recipes/${match.recipe.id}`}
-      className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow"
+      className={`flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all ${recentlyCooked ? 'opacity-50' : ''}`}
     >
       <div className="w-full h-28 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 flex items-center justify-center">
         {match.recipe.hero_image_path ? (
@@ -29,9 +34,13 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
       </div>
       <div className="p-3 space-y-1.5">
         <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-2">{match.recipe.title}</p>
-        {match.recipe.cooking_time_mins && (
+        {recentlyCooked ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Cooked {cookedDaysAgo === 0 ? 'today' : cookedDaysAgo === 1 ? 'yesterday' : `${cookedDaysAgo}d ago`}
+          </p>
+        ) : match.recipe.cooking_time_mins ? (
           <p className="text-xs text-gray-500 dark:text-gray-400">{match.recipe.cooking_time_mins} min</p>
-        )}
+        ) : null}
         <MatchBadge score={match.score} category={match.category} />
       </div>
     </Link>
@@ -41,6 +50,8 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
 export default function Dashboard() {
   const [mode, setMode] = useState<Mode>('planning');
   const { data: allMatches, isLoading } = useMatches();
+  const { data: available } = useAvailable();
+  const atRiskCount = available?.filter((a) => a.confidence < 0.5).length ?? 0;
   const [activeSession, setActiveSession] = useState<CookingSession | null>(null);
 
   useEffect(() => {
@@ -80,6 +91,25 @@ export default function Dashboard() {
             </p>
           </div>
           <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      )}
+
+      {/* At-risk pantry prompt */}
+      {atRiskCount > 0 && mode === 'planning' && !activeSession && (
+        <Link
+          href="/recipes?sort=use_it_up"
+          className="flex items-center gap-3 w-full px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/40 rounded-2xl hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+        >
+          <span className="text-xl flex-shrink-0">⚠️</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+              {atRiskCount} ingredient{atRiskCount > 1 ? 's are' : ' is'} going off
+            </p>
+            <p className="text-xs text-orange-600 dark:text-orange-400">Find recipes that use them up</p>
+          </div>
+          <svg className="w-5 h-5 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </Link>
