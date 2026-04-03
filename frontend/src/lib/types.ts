@@ -109,6 +109,8 @@ export interface RecipeMatchResult {
   partial: IngredientMatchDetail[];
   low_confidence: IngredientMatchDetail[];
   full: IngredientMatchDetail[];
+  urgency_score: number;
+  at_risk_ingredients: string[];
 }
 
 export interface MealPlanEntry {

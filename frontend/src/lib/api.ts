@@ -280,9 +280,15 @@ export interface CookingSession {
   current_step: number;
   completed_steps: number[];
   timers: Record<string, { remaining_seconds: number; running: boolean }>;
+  confirmed_cook: boolean;
+  servings_cooked?: number | null;
+  notes?: string | null;
+  rating?: number | null;
   started_at: string;
   ended_at?: string | null;
   recipe_title?: string | null;
+  user_id?: string | null;
+  user_display_name?: string | null;
 }
 
 export function createCookingSession(recipeId: string): Promise<CookingSession> {
@@ -299,7 +305,13 @@ export function getActiveCookingSession(): Promise<CookingSession | null> {
 
 export function patchCookingSession(
   sessionId: string,
-  data: { current_step?: number; completed_steps?: number[]; timers?: Record<string, unknown> },
+  data: {
+    current_step?: number;
+    completed_steps?: number[];
+    timers?: Record<string, unknown>;
+    notes?: string;
+    rating?: number;
+  },
 ): Promise<CookingSession> {
   return request<CookingSession>(`/api/v1/cooking/sessions/${sessionId}`, {
     method: 'PATCH',
