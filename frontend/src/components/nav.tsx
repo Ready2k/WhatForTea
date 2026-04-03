@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { useCurrentUser } from '@/lib/hooks';
 
 const tabs = [
   {
@@ -65,6 +66,7 @@ const tabs = [
 export function Nav() {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const { data: currentUser } = useCurrentUser();
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/';
@@ -89,6 +91,25 @@ export function Nav() {
             </Link>
           );
         })}
+
+        {/* Profile link */}
+        <Link
+          href="/profile"
+          className={`w-12 flex flex-col items-center justify-center gap-0.5 border-l border-gray-100 dark:border-gray-700 text-xs font-medium transition-colors flex-shrink-0 ${
+            pathname.startsWith('/profile')
+              ? 'text-emerald-600'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+          }`}
+          title={currentUser ? currentUser.display_name : 'Profile'}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span className="truncate max-w-[44px] text-[10px]">
+            {currentUser ? currentUser.display_name.split(' ')[0] : 'Profile'}
+          </span>
+        </Link>
 
         {/* Theme toggle */}
         <button

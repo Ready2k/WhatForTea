@@ -40,7 +40,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
 
         try:
-            jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
+            request.state.user_id = payload.get("sub")
+            request.state.household_id = payload.get("household_id", "household")
         except JWTError:
             return JSONResponse(
                 status_code=401,

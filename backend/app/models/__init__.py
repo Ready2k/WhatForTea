@@ -10,6 +10,7 @@ from app.models.plan import MealPlan, MealPlanEntry
 from app.models.session import CookingSession
 from app.models.ingest import IngestJob, IngestSourceType, IngestStatus, LlmOutput
 from app.models.collection import Collection, recipe_collections
+from app.models.user import Household, User
 from app.models.normalised_amount import NormalizedAmount
 
 __all__ = [
@@ -35,4 +36,6 @@ __all__ = [
     "NormalizedAmount",
     "Collection",
     "recipe_collections",
+    "Household",
+    "User",
 ]

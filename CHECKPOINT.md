@@ -26,6 +26,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 4.4 — Expiry Date Input | ✅ Complete | `expires_at DATE NULL` on pantry_items (migration `g7h8i9j0k1l2`); `calculate_confidence()` uses expiry when set (shelf-life by category); `GET /pantry/expiring?days=3`; APScheduler expiry check at 03:05; pantry page: date picker, ExpiryBadge, expiring-soon banner |
 | 4.3 — Recipe Collections / Folders | ✅ Complete | `collections` + `recipe_collections` tables (migration `h8i9j0k1l2m3`); full CRUD at `/api/v1/collections`; `POST/DELETE /collections/{id}/recipes/{rid}`; `/collections` management page (create/rename/recolour/delete + recipe picker modal); collection filter chips on `/recipes` page |
 | 4.2 — Barcode Scanning | ✅ Complete | `POST /api/v1/barcode/lookup`; Open Food Facts API → normaliser pipeline; Redis cache (30-day TTL); `BarcodeDetector` Web API with manual fallback; scan button on pantry page with confirm qty/unit step |
+| 4.1 — Multi-User Profiles | ✅ Complete | `households` + `users` tables (migration `i9j0k1l2m3n4`); Argon2id password hashing; JWT with `sub=user_id` + `household_id`; backwards-compat env fallback + default user seeder on startup; `/api/v1/users/me` (PATCH display_name, POST password), `/api/v1/household` (GET, POST invite-rotate, GET members, POST join); profile page at `/profile`; nav shows first name + link |
 
 ---
 

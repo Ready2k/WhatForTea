@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Integer, SmallInteger, func
+from sqlalchemy import ForeignKey, Integer, SmallInteger, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,6 +31,13 @@ class CookingSession(Base):
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
     ended_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    # Which household member cooked this — NULL for sessions created before multi-user support
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     # Relationships
     recipe: Mapped["Recipe"] = relationship(back_populates="cooking_sessions")  # noqa: F821
+    user: Mapped[Optional["User"]] = relationship(back_populates="cooking_sessions")  # noqa: F821

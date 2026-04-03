@@ -16,13 +16,22 @@ from app.schemas.session import CookingSession, CookingSessionEnd, CookingSessio
 logger = logging.getLogger(__name__)
 
 
-def _to_schema(session: CookingSessionModel, recipe_title: Optional[str] = None) -> CookingSession:
+def _to_schema(
+    session: CookingSessionModel,
+    recipe_title: Optional[str] = None,
+    user_display_name: Optional[str] = None,
+) -> CookingSession:
     result = CookingSession.model_validate(session)
     result.recipe_title = recipe_title
+    result.user_display_name = user_display_name
     return result
 
 
-async def create_session(recipe_id: uuid.UUID, db: AsyncSession) -> CookingSession:
+async def create_session(
+    recipe_id: uuid.UUID,
+    db: AsyncSession,
+    user_id: Optional[uuid.UUID] = None,
+) -> CookingSession:
     """Create a new cooking session for the given recipe."""
     recipe = await db.get(Recipe, recipe_id)
     if recipe is None:
@@ -33,6 +42,7 @@ async def create_session(recipe_id: uuid.UUID, db: AsyncSession) -> CookingSessi
         current_step=1,
         completed_steps=[],
         timers={},
+        user_id=user_id,
     )
     db.add(session)
     await db.commit()
@@ -121,6 +131,7 @@ async def end_session(
 async def get_history(
     db: AsyncSession,
     recipe_id: Optional[uuid.UUID] = None,
+    user_id: Optional[uuid.UUID] = None,
     limit: int = 20,
 ) -> list[CookingSession]:
     """Return confirmed cooking sessions, newest first."""
@@ -135,10 +146,12 @@ async def get_history(
     )
     if recipe_id is not None:
         stmt = stmt.where(CookingSessionModel.recipe_id == recipe_id)
+    if user_id is not None:
+        stmt = stmt.where(CookingSessionModel.user_id == user_id)
 
     sessions = (await db.execute(stmt)).scalars().all()
 
-    # Batch-load recipe titles
+    # Batch-load recipe titles and user display names
     recipe_ids = list({s.recipe_id for s in sessions})
     recipes: dict[uuid.UUID, str] = {}
     for rid in recipe_ids:
@@ -146,7 +159,19 @@ async def get_history(
         if r:
             recipes[rid] = r.title
 
-    return [_to_schema(s, recipes.get(s.recipe_id)) for s in sessions]
+    user_ids = list({s.user_id for s in sessions if s.user_id is not None})
+    display_names: dict[uuid.UUID, str] = {}
+    if user_ids:
+        from app.models.user import User
+        for uid in user_ids:
+            u = await db.get(User, uid)
+            if u:
+                display_names[uid] = u.display_name
+
+    return [
+        _to_schema(s, recipes.get(s.recipe_id), display_names.get(s.user_id) if s.user_id else None)
+        for s in sessions
+    ]
 
 
 async def get_recipe_stats(

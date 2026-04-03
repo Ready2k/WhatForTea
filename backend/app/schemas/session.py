@@ -42,5 +42,7 @@ class CookingSession(BaseModel):
     started_at: datetime
     ended_at: Optional[datetime] = None
     recipe_title: Optional[str] = None  # populated from joined recipe row
+    user_id: Optional[uuid.UUID] = None
+    user_display_name: Optional[str] = None  # populated from joined user row
 
     model_config = {"from_attributes": True}

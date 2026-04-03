@@ -163,3 +163,19 @@ export interface IngestReviewPayload {
   unresolved_ingredients: string[];
   source_url?: string | null;
 }
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  display_name: string;
+  household_id: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface HouseholdInfo {
+  id: string;
+  name: string;
+  invite_code: string;
+  member_count: number;
+}

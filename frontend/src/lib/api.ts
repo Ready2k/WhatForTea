@@ -1,5 +1,6 @@
 import type {
   Collection,
+  HouseholdInfo,
   Ingredient,
   Recipe,
   RecipeSummary,
@@ -10,6 +11,7 @@ import type {
   ShoppingList,
   IngestStatusResponse,
   IngestReviewPayload,
+  UserProfile,
 } from './types';
 
 const BASE = '';
@@ -394,6 +396,53 @@ export function addRecipeToCollection(collectionId: string, recipeId: string): P
 
 export function removeRecipeFromCollection(collectionId: string, recipeId: string): Promise<Collection> {
   return request<Collection>(`/api/v1/collections/${collectionId}/recipes/${recipeId}`, { method: 'DELETE' });
+}
+
+// ── User / Household ──────────────────────────────────────────────────────────
+
+export function getCurrentUser(): Promise<UserProfile> {
+  return request<UserProfile>('/api/auth/me');
+}
+
+export function updateUserProfile(data: { display_name?: string }): Promise<UserProfile> {
+  return request<UserProfile>('/api/v1/users/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function changePassword(data: { current_password: string; new_password: string }): Promise<void> {
+  return request<void>('/api/v1/users/me/password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function getHousehold(): Promise<HouseholdInfo> {
+  return request<HouseholdInfo>('/api/v1/household');
+}
+
+export function rotateInviteCode(): Promise<HouseholdInfo> {
+  return request<HouseholdInfo>('/api/v1/household/invite', { method: 'POST' });
+}
+
+export function getHouseholdMembers(): Promise<UserProfile[]> {
+  return request<UserProfile[]>('/api/v1/household/members');
+}
+
+export function joinHousehold(data: {
+  invite_code: string;
+  username: string;
+  display_name: string;
+  password: string;
+}): Promise<UserProfile> {
+  return request<UserProfile>('/api/v1/household/join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
 }
 
 export interface VoiceCommandResponse {

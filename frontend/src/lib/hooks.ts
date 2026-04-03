@@ -24,6 +24,12 @@ import {
   fetchCollectionRecipeIds,
   addRecipeToCollection,
   removeRecipeFromCollection,
+  getCurrentUser,
+  updateUserProfile,
+  changePassword,
+  getHousehold,
+  rotateInviteCode,
+  getHouseholdMembers,
 } from './api';
 
 export function useIngredients(q?: string) {
@@ -246,5 +252,54 @@ export function useRemoveRecipeFromCollection() {
       qc.invalidateQueries({ queryKey: ['collections'] });
       qc.invalidateQueries({ queryKey: ['collection-recipes', collectionId] });
     },
+  });
+}
+
+// ── User / Household ──────────────────────────────────────────────────────────
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ['current-user'],
+    queryFn: getCurrentUser,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
+export function useUpdateUserProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: updateUserProfile,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['current-user'] }),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({ mutationFn: changePassword });
+}
+
+export function useHousehold() {
+  return useQuery({
+    queryKey: ['household'],
+    queryFn: getHousehold,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
+export function useRotateInviteCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: rotateInviteCode,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['household'] }),
+  });
+}
+
+export function useHouseholdMembers() {
+  return useQuery({
+    queryKey: ['household-members'],
+    queryFn: getHouseholdMembers,
+    staleTime: 2 * 60 * 1000,
+    retry: false,
   });
 }
