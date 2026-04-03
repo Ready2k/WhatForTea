@@ -3,7 +3,9 @@
 import { useState, useMemo, useRef } from 'react';
 import { useAvailable, useConfirmPantryItem, useUpsertPantryItem, useDeletePantryItem, useIngredients, useCreateIngredient } from '@/lib/hooks';
 import { ConfidenceBar } from '@/components/ConfidenceBar';
+import { BarcodeScanner } from '@/components/BarcodeScanner';
 import type { Ingredient } from '@/lib/types';
+import type { BarcodeLookupResponse } from '@/lib/api';
 
 interface AddItemForm {
   search: string;
@@ -41,6 +43,10 @@ export default function PantryPage() {
   const createIngredientMutation = useCreateIngredient();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState<BarcodeLookupResponse | null>(null);
+  const [scanQty, setScanQty] = useState('1');
+  const [scanUnit, setScanUnit] = useState('unit');
   const [form, setForm] = useState<AddItemForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -140,12 +146,24 @@ export default function PantryPage() {
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">My Pantry</h1>
-        <button
-          onClick={() => { setShowAddForm((v) => !v); setFormError(''); setForm(EMPTY_FORM); }}
-          className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
-        >
-          {showAddForm ? 'Cancel' : '+ Add Item'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowScanner(true)}
+            title="Scan barcode"
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => { setShowAddForm((v) => !v); setFormError(''); setForm(EMPTY_FORM); }}
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            {showAddForm ? 'Cancel' : '+ Add Item'}
+          </button>
+        </div>
       </div>
 
       {/* Add item form */}
@@ -337,6 +355,72 @@ export default function PantryPage() {
         </form>
       )}
 
+      {/* Barcode scan confirm */}
+      {scanResult && (
+        <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-emerald-200 dark:border-emerald-700/60 shadow-sm space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Scanned item</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">{scanResult.product_name ?? scanResult.barcode}</p>
+              {scanResult.canonical_name && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">→ {scanResult.canonical_name}</p>
+              )}
+              {!scanResult.ingredient_id && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">No ingredient match — add manually instead</p>
+              )}
+            </div>
+            <button onClick={() => setScanResult(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 ml-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          {scanResult.ingredient_id && (
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Quantity</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={scanQty}
+                  onChange={(e) => setScanQty(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Unit</label>
+                <input
+                  type="text"
+                  value={scanUnit}
+                  onChange={(e) => setScanUnit(e.target.value)}
+                  placeholder="g / ml / unit"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                />
+              </div>
+              <button
+                disabled={upsertMutation.isPending}
+                onClick={async () => {
+                  const qty = parseFloat(scanQty);
+                  if (isNaN(qty) || qty <= 0 || !scanResult.ingredient_id) return;
+                  await upsertMutation.mutateAsync({
+                    ingredient_id: scanResult.ingredient_id,
+                    quantity: qty,
+                    unit: scanUnit.trim() || 'unit',
+                  });
+                  setScanResult(null);
+                  setScanQty('1');
+                  setScanUnit('unit');
+                }}
+                className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {upsertMutation.isPending ? '...' : 'Add'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {isError && (
         <div className="text-center py-12">
           <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load pantry</p>
@@ -478,6 +562,20 @@ export default function PantryPage() {
             );
           })}
         </div>
+      )}
+      {/* Barcode scanner modal */}
+      {showScanner && (
+        <BarcodeScanner
+          onResolved={(data) => {
+            setShowScanner(false);
+            if (data.source !== 'error' && data.source !== 'not_found') {
+              setScanResult(data);
+              setScanQty('1');
+              setScanUnit(data.canonical_name ? 'unit' : 'unit');
+            }
+          }}
+          onClose={() => setShowScanner(false)}
+        />
       )}
     </main>
   );

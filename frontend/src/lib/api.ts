@@ -338,6 +338,26 @@ export function uploadRecipePhoto(recipeId: string, file: File): Promise<void> {
   });
 }
 
+// ── Barcode ───────────────────────────────────────────────────────────────────
+
+export interface BarcodeLookupResponse {
+  barcode: string;
+  product_name?: string | null;
+  ingredient_id?: string | null;
+  canonical_name?: string | null;
+  confidence: number;
+  source: 'cache' | 'openfoodfacts' | 'not_found' | 'unresolved' | 'error';
+  error?: string | null;
+}
+
+export function lookupBarcode(barcode: string): Promise<BarcodeLookupResponse> {
+  return request<BarcodeLookupResponse>('/api/v1/barcode/lookup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ barcode }),
+  });
+}
+
 // ── Collections ───────────────────────────────────────────────────────────────
 
 export function fetchCollections(): Promise<Collection[]> {
