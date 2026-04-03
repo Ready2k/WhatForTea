@@ -26,6 +26,16 @@ export interface Step {
   text: string;
   timer_seconds?: number;
   image_description?: string | null;
+  image_crop_path?: string | null;
+}
+
+export interface NutritionEstimate {
+  calories_kcal?: number | null;
+  protein_g?: number | null;
+  fat_g?: number | null;
+  carbs_g?: number | null;
+  fibre_g?: number | null;
+  per_servings?: number | null;
 }
 
 export interface Recipe {
@@ -36,6 +46,7 @@ export interface Recipe {
   cooking_time_mins?: number;
   base_servings: number;
   source_type: string;
+  source_url?: string | null;
   mood_tags: string[];
   created_at: string;
   ingredients: RecipeIngredient[];
@@ -44,6 +55,7 @@ export interface Recipe {
   average_rating?: number | null;
   recent_notes: string[];
   last_cooked_at?: string | null;
+  nutrition_estimate?: NutritionEstimate | null;
 }
 
 export interface RecipeSummary {
@@ -139,4 +151,5 @@ export interface IngestReviewPayload {
   job_id: string;
   parsed_recipe: any;
   unresolved_ingredients: string[];
+  source_url?: string | null;
 }

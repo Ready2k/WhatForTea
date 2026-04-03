@@ -185,6 +185,27 @@ export function fetchShoppingList(): Promise<ShoppingList> {
   return request<ShoppingList>('/api/v1/planner/shopping-list');
 }
 
+export interface AutoFillEntry {
+  day_of_week: number;
+  recipe_id: string;
+  recipe_title: string;
+  score: number;
+  servings: number;
+}
+
+export function autoFillWeek(data: {
+  moods: string[];
+  servings: number;
+  max_cook_time_mins?: number;
+  avoid_recent_days?: number;
+}): Promise<AutoFillEntry[]> {
+  return request<AutoFillEntry[]>('/api/v1/planner/auto-fill', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
 export function ingestRecipe(formData: FormData): Promise<{ job_id: string }> {
   return request<{ job_id: string }>('/api/v1/recipes/ingest', {
     method: 'POST',
@@ -194,6 +215,14 @@ export function ingestRecipe(formData: FormData): Promise<{ job_id: string }> {
 
 export function getIngestStatus(jobId: string): Promise<IngestStatusResponse> {
   return request<IngestStatusResponse>(`/api/v1/recipes/ingest/${jobId}/status`);
+}
+
+export function importRecipeFromUrl(url: string): Promise<{ job_id: string }> {
+  return request<{ job_id: string }>('/api/v1/recipes/import-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
 }
 
 export function getIngestReview(jobId: string): Promise<IngestReviewPayload> {
@@ -304,5 +333,21 @@ export function uploadRecipePhoto(recipeId: string, file: File): Promise<void> {
   return request<void>(`/api/v1/recipes/${recipeId}/photo`, {
     method: 'POST',
     body: formData,
+  });
+}
+
+export interface VoiceCommandResponse {
+  intent: 'add_to_list' | 'session_note' | 'navigation' | 'unknown';
+  item?: string | null;
+  note?: string | null;
+  direction?: string | null;
+  raw_transcript: string;
+}
+
+export function sendVoiceCommand(transcript: string, context?: string): Promise<VoiceCommandResponse> {
+  return request<VoiceCommandResponse>('/api/v1/voice/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transcript, context }),
   });
 }

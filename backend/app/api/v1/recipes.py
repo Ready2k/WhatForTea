@@ -27,10 +27,17 @@ from app.schemas.ingest import (
     IngestConfirmRequest,
     IngestReviewPayload,
     IngestStatusResponse,
+    UrlImportRequest,
 )
 from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary, RecipeUpdate
 from app.services.images import rotate_image, save_manual_photo
-from app.services.ingestion import confirm_recipe, save_images, DuplicateRecipeError
+from app.services.ingestion import (
+    confirm_recipe,
+    save_images,
+    run_url_ingestion,
+    DuplicateRecipeError,
+    _URL_IMPORT_PLACEHOLDER,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/recipes", tags=["recipes"])
@@ -168,6 +175,7 @@ async def get_ingest_review(
         job_id=job_id,
         parsed_recipe=recipe_create,
         unresolved_ingredients=unresolved,
+        source_url=parsed.get("source_url"),
     )
 
 
@@ -199,7 +207,59 @@ async def confirm_ingest(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+    # Queue nutrition estimation as a background arq task (non-blocking)
+    try:
+        arq_pool = await create_pool(_redis_settings())
+        await arq_pool.enqueue_job("task_estimate_nutrition", str(recipe.id))
+        await arq_pool.aclose()
+    except Exception:
+        pass  # nutrition is best-effort; never fail a confirm because of this
+
     return recipe
+
+
+@router.post("/import-url", status_code=status.HTTP_202_ACCEPTED)
+async def import_recipe_from_url(
+    body: UrlImportRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Import a recipe from a URL.
+
+    Fetches the page, passes it to the LLM for extraction, normalises ingredients,
+    and creates an IngestJob in REVIEW status. Returns { job_id } for the existing
+    review/confirm flow. The request blocks until LLM processing completes (~5–10s).
+    """
+    import uuid as _uuid
+    from redis.asyncio import Redis
+    from app.config import settings as _settings
+    from app.models.ingest import IngestJob as IngestJobModel, IngestSourceType, IngestStatus
+
+    job_id = _uuid.uuid4()
+    job = IngestJobModel(
+        id=job_id,
+        status=IngestStatus.QUEUED,
+        image_dir=_URL_IMPORT_PLACEHOLDER,
+        source_type=IngestSourceType.IMPORTED,
+    )
+    db.add(job)
+    await db.commit()
+
+    redis_client = Redis.from_url(_settings.redis_url, decode_responses=False)
+    try:
+        await run_url_ingestion(job_id=job_id, url=body.url, db=db, redis_client=redis_client)
+    finally:
+        await redis_client.aclose()
+
+    await db.refresh(job)
+    if job.status == IngestStatus.FAILED:
+        raise HTTPException(
+            status_code=422,
+            detail=job.error_message or "URL import failed",
+        )
+
+    return {"job_id": str(job_id)}
 
 
 # ── Recipe list / detail ──────────────────────────────────────────────────────
@@ -405,6 +465,45 @@ async def update_recipe(
     result = RecipeSchema.model_validate(recipe)
     result.image_count = image_count
     return result
+
+
+@router.get("/{recipe_id}/steps/{step_order}/image")
+async def get_step_crop_image(
+    recipe_id: uuid.UUID,
+    step_order: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve the cropped image for a recipe step, if available."""
+    from app.models.recipe import Step as StepModel
+    stmt = select(StepModel).where(
+        StepModel.recipe_id == recipe_id,
+        StepModel.order == step_order,
+    )
+    step = (await db.execute(stmt)).scalar_one_or_none()
+    if step is None or not step.image_crop_path:
+        raise HTTPException(status_code=404, detail="Step crop image not found")
+    crop_path = Path(step.image_crop_path)
+    if not crop_path.exists():
+        raise HTTPException(status_code=404, detail="Step crop image file not found")
+    return FileResponse(str(crop_path), media_type="image/jpeg")
+
+
+@router.post("/{recipe_id}/estimate-nutrition", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_nutrition_estimate(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Manually trigger (or re-trigger) nutrition estimation for a recipe.
+    Enqueues an arq background task and returns immediately.
+    """
+    recipe = await db.get(Recipe, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    arq_pool = await create_pool(_redis_settings())
+    await arq_pool.enqueue_job("task_estimate_nutrition", str(recipe_id))
+    await arq_pool.aclose()
+    return {"queued": True}
 
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)

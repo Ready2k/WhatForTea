@@ -55,6 +55,7 @@ class RecipeBase(BaseModel):
     base_servings: int = 2
     source_type: SourceType = SourceType.HELLOFRESH
     source_reference: Optional[str] = None
+    source_url: Optional[str] = None
     mood_tags: list[str] = []
 
 
@@ -78,6 +79,15 @@ class RecipeUpdate(BaseModel):
     steps: Optional[list[StepUpdate]] = None
 
 
+class NutritionEstimate(BaseModel):
+    calories_kcal: Optional[float] = None
+    protein_g: Optional[float] = None
+    fat_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fibre_g: Optional[float] = None
+    per_servings: Optional[int] = None
+
+
 class Recipe(RecipeBase):
     id: uuid.UUID
     hero_image_path: Optional[str] = None
@@ -90,6 +100,8 @@ class Recipe(RecipeBase):
     average_rating: Optional[float] = None
     recent_notes: list[str] = []
     last_cooked_at: Optional[datetime] = None
+    # Nutrition estimate — populated asynchronously after confirm
+    nutrition_estimate: Optional[NutritionEstimate] = None
 
     model_config = {"from_attributes": True}
 

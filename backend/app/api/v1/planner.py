@@ -8,8 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.plan import MealPlan, MealPlanCreate, ShoppingList
+from app.schemas.plan import AutoFillEntry, AutoFillRequest, MealPlan, MealPlanCreate, ShoppingList
 from app.services.planner import (
+    auto_fill_week,
     delete_plan_entry,
     generate_shopping_list,
     get_plan,
@@ -91,6 +92,25 @@ async def get_shopping_list(
         return await generate_shopping_list(week_start, db)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.post("/auto-fill", response_model=list[AutoFillEntry])
+async def auto_fill_week_plan(
+    body: AutoFillRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Propose a 7-day meal plan based on mood tags and current pantry availability.
+    Excludes recently cooked recipes. Returns a proposal — does NOT save.
+    Call POST /week to commit the plan.
+    """
+    return await auto_fill_week(
+        moods=body.moods,
+        servings=body.servings,
+        db=db,
+        max_cook_time_mins=body.max_cook_time_mins,
+        avoid_recent_days=body.avoid_recent_days,
+    )
 
 
 @router.get("/zero-waste-suggestions")

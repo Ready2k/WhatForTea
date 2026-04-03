@@ -17,6 +17,12 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 2.3 — "Use It Up" Mode | ✅ Complete | `score_all_recipes_use_it_up()`; orange toggle on recipes page; dashboard banner |
 | 2.4 — Duplicate Recipe Detection | ✅ Complete | dHash fingerprint on confirm; 409 with "Save anyway" modal; `force=true` bypass |
 | 2.5 — Batch Pantry Refresh | ✅ Complete | `POST /pantry/bulk-confirm`; shopping list is tap-to-tick with floating "Mark N as bought" / "I bought everything" bar |
+| 3.2 — Live Serving Scale | ✅ Complete | −/+ stepper (1–12) in ingredient header; scales qty via `servings_quantities` lookup or linear multiplier |
+| 3.1 — Recipe Import from URL | ✅ Complete | `POST /recipes/import-url`; fetches HTML, strips tags, sends to LLM; ingest/review/confirm flow reused; migration `e5f6a7b8c9d0`; "Import from URL" tab on ingest page; source domain shown on recipe detail |
+| 3.4 — Mood-of-the-Week Planner | ✅ Complete | `POST /planner/auto-fill`; mood chips + servings stepper + max cook time; proposes 7-day plan in client state; "Auto-fill week" button in planner |
+| 3.5 — Nutritional Estimates | ✅ Complete | arq task `task_estimate_nutrition`; queued after confirm + manual retrigger; `nutrition_prompt.md`; migration `f6a7b8c9d0e1`; collapsible nutrition section on recipe detail |
+| 3.3 — Step Image Crops | ✅ Complete | `_crop_step_image()` with Pillow; `image_bbox` from LLM in `ingestion_prompt.md`; `GET /recipes/{id}/steps/{order}/image` endpoint; crop thumbnail in recipe detail + cook mode |
+| 3.6 — Voice-Dictated Notes & Commands | ✅ Complete | `POST /api/v1/voice/command`; LLM intent parsing (add_to_list / session_note / navigation / unknown); TeaBot mic button in cook header; ambient trigger detection ("teabot", "add to list"); "Dictate notes" button in end-of-session overlay |
 
 ---
 

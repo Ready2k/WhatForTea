@@ -50,6 +50,165 @@ def _get_client():
     )
 
 
+async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings: int) -> dict:
+    """
+    Estimate macro-nutrients for a recipe.
+    Returns a dict: {calories_kcal, protein_g, fat_g, carbs_g, fibre_g, per_servings}
+    """
+    cfg = _load_settings()
+    template_src = _load_prompt("nutrition_prompt.md")
+    parts = template_src.split("## System", 1)
+    system_prompt = ("## System" + parts[1]).strip() if len(parts) > 1 else template_src.strip()
+
+    ingredient_lines = "\n".join(
+        f"- {ing.get('quantity', '')} {ing.get('unit', '') or ''} {ing.get('raw_name', '')}".strip()
+        for ing in ingredients
+    )
+    user_text = (
+        f"Recipe: {title}\n"
+        f"Servings: {base_servings}\n\n"
+        f"Ingredients:\n{ingredient_lines}\n\n"
+        "Estimate the nutrition per serving and return JSON matching the schema."
+    )
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 512,
+        "temperature": 0.1,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_text}],
+    }
+
+    client = _get_client()
+    response = client.invoke_model(
+        modelId=cfg["model_id"],
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json",
+    )
+    raw = json.loads(response["body"].read())
+    text = raw["content"][0]["text"].strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    return json.loads(text)
+
+
+async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[dict, dict]:
+    """
+    Extract a structured recipe from the plain-text content of a recipe web page.
+
+    Returns:
+        (raw_bedrock_response, parsed_recipe_dict)
+    """
+    cfg = _load_settings()
+    template_src = _load_prompt("url_ingestion_prompt.md")
+    rendered = Template(template_src).render(source_domain=source_domain)
+
+    parts = rendered.split("## System", 1)
+    system_prompt = ("## System" + parts[1]).strip() if len(parts) > 1 else rendered.strip()
+
+    # Truncate page text to avoid exceeding token limits (~32k chars ≈ ~8k tokens)
+    truncated = page_text[:32000]
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": cfg.get("max_tokens", 4096),
+        "temperature": cfg.get("temperature", 0.2),
+        "system": system_prompt,
+        "messages": [
+            {
+                "role": "user",
+                "content": (
+                    f"Here is the text content of a recipe page from {source_domain}:\n\n"
+                    f"{truncated}\n\n"
+                    "Extract the recipe and return valid JSON exactly matching the schema in the system prompt."
+                ),
+            }
+        ],
+    }
+
+    client = _get_client()
+    response = client.invoke_model(
+        modelId=cfg["model_id"],
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json",
+    )
+    raw_response = json.loads(response["body"].read())
+
+    text = raw_response["content"][0]["text"].strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+
+    parsed = json.loads(text)
+
+    usage = raw_response.get("usage", {})
+    logger.info(
+        "url ingestion LLM call",
+        extra={
+            "model": raw_response.get("model", cfg.get("model_id")),
+            "source_domain": source_domain,
+            "prompt_tokens": usage.get("input_tokens"),
+            "completion_tokens": usage.get("output_tokens"),
+            "title": parsed.get("title"),
+            "ingredient_count": len(parsed.get("ingredients", [])),
+            "step_count": len(parsed.get("steps", [])),
+        },
+    )
+    return raw_response, parsed
+
+
+async def call_voice_command_llm(transcript: str, context: str | None = None) -> dict:
+    """
+    Parse a voice transcript into a structured command intent.
+    Returns a dict with keys: intent, item, note, direction.
+    """
+    cfg = _load_settings()
+    system_prompt = _load_prompt("voice_command_prompt.md")
+
+    context_hint = f"\nContext: {context}" if context else ""
+    user_text = f'Transcript: "{transcript}"{context_hint}\n\nReturn JSON matching the schema.'
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 256,
+        "temperature": 0.1,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_text}],
+    }
+
+    try:
+        client = _get_client()
+        response = client.invoke_model(
+            modelId=cfg["model_id"],
+            body=json.dumps(body),
+            contentType="application/json",
+            accept="application/json",
+        )
+        raw = json.loads(response["body"].read())
+        text = raw["content"][0]["text"].strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+        parsed = json.loads(text)
+        logger.info(
+            "voice command LLM call",
+            extra={"transcript": transcript[:80], "intent": parsed.get("intent")},
+        )
+        return parsed
+    except Exception as exc:
+        logger.warning("voice command LLM failed", extra={"error": str(exc)})
+        return {"intent": "unknown"}
+
+
 async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
     """
     Ask the LLM whether raw_name matches the candidate canonical ingredient.

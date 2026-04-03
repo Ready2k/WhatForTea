@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.config import settings
 from app.logging_config import setup_logging
 from app.services.ingestion import _DEFAULT_RECIPES_DIR, run_ingestion
+from app.services.nutrition import estimate_nutrition
 
 setup_logging(settings.log_level)
 logger = logging.getLogger(__name__)
@@ -67,10 +68,18 @@ async def task_process_ingest_job(ctx: dict, job_id: str) -> dict:
     return {"job_id": job_id}
 
 
+async def task_estimate_nutrition(ctx: dict, recipe_id: str) -> dict:
+    """Estimate and persist macro-nutrients for a recipe."""
+    logger.info("estimating nutrition", extra={"recipe_id": recipe_id})
+    async with ctx["session_factory"]() as db:
+        result = await estimate_nutrition(uuid.UUID(recipe_id), db)
+    return {"recipe_id": recipe_id, "success": result is not None}
+
+
 # ── Worker config ─────────────────────────────────────────────────────────────
 
 class WorkerSettings:
-    functions = [task_process_ingest_job]
+    functions = [task_process_ingest_job, task_estimate_nutrition]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = _redis_settings_from_url(settings.redis_url)

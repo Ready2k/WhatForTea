@@ -2,9 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { useCurrentPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
+import { autoFillWeek, type AutoFillEntry } from '@/lib/api';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const MOOD_OPTIONS = ['Comfort', 'Quick', 'Light', 'Vegetarian', 'Spicy', 'Family', 'Fancy', 'Healthy', 'Indulgent'];
 
 type Tab = 'week' | 'shopping';
 
@@ -25,6 +28,12 @@ export default function PlannerPage() {
   const [showPickerFor, setShowPickerFor] = useState<number | null>(null);
   const [showServingPickerFor, setShowServingPickerFor] = useState<number | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [showAutoFill, setShowAutoFill] = useState(false);
+  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [autoFillServings, setAutoFillServings] = useState(2);
+  const [maxCookTime, setMaxCookTime] = useState<number | ''>('');
+  const [autoFillLoading, setAutoFillLoading] = useState(false);
+  const [autoFillError, setAutoFillError] = useState<string | null>(null);
 
   const { data: plan, isLoading: planLoading } = useCurrentPlan();
   const { data: recipes } = useRecipes();
@@ -49,6 +58,35 @@ export default function PlannerPage() {
   function getRecipeSummary(recipeId: string | null): RecipeSummary | undefined {
     if (!recipeId) return undefined;
     return recipes?.find((r) => r.id === recipeId);
+  }
+
+  async function handleAutoFill() {
+    setAutoFillLoading(true);
+    setAutoFillError(null);
+    try {
+      const entries: AutoFillEntry[] = await autoFillWeek({
+        moods: selectedMoods,
+        servings: autoFillServings,
+        max_cook_time_mins: maxCookTime ? Number(maxCookTime) : undefined,
+      });
+      if (entries.length === 0) {
+        setAutoFillError('No matching recipes found. Try fewer mood filters.');
+        return;
+      }
+      const newDayPlan: Record<number, string | null> = {};
+      const newServings: Record<number, number | null> = {};
+      entries.forEach((e) => {
+        newDayPlan[e.day_of_week] = e.recipe_id;
+        newServings[e.day_of_week] = e.servings;
+      });
+      setDayPlan(newDayPlan);
+      setServingsPlan(newServings);
+      setShowAutoFill(false);
+    } catch (err: any) {
+      setAutoFillError(err.message ?? 'Auto-fill failed');
+    } finally {
+      setAutoFillLoading(false);
+    }
   }
 
   async function handleSavePlan() {
@@ -146,6 +184,16 @@ export default function PlannerPage() {
       {/* This Week tab */}
       {activeTab === 'week' && (
         <div className="space-y-3">
+          {/* Auto-fill button */}
+          {!planLoading && (
+            <button
+              onClick={() => { setShowAutoFill(true); setAutoFillError(null); }}
+              className="w-full py-2.5 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-sm font-medium rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-center gap-2"
+            >
+              <span>✨</span> Auto-fill week
+            </button>
+          )}
+
           {planLoading && (
             <div className="space-y-2">
               {Array.from({ length: 7 }).map((_, i) => (
@@ -422,6 +470,83 @@ export default function PlannerPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Auto-fill bottom sheet */}
+      {showAutoFill && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAutoFill(false)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl p-6 pb-8 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Auto-fill week</h2>
+              <button onClick={() => setShowAutoFill(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
+            </div>
+
+            {/* Mood chips */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Mood (pick any)</p>
+              <div className="flex flex-wrap gap-2">
+                {MOOD_OPTIONS.map((mood) => (
+                  <button
+                    key={mood}
+                    onClick={() => setSelectedMoods((prev) =>
+                      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
+                    )}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      selectedMoods.includes(mood)
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {mood}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Servings */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Servings per meal</p>
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-1 py-0.5">
+                <button onClick={() => setAutoFillServings((s) => Math.max(1, s - 1))} disabled={autoFillServings <= 1}
+                  className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">−</button>
+                <span className="w-5 text-center text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{autoFillServings}</span>
+                <button onClick={() => setAutoFillServings((s) => Math.min(12, s + 1))} disabled={autoFillServings >= 12}
+                  className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">+</button>
+              </div>
+            </div>
+
+            {/* Max cook time */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Max cook time (optional)</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={10}
+                  max={180}
+                  step={5}
+                  value={maxCookTime}
+                  onChange={(e) => setMaxCookTime(e.target.value ? Number(e.target.value) : '')}
+                  placeholder="Any"
+                  className="w-20 text-right px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-500 dark:text-gray-400">min</span>
+              </div>
+            </div>
+
+            {autoFillError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{autoFillError}</p>
+            )}
+
+            <button
+              onClick={handleAutoFill}
+              disabled={autoFillLoading}
+              className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {autoFillLoading ? 'Finding recipes…' : 'Fill my week'}
+            </button>
+          </div>
         </div>
       )}
     </main>

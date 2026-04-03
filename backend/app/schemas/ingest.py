@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 from app.models.ingest import IngestSourceType, IngestStatus
 from app.schemas.recipe import RecipeCreate
@@ -40,9 +40,16 @@ class IngestReviewPayload(BaseModel):
     parsed_recipe: RecipeCreate
     # List of raw ingredient names that could not be auto-resolved
     unresolved_ingredients: list[str] = []
+    # Set for URL imports; null for image-scanned cards
+    source_url: Optional[str] = None
 
 
 class IngestConfirmRequest(BaseModel):
     """Body for POST /api/v1/recipes/ingest/confirm/{job_id}"""
     # The user-confirmed (possibly edited) recipe data
     recipe: RecipeCreate
+
+
+class UrlImportRequest(BaseModel):
+    """Body for POST /api/v1/recipes/import-url"""
+    url: str

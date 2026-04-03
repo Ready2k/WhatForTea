@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_RECIPES_DIR = Path("/data/recipes")
 
+_URL_IMPORT_PLACEHOLDER = "url_import"
+
 
 class DuplicateRecipeError(Exception):
     """Raised when a confirmed recipe's image hash matches an existing recipe."""
@@ -245,7 +247,183 @@ async def run_ingestion(
         )
 
 
+# ── URL ingestion ─────────────────────────────────────────────────────────────
+
+def _fetch_page_text(url: str, timeout: int = 10) -> str:
+    """
+    Fetch a URL and return stripped plain text (no HTML tags).
+    Raises ValueError on HTTP errors or timeouts.
+    """
+    import html
+    import re
+    import urllib.request
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "WhatsForTea/1.0 (recipe import; contact via GitHub)",
+            "Accept": "text/html,application/xhtml+xml",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+            charset = "utf-8"
+            ct = resp.headers.get("Content-Type", "")
+            if "charset=" in ct:
+                charset = ct.split("charset=")[-1].split(";")[0].strip()
+            page_html = raw.decode(charset, errors="replace")
+    except Exception as exc:
+        raise ValueError(f"Failed to fetch URL: {exc}") from exc
+
+    # Remove <script>, <style>, <noscript> blocks
+    page_html = re.sub(r"<(script|style|noscript)[^>]*>.*?</\1>", " ", page_html, flags=re.DOTALL | re.IGNORECASE)
+    # Strip all remaining HTML tags
+    text = re.sub(r"<[^>]+>", " ", page_html)
+    # Decode HTML entities
+    text = html.unescape(text)
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+async def run_url_ingestion(
+    job_id: uuid.UUID,
+    url: str,
+    db: AsyncSession,
+    redis_client,
+) -> None:
+    """
+    URL ingestion pipeline: fetch HTML → LLM extraction → normalise → REVIEW.
+
+    Runs synchronously in the API request context (no arq queue).
+    Updates IngestJob.status and stores LlmOutput on completion.
+    """
+    job = await db.get(IngestJob, job_id)
+    if job is None:
+        logger.error("IngestJob not found", extra={"job_id": str(job_id)})
+        return
+
+    try:
+        job.status = IngestStatus.PROCESSING
+        await db.commit()
+
+        # Rate-limit before the LLM call
+        await check_and_increment(redis_client)
+
+        # Fetch + strip HTML (sync, run in thread to avoid blocking event loop)
+        import asyncio
+        import urllib.parse
+        source_domain = urllib.parse.urlparse(url).netloc or url
+
+        loop = asyncio.get_event_loop()
+        page_text = await loop.run_in_executor(None, _fetch_page_text, url)
+
+        # LLM call
+        from app.services.bedrock import call_url_ingestion_llm
+        raw_response, parsed = await call_url_ingestion_llm(page_text, source_domain)
+
+        # Persist raw response
+        llm_out = LlmOutput(
+            ingest_job_id=job_id,
+            raw_llm_response=raw_response,
+            parsed_result={},
+        )
+        db.add(llm_out)
+        await db.flush()
+
+        # Validate
+        errors = _validate_llm_result(parsed)
+        if errors:
+            raise ValueError("; ".join(errors))
+
+        # Normalise ingredients
+        from app.services.normaliser import resolve_ingredient
+        enriched: list[dict] = []
+        unresolved: list[str] = []
+
+        for ing in parsed.get("ingredients", []):
+            result = await resolve_ingredient(
+                raw_name=ing["raw_name"],
+                db=db,
+                redis_client=redis_client,
+                use_llm=False,
+            )
+            entry = dict(ing)
+            if result.ingredient:
+                entry["ingredient_id"] = str(result.ingredient.id)
+                entry["resolved"] = True
+            else:
+                entry["ingredient_id"] = None
+                entry["resolved"] = False
+                unresolved.append(ing["raw_name"])
+            enriched.append(entry)
+
+        parsed_result = {
+            **{k: v for k, v in parsed.items() if k != "ingredients"},
+            "ingredients": enriched,
+            "unresolved_ingredients": unresolved,
+            "source_url": url,
+        }
+        llm_out.parsed_result = parsed_result
+        job.status = IngestStatus.REVIEW
+        await db.commit()
+        ingestion_total.labels(status="success").inc()
+
+        logger.info(
+            "url ingestion complete — awaiting review",
+            extra={
+                "job_id": str(job_id),
+                "url": url,
+                "title": parsed.get("title"),
+                "unresolved_count": len(unresolved),
+            },
+        )
+
+    except RateLimitExceeded as exc:
+        job.status = IngestStatus.FAILED
+        job.error_message = str(exc)
+        await db.commit()
+        logger.warning("url ingestion aborted — rate limit", extra={"job_id": str(job_id)})
+
+    except Exception as exc:
+        job.status = IngestStatus.FAILED
+        job.error_message = str(exc)
+        await db.commit()
+        ingestion_total.labels(status="error").inc()
+        logger.error("url ingestion failed", extra={"job_id": str(job_id), "error": str(exc)}, exc_info=True)
+
+
 # ── Confirm ───────────────────────────────────────────────────────────────────
+
+def _crop_step_image(
+    source_path: Path,
+    bbox: list,
+    dest_path: Path,
+) -> bool:
+    """
+    Crop a step photo region from source_path using normalised bbox [x1,y1,x2,y2].
+    Saves result as JPEG to dest_path. Returns True on success.
+    """
+    try:
+        from PIL import Image
+        with Image.open(source_path) as img:
+            w, h = img.size
+            x1 = int(bbox[0] * w)
+            y1 = int(bbox[1] * h)
+            x2 = int(bbox[2] * w)
+            y2 = int(bbox[3] * h)
+            # Sanity check — bbox must be a meaningful region
+            if x2 <= x1 or y2 <= y1 or (x2 - x1) < 20 or (y2 - y1) < 20:
+                return False
+            crop = img.crop((x1, y1, x2, y2))
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            crop.save(dest_path, "JPEG", quality=85)
+        return True
+    except Exception as exc:
+        logger.warning("step crop failed", extra={"source": str(source_path), "error": str(exc)})
+        return False
+
 
 async def confirm_recipe(
     job_id: uuid.UUID,
@@ -360,6 +538,11 @@ async def confirm_recipe(
             )
             break
 
+    # Pick up source_url from LlmOutput (set by URL imports) or from the recipe data itself
+    source_url = recipe_data.source_url
+    if not source_url and llm_out and llm_out.parsed_result:
+        source_url = llm_out.parsed_result.get("source_url")
+
     recipe = Recipe(
         title=recipe_data.title,
         hello_fresh_style=recipe_data.hello_fresh_style,
@@ -367,6 +550,7 @@ async def confirm_recipe(
         base_servings=recipe_data.base_servings,
         source_type=recipe_data.source_type,
         source_reference=recipe_data.source_reference,
+        source_url=source_url,
         mood_tags=recipe_data.mood_tags,
         hero_image_path=hero_image_path,
         image_fingerprint=fingerprint,
@@ -384,13 +568,36 @@ async def confirm_recipe(
             servings_quantities=ing_data.servings_quantities,
         ))
 
+    # Build bbox lookup from LlmOutput for step crop extraction
+    llm_step_bboxes: dict[int, list] = {}
+    if llm_out and llm_out.parsed_result:
+        for s in llm_out.parsed_result.get("steps", []):
+            bbox = s.get("image_bbox")
+            if bbox and isinstance(bbox, list) and len(bbox) == 4:
+                llm_step_bboxes[s.get("order", 0)] = bbox
+
+    # Use the back image (index 0 per HelloFresh convention = back = steps side) for crops
+    back_image_path: Path | None = None
+    if image_paths:
+        back_idx = 1 - (front_idx or 0) if len(image_paths) > 1 else (front_idx or 0)
+        back_idx = max(0, min(back_idx, len(image_paths) - 1))
+        back_image_path = image_paths[back_idx]
+
     for step_data in recipe_data.steps:
+        crop_path: str | None = None
+        bbox = llm_step_bboxes.get(step_data.order)
+        if bbox and back_image_path and back_image_path.exists():
+            crop_dest = job_dir / f"step_{step_data.order:02d}_crop.jpg"
+            if _crop_step_image(back_image_path, bbox, crop_dest):
+                crop_path = str(crop_dest)
+
         db.add(Step(
             recipe_id=recipe.id,
             order=step_data.order,
             text=step_data.text,
             timer_seconds=step_data.timer_seconds,
             image_description=step_data.image_description,
+            image_crop_path=crop_path,
         ))
 
     if llm_out:

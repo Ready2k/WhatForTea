@@ -307,6 +307,19 @@ export default function RecipeDetailPage() {
               </span>
             )}
           </div>
+          {recipe.source_url && (
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Imported from{' '}
+              <a
+                href={recipe.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-600 dark:text-emerald-400 hover:underline"
+              >
+                {(() => { try { return new URL(recipe.source_url).hostname; } catch { return recipe.source_url; } })()}
+              </a>
+            </p>
+          )}
           {recipe.mood_tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {recipe.mood_tags.map((tag) => (
@@ -352,21 +365,23 @@ export default function RecipeDetailPage() {
                 </div>
               )}
             </div>
-            <div className={`flex items-center gap-1.5 transition-opacity ${isEditing ? 'opacity-30 pointer-events-none' : ''}`}>
-              <span className="text-xs text-gray-400 dark:text-gray-500 mr-0.5">Servings:</span>
-              {[1, 2, 3, 4, 6, 8].map((n) => (
+            <div className={`flex items-center gap-2 transition-opacity ${isEditing ? 'opacity-30 pointer-events-none' : ''}`}>
+              <span className="text-xs text-gray-400 dark:text-gray-500">Serves</span>
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg px-1 py-0.5">
                 <button
-                  key={n}
-                  onClick={() => setServings(n)}
-                  className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
-                    servings === n
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+                  onClick={() => setServings((s) => Math.max(1, s - 1))}
+                  disabled={servings <= 1}
+                  className="w-6 h-6 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 transition-colors font-bold text-base"
+                  aria-label="Decrease servings"
+                >−</button>
+                <span className="w-5 text-center text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{servings}</span>
+                <button
+                  onClick={() => setServings((s) => Math.min(12, s + 1))}
+                  disabled={servings >= 12}
+                  className="w-6 h-6 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 transition-colors font-bold text-base"
+                  aria-label="Increase servings"
+                >+</button>
+              </div>
             </div>
           </div>
           <ul className="space-y-1.5">
@@ -612,6 +627,13 @@ export default function RecipeDetailPage() {
                     {idx + 1}
                   </span>
                   <div className="flex-1 pt-0.5">
+                    {step.image_crop_path && (
+                      <img
+                        src={`/api/v1/recipes/${recipe.id}/steps/${step.order}/image`}
+                        alt={step.image_description ?? `Step ${idx + 1}`}
+                        className="w-full max-h-32 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700"
+                      />
+                    )}
                     <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step.text}</p>
                     {step.image_description && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 italic mt-1">{step.image_description}</p>
@@ -656,6 +678,37 @@ export default function RecipeDetailPage() {
               })}
             </ul>
           </div>
+        )}
+
+        {/* Nutrition (estimated) */}
+        {recipe.nutrition_estimate && (
+          <details className="group">
+            <summary className="cursor-pointer list-none flex items-center justify-between py-2 border-t border-gray-100 dark:border-gray-700">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Nutrition (estimated)</h2>
+              <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div className="mt-2 space-y-1.5">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                Per serving ({recipe.nutrition_estimate.per_servings ?? recipe.base_servings} servings) — AI estimate, not suitable for medical use
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {[
+                  { label: 'Calories', value: recipe.nutrition_estimate.calories_kcal, unit: 'kcal' },
+                  { label: 'Protein', value: recipe.nutrition_estimate.protein_g, unit: 'g' },
+                  { label: 'Fat', value: recipe.nutrition_estimate.fat_g, unit: 'g' },
+                  { label: 'Carbs', value: recipe.nutrition_estimate.carbs_g, unit: 'g' },
+                  { label: 'Fibre', value: recipe.nutrition_estimate.fibre_g, unit: 'g' },
+                ].filter((r) => r.value != null).map(({ label, value, unit }) => (
+                  <div key={label} className="flex items-center justify-between border-b border-gray-50 dark:border-gray-700/50 py-1">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{value} {unit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </details>
         )}
 
         {/* CTA */}

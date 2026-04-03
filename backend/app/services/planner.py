@@ -482,3 +482,96 @@ async def zero_waste_suggestions(
         reverse=True,
     )
     return suggestions[:limit]
+
+
+async def auto_fill_week(
+    moods: list[str],
+    servings: int,
+    db: AsyncSession,
+    max_cook_time_mins: Optional[int] = None,
+    avoid_recent_days: int = 14,
+) -> list[dict]:
+    """
+    Propose a 7-day meal plan based on mood tags and pantry availability.
+
+    Algorithm:
+    1. Filter recipes by mood_tags overlap (any match), optionally by cook time.
+    2. Exclude recipes cooked within avoid_recent_days.
+    3. Score remaining recipes via the matcher.
+    4. Greedily assign highest-scoring unique recipe to each day (0–6).
+    5. Return proposed entries as [{day_of_week, recipe_id, recipe_title, score}].
+       Does NOT save — caller must POST /planner/week to commit.
+    """
+    from datetime import datetime, timedelta, timezone
+    from app.models.session import CookingSession
+    from app.services.matcher import score_all_recipes
+    from app.services.pantry import get_available
+
+    # Fetch all recipes
+    stmt = (
+        select(Recipe)
+        .options(selectinload(Recipe.ingredients))
+    )
+    all_recipes = (await db.execute(stmt)).scalars().all()
+
+    # Recent cook filter
+    cutoff = datetime.now(timezone.utc) - timedelta(days=avoid_recent_days)
+    recent_stmt = (
+        select(CookingSession.recipe_id)
+        .where(
+            CookingSession.confirmed_cook.is_(True),
+            CookingSession.ended_at >= cutoff,
+        )
+        .distinct()
+    )
+    recently_cooked_ids = set(
+        row[0] for row in (await db.execute(recent_stmt)).all()
+    )
+
+    # Mood + time filter
+    mood_set = {m.lower() for m in moods}
+    candidates = []
+    for recipe in all_recipes:
+        if recipe.id in recently_cooked_ids:
+            continue
+        if max_cook_time_mins is not None and recipe.cooking_time_mins and recipe.cooking_time_mins > max_cook_time_mins:
+            continue
+        if mood_set:
+            recipe_moods = {t.lower() for t in (recipe.mood_tags or [])}
+            if not mood_set.intersection(recipe_moods):
+                continue
+        candidates.append(recipe)
+
+    if not candidates:
+        return []
+
+    # Score against pantry
+    avail = await get_available(db)
+    avail_map = {a.ingredient.id: a for a in avail}
+
+    from app.services.matcher import score_recipe
+    scored = []
+    for recipe in candidates:
+        result = await score_recipe(recipe, avail_map, db)
+        scored.append(result)
+
+    # Sort by score descending
+    scored.sort(key=lambda r: r.score, reverse=True)
+
+    # Greedily fill 7 days — no repeats
+    used_ids: set[uuid.UUID] = set()
+    proposal = []
+    for day in range(7):
+        for result in scored:
+            if result.recipe.id not in used_ids:
+                proposal.append({
+                    "day_of_week": day,
+                    "recipe_id": str(result.recipe.id),
+                    "recipe_title": result.recipe.title,
+                    "score": round(result.score, 1),
+                    "servings": servings,
+                })
+                used_ids.add(result.recipe.id)
+                break
+
+    return proposal

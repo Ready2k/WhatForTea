@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useIngestRecipe } from '@/lib/hooks';
-import { getIngestStatus, getIngestReview, confirmIngest } from '@/lib/api';
+import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl } from '@/lib/api';
 import type { IngestReviewPayload } from '@/lib/types';
 
 const MAX_DIMENSION = 1500;
@@ -188,6 +188,9 @@ export default function IngestPage() {
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<{ id: string; title: string } | null>(null);
+  const [uploadTab, setUploadTab] = useState<'scan' | 'url'>('scan');
+  const [urlInput, setUrlInput] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<ApiStatus>('uploading');
   const [funMessageIdx, setFunMessageIdx] = useState(0);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -353,6 +356,23 @@ export default function IngestPage() {
     }
   }
 
+  async function handleUrlImport() {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
+    setProcessingError(null);
+    try {
+      const { job_id } = await importRecipeFromUrl(urlInput.trim());
+      setJobId(job_id);
+      const payload = await getIngestReview(job_id);
+      setReviewPayload(payload);
+      setFlowState('review');
+    } catch (err: any) {
+      setProcessingError(err.message ?? 'Failed to import recipe from URL');
+    } finally {
+      setUrlLoading(false);
+    }
+  }
+
   function handleStartOver() {
     if (pollRef.current) clearInterval(pollRef.current);
     if (tickerRef.current) clearInterval(tickerRef.current);
@@ -374,8 +394,31 @@ export default function IngestPage() {
     return (
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Scan Recipe Card</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">You need both sides of the card — back first, then front</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Add Recipe</h1>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+          <button
+            onClick={() => setUploadTab('scan')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              uploadTab === 'scan'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            Scan Card
+          </button>
+          <button
+            onClick={() => setUploadTab('url')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              uploadTab === 'url'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            Import from URL
+          </button>
         </div>
 
         {processingError && (
@@ -384,8 +427,35 @@ export default function IngestPage() {
           </div>
         )}
 
+        {/* URL import panel */}
+        {uploadTab === 'url' && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Paste a recipe URL from BBC Good Food, AllRecipes, or any recipe site.
+            </p>
+            <input
+              type="url"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleUrlImport()}
+              placeholder="https://www.bbcgoodfood.com/recipes/..."
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+            />
+            <button
+              onClick={handleUrlImport}
+              disabled={!urlInput.trim() || urlLoading}
+              className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {urlLoading ? 'Fetching recipe…' : 'Fetch Recipe'}
+            </button>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+              Works best with structured recipe pages. JavaScript-heavy sites may not work.
+            </p>
+          </div>
+        )}
+
         {/* Upload buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        {uploadTab === 'scan' && <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => cameraInputRef.current?.click()}
             className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
@@ -419,44 +489,46 @@ export default function IngestPage() {
             className="hidden"
             onChange={(e) => handleFilesSelected(e.target.files)}
           />
-        </div>
+        </div>}
 
-        {/* Previews */}
-        {capturedPhotos.length > 0 && (
-          <div className="flex gap-3">
-            {capturedPhotos.map((p, i) => (
-              <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
-                <img src={p.url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
-                <button
-                  onClick={() => {
-                    URL.revokeObjectURL(p.url);
-                    setCapturedPhotos((prev) => prev.filter((_, idx) => idx !== i));
-                  }}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-black/70"
-                  aria-label="Remove photo"
-                >
-                  ×
-                </button>
-                <span className="absolute bottom-1 left-1 text-xs bg-black/40 text-white px-1.5 py-0.5 rounded">
-                  {i + 1}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+        {uploadTab === 'scan' && <>
+          {/* Previews */}
+          {capturedPhotos.length > 0 && (
+            <div className="flex gap-3">
+              {capturedPhotos.map((p, i) => (
+                <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                  <img src={p.url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => {
+                      URL.revokeObjectURL(p.url);
+                      setCapturedPhotos((prev) => prev.filter((_, idx) => idx !== i));
+                    }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-black/70"
+                    aria-label="Remove photo"
+                  >
+                    ×
+                  </button>
+                  <span className="absolute bottom-1 left-1 text-xs bg-black/40 text-white px-1.5 py-0.5 rounded">
+                    {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {capturedPhotos.length === 1 && (
-          <p className="text-sm text-center text-amber-600 dark:text-amber-400 font-medium">
-            Add the other side of the card to continue
-          </p>
-        )}
-        <button
-          onClick={handleUpload}
-          disabled={capturedPhotos.length !== 2 || ingestMutation.isPending}
-          className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          {ingestMutation.isPending ? 'Uploading...' : capturedPhotos.length === 2 ? 'Upload & Process' : `${capturedPhotos.length}/2 photos — add ${2 - capturedPhotos.length} more`}
-        </button>
+          {capturedPhotos.length === 1 && (
+            <p className="text-sm text-center text-amber-600 dark:text-amber-400 font-medium">
+              Add the other side of the card to continue
+            </p>
+          )}
+          <button
+            onClick={handleUpload}
+            disabled={capturedPhotos.length !== 2 || ingestMutation.isPending}
+            className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {ingestMutation.isPending ? 'Uploading...' : capturedPhotos.length === 2 ? 'Upload & Process' : `${capturedPhotos.length}/2 photos — add ${2 - capturedPhotos.length} more`}
+          </button>
+        </>}
       </main>
     );
   }

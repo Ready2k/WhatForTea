@@ -32,6 +32,11 @@ class Recipe(Base):
     source_reference: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     mood_tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default="{}")
     image_fingerprint: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    nutrition_estimate: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    nutrition_estimated_at: Mapped[Optional[datetime]] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

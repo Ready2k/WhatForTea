@@ -49,6 +49,21 @@ class ShoppingListItem(BaseModel):
     is_unresolved: bool = False  # True if ingredient was not normalised to DB canonical
 
 
+class AutoFillRequest(BaseModel):
+    moods: list[str] = []
+    servings: int = 2
+    max_cook_time_mins: Optional[int] = None
+    avoid_recent_days: int = 14
+
+
+class AutoFillEntry(BaseModel):
+    day_of_week: int
+    recipe_id: str
+    recipe_title: str
+    score: float
+    servings: int
+
+
 class ShoppingList(BaseModel):
     """Result of GET /api/v1/planner/shopping-list"""
     zones: dict[str, list[ShoppingListItem]]  # e.g. "Fridge & Fresh" → items

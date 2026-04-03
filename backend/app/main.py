@@ -15,6 +15,7 @@ from app.api.v1.matcher import router as matcher_router
 from app.api.v1.pantry import router as pantry_router
 from app.api.v1.planner import router as planner_router
 from app.api.v1.recipes import router as recipes_router
+from app.api.v1.voice import router as voice_router
 from app.middleware.auth import AuthMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.services.scheduler import create_scheduler
@@ -62,3 +63,4 @@ app.include_router(planner_router)
 # matcher_router must come before recipes_router: /recipes/match before /recipes/{id}
 app.include_router(matcher_router)
 app.include_router(recipes_router)
+app.include_router(voice_router)

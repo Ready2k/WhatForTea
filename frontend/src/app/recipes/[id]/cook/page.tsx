@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useRecipe } from '@/lib/hooks';
 import { StepTimer } from '@/components/StepTimer';
-import { createCookingSession, patchCookingSession, endCookingSession } from '@/lib/api';
+import { createCookingSession, patchCookingSession, endCookingSession, sendVoiceCommand } from '@/lib/api';
 import type { Step } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ type StepTimerState = {
   stepNumber: number;
 };
 
-type Toast = { id: string; message: string; variant: 'halfway' | 'done' };
+type Toast = { id: string; message: string; variant: 'halfway' | 'done' | 'teabot' | 'error' };
 
 // ── Sub-step parser ────────────────────────────────────────────────────────────
 function parseSubSteps(raw: string): SubStep[] {
@@ -73,6 +73,15 @@ function BellIcon({ className }: { className?: string }) {
   );
 }
 
+// ── Mic icon SVG ──────────────────────────────────────────────────────────────
+function MicIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+    </svg>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function CookingModePage() {
   const { id } = useParams<{ id: string }>();
@@ -87,11 +96,17 @@ export default function CookingModePage() {
   const [pendingRating, setPendingRating] = useState(0);
   const [pendingNotes, setPendingNotes] = useState('');
   const [isSavingRating, setIsSavingRating] = useState(false);
+  const [teabotActive, setTeabotActive] = useState(false);
+  const [voiceNotesActive, setVoiceNotesActive] = useState(false);
   const sessionIdRef = useRef<string | null>(null);
   const patchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
+  const commandRecognitionRef = useRef<any>(null);
   const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const hasSpeechRecognition = typeof window !== 'undefined' && !!(
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  );
 
   // KEY FIX: keep a ref so the setInterval closure always reads fresh timer state
   // without needing setState's functional-updater pattern (which can't produce side effects)
@@ -289,6 +304,79 @@ export default function CookingModePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex]);
 
+  // ── TeaBot voice command ─────────────────────────────────────────────────
+  function addToast(message: string, variant: Toast['variant']) {
+    const id = `${variant}-${Date.now()}`;
+    setToasts((prev) => [...prev, { id, message, variant }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 6000);
+  }
+
+  function startTeabotCommand() {
+    if (teabotActive) return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    // Stop navigation recognition while TeaBot listens
+    try { recognitionRef.current?.stop(); } catch {}
+    setTeabotActive(true);
+    const r = new SR();
+    r.lang = 'en-US';
+    r.onresult = async (e: any) => {
+      const transcript = Array.from(e.results as SpeechRecognitionResultList)
+        .map((res) => (res as SpeechRecognitionResult)[0].transcript)
+        .join(' ');
+      setTeabotActive(false);
+      try {
+        const result = await sendVoiceCommand(transcript);
+        if (result.intent === 'add_to_list' && result.item) {
+          addToast(`Added "${result.item}" to your notes`, 'teabot');
+          setPendingNotes((prev) => {
+            const line = `Need: ${result.item}`;
+            return prev ? `${prev}\n${line}` : line;
+          });
+        } else if (result.intent === 'session_note' && result.note) {
+          addToast('Note saved', 'teabot');
+          setPendingNotes((prev) => (prev ? `${prev}\n${result.note}` : result.note!));
+        } else if (result.intent === 'navigation') {
+          result.direction === 'next' ? goNext() : goPrev();
+        } else {
+          addToast('Sorry, I didn\'t catch that', 'error');
+        }
+      } catch {
+        addToast('TeaBot unavailable right now', 'error');
+      }
+    };
+    r.onerror = () => setTeabotActive(false);
+    r.onend = () => setTeabotActive(false);
+    try { r.start(); } catch { setTeabotActive(false); }
+    commandRecognitionRef.current = r;
+  }
+
+  function startVoiceNotes() {
+    if (voiceNotesActive) return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    setVoiceNotesActive(true);
+    const r = new SR();
+    r.lang = 'en-US';
+    r.onresult = async (e: any) => {
+      const transcript = Array.from(e.results as SpeechRecognitionResultList)
+        .map((res) => (res as SpeechRecognitionResult)[0].transcript)
+        .join(' ');
+      setVoiceNotesActive(false);
+      try {
+        const result = await sendVoiceCommand(transcript, 'session_notes');
+        const text = result.note ?? transcript;
+        setPendingNotes((prev) => (prev ? `${prev}\n${text}` : text));
+      } catch {
+        // Fallback: use raw transcript
+        setPendingNotes((prev) => (prev ? `${prev}\n${transcript}` : transcript));
+      }
+    };
+    r.onerror = () => setVoiceNotesActive(false);
+    r.onend = () => setVoiceNotesActive(false);
+    try { r.start(); } catch { setVoiceNotesActive(false); }
+  }
+
   // ── Navigation ───────────────────────────────────────────────────────────
   const goNext = useCallback(() => setCurrentIndex((i) => Math.min(i + 1, total - 1)), [total]);
   const goPrev = useCallback(() => setCurrentIndex((i) => Math.max(i - 1, 0)), []);
@@ -302,7 +390,10 @@ export default function CookingModePage() {
     r.onresult = (e: any) => {
       const t = e.results[e.results.length - 1][0].transcript.toLowerCase();
       if (t.includes('next')) goNext();
-      if (t.includes('back') || t.includes('previous')) goPrev();
+      else if (t.includes('back') || t.includes('previous')) goPrev();
+      else if (t.includes('teabot') || t.includes('hey tea') || t.includes('add to list') || t.includes('i need') || t.includes('we need')) {
+        startTeabotCommand();
+      }
     };
     r.onerror = () => {};
     try { r.start(); } catch {}
@@ -469,7 +560,33 @@ export default function CookingModePage() {
               <SpeakerIcon muted={!isSpeaking} className="w-5 h-5" />
             </button>
           )}
+          {hasSpeechRecognition && (
+            <button
+              onClick={startTeabotCommand}
+              disabled={teabotActive}
+              aria-label={teabotActive ? 'TeaBot listening…' : 'TeaBot voice command'}
+              title={teabotActive ? 'Listening…' : 'Say a command (e.g. "add garlic to list")'}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                teabotActive
+                  ? 'bg-emerald-500 text-white animate-pulse shadow-lg shadow-emerald-500/50'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <MicIcon className="w-5 h-5" />
+            </button>
+          )}
         </div>
+
+        {/* Step crop image */}
+        {currentStep?.image_crop_path && (
+          <div className="mb-3 rounded-2xl overflow-hidden max-h-48">
+            <img
+              src={`/api/v1/recipes/${recipe.id}/steps/${currentStep.order}/image`}
+              alt={currentStep.image_description ?? `Step ${currentIndex + 1}`}
+              className="w-full h-full object-contain bg-gray-100 dark:bg-gray-800"
+            />
+          </div>
+        )}
 
         <div className="space-y-3">
           {subSteps.map((sub, si) => {
@@ -580,13 +697,30 @@ export default function CookingModePage() {
             </div>
 
             {/* Notes */}
-            <textarea
-              value={pendingNotes}
-              onChange={(e) => setPendingNotes(e.target.value)}
-              placeholder="Any notes for next time? (optional)"
-              rows={3}
-              className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            />
+            <div className="space-y-2">
+              <textarea
+                value={pendingNotes}
+                onChange={(e) => setPendingNotes(e.target.value)}
+                placeholder="Any notes for next time? (optional)"
+                rows={3}
+                className="w-full bg-gray-800 border border-gray-600 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              />
+              {hasSpeechRecognition && (
+                <button
+                  type="button"
+                  onClick={startVoiceNotes}
+                  disabled={voiceNotesActive}
+                  className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl transition-all ${
+                    voiceNotesActive
+                      ? 'bg-emerald-600 text-white animate-pulse'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <MicIcon className="w-4 h-4" />
+                  {voiceNotesActive ? 'Listening… speak your notes' : 'Dictate notes'}
+                </button>
+              )}
+            </div>
 
             {/* Actions */}
             <div className="space-y-3">
@@ -639,11 +773,16 @@ export default function CookingModePage() {
           <div
             key={toast.id}
             className={`toast-enter w-full max-w-sm flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white font-semibold pointer-events-auto ${
-              toast.variant === 'done' ? 'bg-emerald-500' : 'bg-orange-500'
+              toast.variant === 'done' ? 'bg-emerald-500' :
+              toast.variant === 'teabot' ? 'bg-indigo-600' :
+              toast.variant === 'error' ? 'bg-red-600' :
+              'bg-orange-500'
             }`}
           >
             <span className="text-2xl flex-shrink-0">
-              {toast.variant === 'done' ? '✅' : '⏰'}
+              {toast.variant === 'done' ? '✅' :
+               toast.variant === 'teabot' ? '🤖' :
+               toast.variant === 'error' ? '❌' : '⏰'}
             </span>
             <span className="text-sm leading-snug">{toast.message}</span>
             <button
