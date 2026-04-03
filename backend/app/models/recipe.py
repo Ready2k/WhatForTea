@@ -57,6 +57,11 @@ class Recipe(Base):
     pantry_reservations: Mapped[list["PantryReservation"]] = relationship(  # noqa: F821
         back_populates="recipe"
     )
+    collections: Mapped[list["Collection"]] = relationship(  # noqa: F821
+        "Collection",
+        secondary="recipe_collections",
+        back_populates="recipes",
+    )
 
 
 class RecipeIngredient(Base):

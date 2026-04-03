@@ -9,6 +9,7 @@ from app.models.pantry import PantryItem, PantryReservation, ReservationType
 from app.models.plan import MealPlan, MealPlanEntry
 from app.models.session import CookingSession
 from app.models.ingest import IngestJob, IngestSourceType, IngestStatus, LlmOutput
+from app.models.collection import Collection, recipe_collections
 from app.models.normalised_amount import NormalizedAmount
 
 __all__ = [
@@ -32,4 +33,6 @@ __all__ = [
     "IngestStatus",
     "LlmOutput",
     "NormalizedAmount",
+    "Collection",
+    "recipe_collections",
 ]

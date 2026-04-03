@@ -1,4 +1,5 @@
 import type {
+  Collection,
   Ingredient,
   Recipe,
   RecipeSummary,
@@ -335,6 +336,44 @@ export function uploadRecipePhoto(recipeId: string, file: File): Promise<void> {
     method: 'POST',
     body: formData,
   });
+}
+
+// ── Collections ───────────────────────────────────────────────────────────────
+
+export function fetchCollections(): Promise<Collection[]> {
+  return request<Collection[]>('/api/v1/collections');
+}
+
+export function createCollection(data: { name: string; colour?: string }): Promise<Collection> {
+  return request<Collection>('/api/v1/collections', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateCollection(id: string, data: { name?: string; colour?: string }): Promise<Collection> {
+  return request<Collection>(`/api/v1/collections/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCollection(id: string): Promise<void> {
+  return request<void>(`/api/v1/collections/${id}`, { method: 'DELETE' });
+}
+
+export function fetchCollectionRecipeIds(id: string): Promise<{ collection_id: string; recipe_ids: string[] }> {
+  return request(`/api/v1/collections/${id}/recipe-ids`);
+}
+
+export function addRecipeToCollection(collectionId: string, recipeId: string): Promise<Collection> {
+  return request<Collection>(`/api/v1/collections/${collectionId}/recipes/${recipeId}`, { method: 'POST' });
+}
+
+export function removeRecipeFromCollection(collectionId: string, recipeId: string): Promise<Collection> {
+  return request<Collection>(`/api/v1/collections/${collectionId}/recipes/${recipeId}`, { method: 'DELETE' });
 }
 
 export interface VoiceCommandResponse {

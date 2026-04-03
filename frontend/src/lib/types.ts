@@ -127,6 +127,14 @@ export interface MealPlan {
   entries: MealPlanEntry[];
 }
 
+export interface Collection {
+  id: string;
+  name: string;
+  colour: string;
+  created_at: string;
+  recipe_count: number;
+}
+
 export interface ShoppingListItem {
   ingredient_id?: string;
   canonical_name: string;

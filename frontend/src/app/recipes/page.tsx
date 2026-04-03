@@ -3,7 +3,7 @@
 import { useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useMatches } from '@/lib/hooks';
+import { useMatches, useCollections, useCollectionRecipeIds } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import type { RecipeMatchResult } from '@/lib/types';
 
@@ -115,11 +115,17 @@ function RecipesContent() {
   const [query, setQuery] = useState('');
   const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
   const [useItUp, setUseItUp] = useState(initialSort === 'use_it_up');
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
 
   const { data: matches, isLoading, isError, refetch } = useMatches(
     selectedCategory,
     useItUp ? 'use_it_up' : undefined,
   );
+  const { data: collections = [] } = useCollections();
+  const { data: collectionRecipes } = useCollectionRecipeIds(selectedCollectionId);
+  const collectionRecipeSet = collectionRecipes
+    ? new Set(collectionRecipes.recipe_ids)
+    : null;
 
   // Collect unique mood tags from current category results
   const allMoodTags = useMemo(() => {
@@ -135,14 +141,16 @@ function RecipesContent() {
     const q = query.trim().toLowerCase();
     return matches
       .filter((m) => !q || m.recipe.title.toLowerCase().includes(q))
-      .filter((m) => !selectedMoodTag || m.recipe.mood_tags?.includes(selectedMoodTag));
-  }, [matches, query, selectedMoodTag]);
+      .filter((m) => !selectedMoodTag || m.recipe.mood_tags?.includes(selectedMoodTag))
+      .filter((m) => !collectionRecipeSet || collectionRecipeSet.has(m.recipe.id));
+  }, [matches, query, selectedMoodTag, collectionRecipeSet]);
 
-  const hasActiveFilters = query.trim() !== '' || selectedMoodTag !== null;
+  const hasActiveFilters = query.trim() !== '' || selectedMoodTag !== null || selectedCollectionId !== null;
 
   function clearFilters() {
     setQuery('');
     setSelectedMoodTag(null);
+    setSelectedCollectionId(null);
   }
 
   return (
@@ -232,6 +240,36 @@ function RecipesContent() {
               {tag}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ── Collection filter chips ──────────────────────────────────────────── */}
+      {collections.length > 0 && (
+        <div className="flex gap-1.5 flex-wrap mb-4 items-center">
+          <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Collections:</span>
+          {collections.map((col) => (
+            <button
+              key={col.id}
+              onClick={() => setSelectedCollectionId(selectedCollectionId === col.id ? null : col.id)}
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+                selectedCollectionId === col.id
+                  ? 'text-white shadow-sm'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
+              }`}
+              style={selectedCollectionId === col.id
+                ? { backgroundColor: col.colour, borderColor: col.colour }
+                : { borderColor: col.colour + '80' }}
+            >
+              {col.name}
+              <span className="ml-1 opacity-60">{col.recipe_count}</span>
+            </button>
+          ))}
+          <Link
+            href="/collections"
+            className="text-xs text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 ml-1"
+          >
+            Manage
+          </Link>
         </div>
       )}
 

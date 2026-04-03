@@ -17,6 +17,13 @@ import {
   fetchShoppingList,
   ingestRecipe,
   resolveRecipeIngredient,
+  fetchCollections,
+  createCollection,
+  updateCollection,
+  deleteCollection,
+  fetchCollectionRecipeIds,
+  addRecipeToCollection,
+  removeRecipeFromCollection,
 } from './api';
 
 export function useIngredients(q?: string) {
@@ -170,6 +177,74 @@ export function useResolveRecipeIngredient(recipeId: string) {
       qc.invalidateQueries({ queryKey: ['recipe', recipeId] });
       qc.invalidateQueries({ queryKey: ['matches'] });
       qc.invalidateQueries({ queryKey: ['shopping-list'] });
+    },
+  });
+}
+
+// ── Collections ───────────────────────────────────────────────────────────────
+
+export function useCollections() {
+  return useQuery({
+    queryKey: ['collections'],
+    queryFn: fetchCollections,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useCollectionRecipeIds(collectionId: string | null) {
+  return useQuery({
+    queryKey: ['collection-recipes', collectionId],
+    queryFn: () => fetchCollectionRecipeIds(collectionId!),
+    enabled: !!collectionId,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useCreateCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createCollection,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collections'] }),
+  });
+}
+
+export function useUpdateCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; colour?: string } }) =>
+      updateCollection(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collections'] }),
+  });
+}
+
+export function useDeleteCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteCollection,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['collections'] }),
+  });
+}
+
+export function useAddRecipeToCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ collectionId, recipeId }: { collectionId: string; recipeId: string }) =>
+      addRecipeToCollection(collectionId, recipeId),
+    onSuccess: (_data, { collectionId }) => {
+      qc.invalidateQueries({ queryKey: ['collections'] });
+      qc.invalidateQueries({ queryKey: ['collection-recipes', collectionId] });
+    },
+  });
+}
+
+export function useRemoveRecipeFromCollection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ collectionId, recipeId }: { collectionId: string; recipeId: string }) =>
+      removeRecipeFromCollection(collectionId, recipeId),
+    onSuccess: (_data, { collectionId }) => {
+      qc.invalidateQueries({ queryKey: ['collections'] });
+      qc.invalidateQueries({ queryKey: ['collection-recipes', collectionId] });
     },
   });
 }
