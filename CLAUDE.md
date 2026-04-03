@@ -36,6 +36,7 @@ make shell-api           # bash into api container
 cp .env.example .env     # then fill in POSTGRES_PASSWORD and JWT_SECRET
 make init-dirs
 make up
+make migrate
 ```
 
 **Running a single test:**
@@ -70,30 +71,55 @@ docker-compose -f docker-compose.synology.yml up -d
 
 ## Architecture
 
-### Critical Path (implementation order)
-1. **Phase 0** ✅ — Docker Compose skeleton
-2. **Phase 1** — PostgreSQL schema + Alembic migrations (13 tables)
-3. **Phase 2** — **Ingredient Normaliser** — blocks all downstream logic
-4. **Phase 3** — LLM ingestion pipeline (image → Bedrock → validated recipe)
-5. **Phase 4** — Pantry intelligence (confidence decay)
-6. **Phase 5** — "Hangry" recipe matcher
-7. **Phase 6** — Planner & shopping list
-8. **Phase 7** — Frontend UI
-9. **Phases 8–10** — Security, observability, testing
+### All phases complete
+All 10 core phases and all 4 post-v1 tiers are implemented. The project is feature-complete.
 
 ### Backend structure
 ```
 backend/
 ├── app/
-│   ├── main.py             # FastAPI app entry point, lifespan, route registration
+│   ├── main.py             # FastAPI app entry point, lifespan, route registration, default user seeder
 │   ├── config.py           # pydantic-settings (reads .env)
 │   ├── database.py         # async SQLAlchemy engine + get_db() dependency
 │   ├── errors.py           # AppError base class + error codes (ErrorCode)
 │   ├── logging_config.py   # JSON structured logging setup
-│   ├── models/             # SQLAlchemy ORM models (added Phase 1)
-│   ├── schemas/            # Pydantic request/response schemas (added Phase 1)
-│   ├── services/           # Business logic (normaliser, matcher, etc.)
+│   ├── middleware/
+│   │   ├── auth.py         # JWT cookie validation; stores user_id + household_id in request.state
+│   │   └── logging.py      # Request/response structured logging
+│   ├── models/             # SQLAlchemy ORM models
+│   │   ├── ingredient.py   # Ingredient, UnitConversion, IngredientSubstitute
+│   │   ├── recipe.py       # Recipe, RecipeIngredient, Step
+│   │   ├── pantry.py       # PantryItem, PantryReservation (+ expires_at)
+│   │   ├── plan.py         # MealPlan, MealPlanEntry
+│   │   ├── session.py      # CookingSession (+ user_id FK)
+│   │   ├── ingest.py       # IngestJob, LlmOutput
+│   │   ├── collection.py   # Collection, recipe_collections (M2M)
+│   │   ├── user.py         # Household, User
+│   │   └── normalised_amount.py  # NormalizedAmount value object
+│   ├── schemas/            # Pydantic request/response schemas
+│   ├── services/           # Business logic
+│   │   ├── normaliser.py   # 4-layer ingredient normalisation pipeline
+│   │   ├── bedrock.py      # AWS Bedrock client
+│   │   ├── ingestion.py    # LLM ingest pipeline + job management
+│   │   ├── pantry.py       # CRUD, decay (+ expiry override), availability, consumption
+│   │   ├── matcher.py      # Hangry score calculation + use-it-up mode
+│   │   ├── planner.py      # Week plan + shopping list + auto-fill
+│   │   ├── cooking.py      # Cooking session CRUD + history
+│   │   ├── barcode.py      # Open Food Facts lookup + Redis cache
+│   │   ├── scheduler.py    # APScheduler: decay (03:00), expiry check (03:05), LLM cleanup (04:00)
+│   │   └── voice.py        # Voice command intent parsing via LLM
 │   └── api/v1/             # Route handlers — all prefixed /api/v1/
+│       ├── auth.py         # Login, refresh, logout, /me
+│       ├── ingredients.py
+│       ├── recipes.py
+│       ├── pantry.py       # + GET /expiring
+│       ├── matcher.py
+│       ├── planner.py
+│       ├── cooking.py      # + ?mine=true history filter
+│       ├── barcode.py
+│       ├── collections.py
+│       ├── users.py        # /users/me, /household, /household/join
+│       └── voice.py
 ├── alembic/                # Migrations; env.py uses async engine
 ├── agent_config/           # LLM prompts (Jinja2 .md) + agent_settings.yaml
 └── config/
@@ -102,14 +128,46 @@ backend/
 
 ### API conventions
 - All routes prefixed `/api/v1/` — do not skip the prefix
+- Auth routes use `/api/auth/` prefix (no v1)
 - Error envelope: `{ "error": { "code": "SCREAMING_SNAKE_CASE", "message": "...", "details": {} } }`
 - Success: raw object or plain JSON array (no envelope wrapper)
 - Error codes defined in `backend/app/errors.py` — add new codes there
 
+### Frontend structure
+```
+frontend/src/
+├── app/
+│   ├── layout.tsx          # Root layout with Nav + Providers
+│   ├── page.tsx            # Dashboard (hangry matcher + resume banner)
+│   ├── login/              # Login page
+│   ├── recipes/            # Recipe library + collection filter chips
+│   ├── pantry/             # Pantry CRUD + expiry badges + barcode scan button
+│   ├── planner/            # Week planner + shopping list
+│   ├── ingest/             # Recipe ingest (photo upload + URL import + review)
+│   ├── collections/        # Collection management page
+│   └── profile/            # User profile + password change + household/invite
+├── components/
+│   ├── nav.tsx             # Bottom nav with current user name + profile link
+│   ├── providers.tsx       # React Query + ThemeContext providers
+│   └── BarcodeScanner.tsx  # Camera/BarcodeDetector modal with manual fallback
+└── lib/
+    ├── types.ts            # All shared TypeScript interfaces
+    ├── api.ts              # All API call functions
+    └── hooks.ts            # All React Query hooks
+```
+
 ### Frontend proxy
 `next.config.ts` rewrites `/api/*` → `http://api:8000/api/*` (internal Docker network). The browser only ever talks to the Next.js container on port 3000.
 
-### Ingredient Normaliser (Phase 2 — the critical foundation)
+### Auth system
+- JWT httpOnly cookies: `whatsfortea_access` (15 min) + `whatsfortea_refresh` (7 days)
+- JWT payload: `{ sub: user_id, household_id, exp }`
+- Auth middleware stores `request.state.user_id` and `request.state.household_id` after decode
+- Login checks `users` table first; falls back to env `household_username`/`household_password_hash` for backwards compatibility
+- On first startup with empty `users` table, a default household + admin user is seeded from env creds
+- New users join via invite code: `POST /api/v1/household/join`
+
+### Ingredient Normaliser (the critical foundation)
 Layered pipeline:
 1. **Lookup** — case-insensitive alias match against `ingredients.aliases`
 2. **Fuzzy** — `rapidfuzz` ≥ 0.85 threshold (config: `fuzzy_threshold_auto_accept`)
@@ -123,7 +181,9 @@ Layered pipeline:
 
 ### Pantry intelligence
 - `effective_quantity = quantity × confidence`
+- If `expires_at` is set, confidence is derived from days remaining vs category shelf life instead of time decay
 - APScheduler runs daily decay at 03:00; fridge −0.1/day, pantry −0.02/day
+- Expiry check at 03:05 logs items expiring within 3 days
 - Always use `GET /api/v1/pantry/available` — never read `pantry_items.quantity` directly
 - `pantry_reservations` table prevents double-counting across planner + active sessions
 
@@ -131,6 +191,16 @@ Layered pipeline:
 - Per-ingredient: `min(available / required, 1.0)`
 - Recipe score: mean × 100
 - ≥90% = "Cook Now", 50–89% = "Almost There", <50% = "Planner"
+- "Use it up" mode re-scores by weighting items closest to expiry or zero
+
+### Barcode lookup
+- `POST /api/v1/barcode/lookup` — checks Redis cache, then Open Food Facts, then runs normaliser
+- Redis cache key: `barcode:{barcode}`, TTL 30 days
+- Frontend uses `BarcodeDetector` Web API (Chrome/Edge) with manual numeric entry fallback
+
+### Collections
+- M2M via `recipe_collections` association table
+- Client-side filtering: `GET /collections/{id}/recipe-ids` returns compact ID list; frontend filters without touching the matcher pipeline
 
 ## Key Configuration Files
 
@@ -139,15 +209,17 @@ Layered pipeline:
 | `backend/agent_config/agent_settings.yaml` | Model ID, temp, rate limits, fuzzy thresholds |
 | `backend/agent_config/ingestion_prompt.md` | Vision LLM prompt (Jinja2) |
 | `backend/agent_config/normaliser_prompt.md` | Ingredient resolution prompt (Jinja2) |
+| `backend/agent_config/nutrition_prompt.md` | Nutrition estimation prompt (Jinja2) |
+| `backend/agent_config/voice_prompt.md` | Voice command intent parsing prompt (Jinja2) |
 | `backend/config/pack_sizes.yaml` | Shopping list rounding rules |
 | `docker-compose.yml` | Local dev (build from source) |
 | `docker-compose.synology.yml` | NAS production (pull from Docker Hub) |
 
 ## Testing Strategy
 - `tests/fixtures/` — golden recipe test set (5+ HelloFresh cards with expected parse output)
-- Ingredient normaliser must hit ≥95% of golden set before Phase 2 is considered complete
-- Integration tests use a separate test PostgreSQL schema
+- Ingredient normaliser hits 55/55 (100%) of golden set
+- Integration tests use a real test PostgreSQL schema (no mocks for DB)
 - Mocked LLM responses for non-golden-set tests
 
-## Out of Scope (v1)
-Barcode scanning, supermarket integrations, nutrition tracking, multi-user profiles, expiry-date recognition, step image cropping, native mobile app.
+## Out of Scope
+Supermarket integrations, native mobile app.
