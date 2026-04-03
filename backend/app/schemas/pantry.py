@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ class PantryItemBase(BaseModel):
     unit: str
     confidence: float = 1.0
     decay_rate: float = 0.02
+    expires_at: Optional[date] = None
 
 
 class PantryItemCreate(PantryItemBase):
@@ -25,6 +26,7 @@ class PantryItemUpdate(BaseModel):
     unit: Optional[str] = None
     confidence: Optional[float] = None
     decay_rate: Optional[float] = None
+    expires_at: Optional[date] = None
 
 
 class PantryItem(PantryItemBase):
@@ -48,6 +50,7 @@ class PantryAvailability(BaseModel):
     available_quantity: float  # (total × confidence) - reserved
     confidence: float
     unit: str
+    expires_at: Optional[date] = None
 
 
 class PantryReservationBase(BaseModel):

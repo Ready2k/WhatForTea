@@ -12,7 +12,7 @@ and never read pantry_items.quantity directly.
 """
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -30,21 +30,49 @@ logger = logging.getLogger(__name__)
 
 # ── Confidence helpers ────────────────────────────────────────────────────────
 
+# Estimated total shelf life in days by ingredient category.
+# Used when expires_at is set: confidence = remaining_days / shelf_life
+_SHELF_LIFE_BY_CATEGORY: dict[str, int] = {
+    "produce": 7,
+    "dairy": 14,
+    "meat": 3,
+    "fish": 3,
+    "bakery": 7,
+    "pantry": 365,
+    "spice": 730,
+    "other": 30,
+}
+
+
 def calculate_confidence(
     decay_rate: float,
     last_confirmed_at: datetime,
     now: Optional[datetime] = None,
+    expires_at: Optional[date] = None,
+    ingredient_category: Optional[str] = None,
 ) -> float:
     """
-    Pure function: recalculate confidence from the confirmation point.
+    Pure function: recalculate confidence.
 
-    Confidence starts at 1.0 when an item is confirmed and decays linearly.
-    Re-calculating from last_confirmed_at makes decay idempotent — safe to
-    run the scheduler multiple times without compounding decay.
+    When expires_at is set:
+      confidence = max(0, remaining_days / shelf_life_for_category)
+      This is more accurate than time-decay for fresh items with a known best-before date.
+
+    Otherwise falls back to the linear decay model:
+      confidence = max(0, 1 - decay_rate * days_since_confirmed)
     """
     if now is None:
         now = datetime.now(timezone.utc)
-    # Ensure both datetimes are tz-aware for subtraction
+
+    if expires_at is not None:
+        today = now.date()
+        days_remaining = (expires_at - today).days
+        if days_remaining <= 0:
+            return 0.0
+        shelf_life = _SHELF_LIFE_BY_CATEGORY.get(ingredient_category or "other", 30)
+        return max(0.0, min(1.0, days_remaining / shelf_life))
+
+    # Fall back to time-decay model
     if last_confirmed_at.tzinfo is None:
         last_confirmed_at = last_confirmed_at.replace(tzinfo=timezone.utc)
     days = (now - last_confirmed_at).total_seconds() / 86400
@@ -68,6 +96,7 @@ async def upsert_pantry_item(data: PantryItemCreate, db: AsyncSession) -> Pantry
         existing.confidence = 1.0
         existing.decay_rate = data.decay_rate
         existing.last_confirmed_at = datetime.now(timezone.utc)
+        existing.expires_at = data.expires_at
         await db.commit()
         await db.refresh(existing)
         return existing
@@ -79,6 +108,7 @@ async def upsert_pantry_item(data: PantryItemCreate, db: AsyncSession) -> Pantry
         confidence=data.confidence,
         decay_rate=data.decay_rate,
         last_confirmed_at=datetime.now(timezone.utc),
+        expires_at=data.expires_at,
     )
     db.add(item)
     await db.commit()
@@ -104,6 +134,8 @@ async def update_pantry_item(
         item.confidence = max(0.0, min(1.0, data.confidence))
     if data.decay_rate is not None:
         item.decay_rate = data.decay_rate
+    if data.expires_at is not None:
+        item.expires_at = data.expires_at
 
     await db.commit()
     await db.refresh(item)
@@ -143,6 +175,8 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
             existing.confidence = 1.0
             existing.decay_rate = item_data.decay_rate
             existing.last_confirmed_at = datetime.now(timezone.utc)
+            if item_data.expires_at is not None:
+                existing.expires_at = item_data.expires_at
             results.append(existing)
         else:
             item = PantryItem(
@@ -152,6 +186,7 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
                 confidence=1.0,
                 decay_rate=item_data.decay_rate,
                 last_confirmed_at=datetime.now(timezone.utc),
+                expires_at=item_data.expires_at,
             )
             db.add(item)
             results.append(item)
@@ -159,6 +194,31 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
     for item in results:
         await db.refresh(item)
     return results
+
+
+async def get_expiring_soon(db: AsyncSession, days: int = 3) -> list[PantryItem]:
+    """
+    Return pantry items with expires_at within the next `days` days (inclusive).
+    Items already expired (expires_at < today) are also included (days_remaining <= 0).
+    Ordered by expires_at ascending.
+    """
+    from sqlalchemy import and_
+
+    today = datetime.now(timezone.utc).date()
+    cutoff = date.fromordinal(today.toordinal() + days)
+
+    stmt = (
+        select(PantryItem)
+        .options(selectinload(PantryItem.ingredient))
+        .where(
+            and_(
+                PantryItem.expires_at.is_not(None),
+                PantryItem.expires_at <= cutoff,
+            )
+        )
+        .order_by(PantryItem.expires_at.asc())
+    )
+    return list((await db.execute(stmt)).scalars().all())
 
 
 async def delete_pantry_item(item_id: uuid.UUID, db: AsyncSession) -> None:
@@ -192,7 +252,13 @@ async def get_available(db: AsyncSession) -> list[PantryAvailability]:
     now = datetime.now(timezone.utc)
     result = []
     for item in items:
-        live_confidence = calculate_confidence(item.decay_rate, item.last_confirmed_at, now)
+        live_confidence = calculate_confidence(
+            item.decay_rate,
+            item.last_confirmed_at,
+            now,
+            expires_at=item.expires_at,
+            ingredient_category=item.ingredient.category if item.ingredient else None,
+        )
         effective = float(item.quantity) * live_confidence
         reserved = sum(float(r.quantity) for r in item.reservations)
         available = max(0.0, effective - reserved)
@@ -205,6 +271,7 @@ async def get_available(db: AsyncSession) -> list[PantryAvailability]:
             available_quantity=available,
             confidence=live_confidence,
             unit=item.unit,
+            expires_at=item.expires_at,
         ))
 
     return result
@@ -219,13 +286,19 @@ async def apply_decay_all(db: AsyncSession) -> int:
 
     Called by APScheduler daily at 03:00. Safe to run multiple times (idempotent).
     """
-    stmt = select(PantryItem)
+    stmt = select(PantryItem).options(selectinload(PantryItem.ingredient))
     items = (await db.execute(stmt)).scalars().all()
 
     now = datetime.now(timezone.utc)
     count = 0
     for item in items:
-        new_conf = calculate_confidence(item.decay_rate, item.last_confirmed_at, now)
+        new_conf = calculate_confidence(
+            item.decay_rate,
+            item.last_confirmed_at,
+            now,
+            expires_at=item.expires_at,
+            ingredient_category=item.ingredient.category if item.ingredient else None,
+        )
         if abs(new_conf - item.confidence) > 0.0001:
             item.confidence = new_conf
             count += 1

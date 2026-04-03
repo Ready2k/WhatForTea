@@ -1,9 +1,9 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Enum, Float, ForeignKey, Numeric, Text, func
+from sqlalchemy import Date, Enum, Float, ForeignKey, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -34,6 +34,8 @@ class PantryItem(Base):
     )
     # Per-day confidence decay rate; fridge items ~0.1, pantry ~0.02
     decay_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.02)
+    # Optional explicit best-before date; when set, drives confidence instead of decay_rate
+    expires_at: Mapped[Optional[date]] = mapped_column(Date(), nullable=True)
 
     # Relationships
     ingredient: Mapped["Ingredient"] = relationship(back_populates="pantry_items")  # noqa: F821

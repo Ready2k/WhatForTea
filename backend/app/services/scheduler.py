@@ -48,6 +48,28 @@ async def _llm_output_cleanup_job() -> None:
     )
 
 
+async def _expiry_check_job() -> None:
+    """Log pantry items expiring within 3 days so they surface in 'Use it up' mode."""
+    from app.database import AsyncSessionLocal
+    from app.services.pantry import get_expiring_soon
+
+    async with AsyncSessionLocal() as db:
+        items = await get_expiring_soon(db, days=3)
+
+    if items:
+        names = [
+            f"{i.ingredient.canonical_name} (expires {i.expires_at})"
+            for i in items
+            if i.ingredient
+        ]
+        logger.warning(
+            "pantry items expiring soon",
+            extra={"count": len(items), "items": names},
+        )
+    else:
+        logger.info("expiry check: no items expiring within 3 days")
+
+
 async def _nightly_backup_job() -> None:
     """Run scripts/backup.sh in a subprocess (non-blocking via thread executor)."""
     if not _BACKUP_SCRIPT.exists():
@@ -91,6 +113,15 @@ def create_scheduler() -> AsyncIOScheduler:
         trigger=CronTrigger(hour=4, minute=0),
         id="llm_output_cleanup",
         name="LLM output expiry cleanup",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+
+    scheduler.add_job(
+        _expiry_check_job,
+        trigger=CronTrigger(hour=3, minute=5),
+        id="expiry_check",
+        name="Pantry expiry check",
         replace_existing=True,
         misfire_grace_time=3600,
     )

@@ -76,6 +76,7 @@ export interface PantryItem {
   decay_rate: number;
   last_confirmed_at: string;
   last_used_at?: string;
+  expires_at?: string | null;
 }
 
 export interface PantryAvailability {
@@ -86,6 +87,7 @@ export interface PantryAvailability {
   available_quantity: number;
   confidence: number;
   unit: string;
+  expires_at?: string | null;
 }
 
 export interface IngredientMatchDetail {

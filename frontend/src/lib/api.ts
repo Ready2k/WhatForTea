@@ -134,6 +134,7 @@ export function upsertPantryItem(data: {
   quantity: number;
   unit: string;
   confidence?: number;
+  expires_at?: string | null;
 }): Promise<PantryItem> {
   return request<PantryItem>('/api/v1/pantry', {
     method: 'POST',

@@ -23,6 +23,7 @@ Use this document to resume work across sessions. Update it as each phase comple
 | 3.5 — Nutritional Estimates | ✅ Complete | arq task `task_estimate_nutrition`; queued after confirm + manual retrigger; `nutrition_prompt.md`; migration `f6a7b8c9d0e1`; collapsible nutrition section on recipe detail |
 | 3.3 — Step Image Crops | ✅ Complete | `_crop_step_image()` with Pillow; `image_bbox` from LLM in `ingestion_prompt.md`; `GET /recipes/{id}/steps/{order}/image` endpoint; crop thumbnail in recipe detail + cook mode |
 | 3.6 — Voice-Dictated Notes & Commands | ✅ Complete | `POST /api/v1/voice/command`; LLM intent parsing (add_to_list / session_note / navigation / unknown); TeaBot mic button in cook header; ambient trigger detection ("teabot", "add to list"); "Dictate notes" button in end-of-session overlay |
+| 4.4 — Expiry Date Input | ✅ Complete | `expires_at DATE NULL` on pantry_items (migration `g7h8i9j0k1l2`); `calculate_confidence()` uses expiry when set (shelf-life by category); `GET /pantry/expiring?days=3`; APScheduler expiry check at 03:05; pantry page: date picker, ExpiryBadge, expiring-soon banner |
 
 ---
 

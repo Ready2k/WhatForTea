@@ -10,9 +10,26 @@ interface AddItemForm {
   ingredient: Ingredient | null;
   quantity: string;
   unit: string;
+  expires_at: string;
 }
 
-const EMPTY_FORM: AddItemForm = { search: '', ingredient: null, quantity: '', unit: '' };
+const EMPTY_FORM: AddItemForm = { search: '', ingredient: null, quantity: '', unit: '', expires_at: '' };
+
+function daysUntil(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - today.getTime()) / 86400000);
+}
+
+function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
+  const days = daysUntil(expiresAt);
+  if (days < 0) return <span className="text-xs font-semibold text-red-600 dark:text-red-400">Expired</span>;
+  if (days === 0) return <span className="text-xs font-semibold text-red-500 dark:text-red-400">Expires today</span>;
+  if (days <= 3) return <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">Expires in {days}d</span>;
+  return <span className="text-xs text-gray-400 dark:text-gray-500">Expires {new Date(expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>;
+}
 
 export default function PantryPage() {
   const { data: items, isLoading, isError, refetch } = useAvailable();
@@ -57,8 +74,16 @@ export default function PantryPage() {
   const noResults = inputFocused && !form.ingredient && form.search.trim().length > 0 && suggestions.length === 0;
 
   const sorted = items
-    ? [...items].sort((a, b) => a.confidence - b.confidence)
+    ? [...items].sort((a, b) => {
+        // Expiring within 3 days floats to top, then by confidence ascending
+        const aExpiring = a.expires_at ? daysUntil(a.expires_at) <= 3 : false;
+        const bExpiring = b.expires_at ? daysUntil(b.expires_at) <= 3 : false;
+        if (aExpiring !== bExpiring) return aExpiring ? -1 : 1;
+        return a.confidence - b.confidence;
+      })
     : [];
+
+  const expiringSoon = sorted.filter((i) => i.expires_at && daysUntil(i.expires_at) <= 3);
 
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
@@ -98,6 +123,7 @@ export default function PantryPage() {
         ingredient_id: ingredient.id,
         quantity: qty,
         unit: form.unit.trim() || ingredient.typical_unit || 'unit',
+        expires_at: form.expires_at || null,
       });
       setForm(EMPTY_FORM);
       setShowAddForm(false);
@@ -288,6 +314,18 @@ export default function PantryPage() {
               />
             </div>
           </div>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Best-before date <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="date"
+              value={form.expires_at}
+              onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
           {formError && <p className="text-xs text-red-600 dark:text-red-400">{formError}</p>}
           <button
             type="submit"
@@ -316,6 +354,21 @@ export default function PantryPage() {
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
           ))}
+        </div>
+      )}
+
+      {/* Expiring soon banner */}
+      {!isLoading && !isError && expiringSoon.length > 0 && (
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/60 rounded-2xl flex items-start gap-2">
+          <span className="text-lg flex-shrink-0">⚠️</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              {expiringSoon.length} item{expiringSoon.length > 1 ? 's' : ''} expiring soon
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+              {expiringSoon.map((i) => i.ingredient.canonical_name).join(', ')}
+            </p>
+          </div>
         </div>
       )}
 
@@ -398,9 +451,12 @@ export default function PantryPage() {
                 </div>
 
                 <div className="flex items-center justify-between mt-3">
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {item.ingredient.category}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {item.ingredient.category}
+                    </p>
+                    {item.expires_at && <ExpiryBadge expiresAt={item.expires_at} />}
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => deleteMutation.mutate(item.pantry_item_id)}

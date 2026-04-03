@@ -25,6 +25,7 @@ from app.services.pantry import (
     confirm_pantry_item,
     delete_pantry_item,
     get_available,
+    get_expiring_soon,
     update_pantry_item,
     upsert_pantry_item,
 )
@@ -41,6 +42,18 @@ async def list_available(db: AsyncSession = Depends(get_db)):
     Use this endpoint — never read pantry_items.quantity directly.
     """
     return await get_available(db)
+
+
+@router.get("/expiring", response_model=list[PantryItemSchema])
+async def list_expiring(
+    days: int = 3,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return pantry items with an expiry date within the next `days` days (default 3).
+    Items already expired are also included. Ordered by expiry date ascending.
+    """
+    return await get_expiring_soon(db, days=days)
 
 
 @router.get("", response_model=list[PantryItemSchema])
