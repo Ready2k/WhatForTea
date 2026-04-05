@@ -111,7 +111,7 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
   const isLoading = state.phase === 'loading';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center px-4 pb-4">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center px-4 pt-12 pb-4">
       <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
