@@ -86,17 +86,47 @@ async def save_images(
 ) -> Path:
     """
     Persist uploaded UploadFile objects to <recipes_dir>/<job_id>/.
+    Compresses and resizes images to avoid hitting the 5MB Bedrock limit
+    and to save NAS storage space.
     Returns the job directory path.
     """
+    import io
+    from PIL import Image, ImageOps
+
     job_dir = _job_dir(job_id, recipes_dir)
     job_dir.mkdir(parents=True, exist_ok=True)
 
+    MAX_SIZE = (1568, 1568)
+
     for i, file in enumerate(files):
-        suffix = Path(file.filename).suffix if file.filename else ".jpg"
-        dest = job_dir / f"image_{i:02d}{suffix}"
         content = await file.read()
-        dest.write_bytes(content)
-        logger.debug("image saved", extra={"path": str(dest), "bytes": len(content)})
+        
+        try:
+            with Image.open(io.BytesIO(content)) as img:
+                # Correct orientation from EXIF (important for mobile photos)
+                img = ImageOps.exif_transpose(img)
+                # Convert to RGB to ensure we can save as JPEG
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                    
+                # Downscale if larger than MAX_SIZE
+                img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
+                
+                dest = job_dir / f"image_{i:02d}.jpg"
+                img.save(dest, "JPEG", quality=85, optimize=True)
+                
+                new_size = dest.stat().st_size
+                logger.debug(
+                    "image saved and optimized", 
+                    extra={"path": str(dest), "original_bytes": len(content), "new_bytes": new_size}
+                )
+        except Exception as e:
+            logger.warning("Failed to optimize image, saving original", extra={"error": str(e)})
+            # Fallback for unexpected formats (e.g. not an image) or Image module errors
+            suffix = Path(file.filename).suffix if file.filename else ".jpg"
+            dest = job_dir / f"image_{i:02d}{suffix}"
+            dest.write_bytes(content)
+            logger.debug("image saved without optimization", extra={"path": str(dest), "bytes": len(content)})
 
     return job_dir
 
