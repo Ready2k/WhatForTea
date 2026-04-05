@@ -84,6 +84,27 @@ fi
 docker buildx use "${BUILDER_NAME}"
 echo ""
 
+# Safely bump version in frontend and backend
+if [[ "${VERSION}" != "latest" ]]; then
+    echo "🔄 Bumping codebase version to ${VERSION}..."
+    if [[ -d "frontend" ]]; then
+        (cd frontend && npm --no-git-tag-version --allow-same-version version "${VERSION}" >/dev/null 2>&1) || true
+    fi
+    if [[ -f "backend/app/main.py" ]]; then
+        python3 -c "
+import re
+path = 'backend/app/main.py'
+with open(path, 'r') as f:
+    content = f.read()
+content = re.sub(r'version=\"[0-9\.]+\"', 'version=\"${VERSION}\"', content)
+with open(path, 'w') as f:
+    f.write(content)
+"
+    fi
+    echo "✅ Codebase version bumped."
+    echo ""
+fi
+
 build_and_push() {
     local service="$1"
     local dockerfile="$2"
