@@ -1,8 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from prometheus_fastapi_instrumentator import Instrumentator
+from copilotkit import CopilotKitRemoteEndpoint
+from copilotkit.integrations.fastapi import add_fastapi_endpoint
+from langchain_aws import ChatBedrock
+import boto3
 
 from app.config import settings
 from app.errors import register_exception_handlers
@@ -22,9 +26,43 @@ from app.api.v1.voice import router as voice_router
 from app.middleware.auth import AuthMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.services.scheduler import create_scheduler
+from app.agents.teabot import teabot_coagent
+from app.agents.recipe_agent import recipe_coagent
+from app.agents.planner_agent import planner_coagent
+from app.agents.pantry_agent import pantry_coagent
+from app.agents.cooking_agent import cooking_coagent
+from app.agents.ingest_agent import ingest_coagent
 
 setup_logging(settings.log_level)
 logger = logging.getLogger(__name__)
+
+# Initialize the Bedrock LLM for the CoPilot runtime
+# Per Section 11, we default to Haiku for cheaper/faster routing
+bedrock_client = boto3.client(
+    service_name="bedrock-runtime",
+    aws_access_key_id=settings.aws_access_key_id,
+    aws_secret_access_key=settings.aws_secret_access_key,
+    region_name=settings.aws_region
+)
+
+haiku_model = ChatBedrock(
+    client=bedrock_client,
+    model_id="anthropic.claude-3-haiku-20240307-v1:0"
+)
+
+runtime = CopilotKitRemoteEndpoint(
+    agents=[
+        teabot_coagent,
+        recipe_coagent,
+        planner_coagent,
+        pantry_coagent,
+        cooking_coagent,
+        ingest_coagent
+    ],
+)
+
+
+
 
 
 async def _seed_default_user() -> None:
@@ -112,3 +150,6 @@ app.include_router(barcode_router)
 app.include_router(collections_router)
 app.include_router(users_router)
 app.include_router(voice_router)
+
+# Add CopilotKit endpoint
+add_fastapi_endpoint(app, runtime, "/api/copilot")

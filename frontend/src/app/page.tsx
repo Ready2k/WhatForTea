@@ -49,6 +49,8 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
 
 export default function Dashboard() {
   const [mode, setMode] = useState<Mode>('planning');
+  const [showLegacy, setShowLegacy] = useState(false);
+  
   const { data: allMatches, isLoading } = useMatches();
   const { data: available } = useAvailable();
   const atRiskCount = available?.filter((a) => a.confidence < 0.5).length ?? 0;
@@ -62,18 +64,59 @@ export default function Dashboard() {
 
   const cookNowCount = allMatches?.filter((m) => m.category === 'cook_now').length ?? 0;
   
-  // Filter matches based on mode
   const filteredMatches = allMatches?.filter(m => {
     if (mode === 'hangry') {
       return m.category === 'cook_now';
     }
-    return true; // Show all in planning mode
+    return true;
   }) ?? [];
 
   const topMatches = filteredMatches.slice(0, 3);
 
+  // Default TeaBot Entry View
+  if (!showLegacy) {
+    return (
+      <main className="max-w-lg mx-auto px-6 h-[80vh] flex flex-col justify-center items-center text-center space-y-8 animate-in fade-in duration-500">
+        <div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/50 rounded-3xl flex items-center justify-center text-5xl shadow-xl shadow-indigo-100 dark:shadow-none mb-4 animate-bounce">
+          🍵
+        </div>
+        
+        <div>
+          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-3">
+            What's for Tea?
+          </h1>
+          <p className="text-lg text-gray-500 dark:text-gray-400">
+            Your conversational kitchen assistant.
+          </p>
+        </div>
+
+        <div className="w-full space-y-4 pt-8">
+          <button
+            onClick={() => window.dispatchEvent(new Event('teabot-toggle'))}
+            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold font-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
+          >
+            Open TeaBot
+          </button>
+          
+          <button
+            onClick={() => setShowLegacy(true)}
+            className="text-sm font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            View Legacy Dashboard
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-6">
+    <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-6 animate-in slide-in-from-bottom-4 duration-300">
+      <div className="flex justify-end mb-2">
+         <button onClick={() => setShowLegacy(false)} className="text-xs font-medium text-indigo-500 hover:underline">
+            ← Back to TeaBot
+         </button>
+      </div>
+      
       {/* Resume cooking banner */}
       {activeSession && (
         <Link
