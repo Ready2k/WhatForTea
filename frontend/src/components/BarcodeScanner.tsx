@@ -95,8 +95,11 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
     }
   }, [handleBarcode]);
 
-  // Clean up camera on unmount
-  useEffect(() => () => stopCamera(), [stopCamera]);
+  // Auto-start camera on mount if BarcodeDetector is available
+  useEffect(() => {
+    if (hasBarcodeDetector) startCamera();
+    return () => stopCamera();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Manual entry ──────────────────────────────────────────────────────────
   async function handleManualSubmit(e: React.FormEvent) {
@@ -150,12 +153,7 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
               )}
               {state.phase === 'idle' && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <button
-                    onClick={startCamera}
-                    className="px-5 py-2.5 bg-emerald-500 text-white font-semibold rounded-2xl text-sm hover:bg-emerald-600 transition-colors"
-                  >
-                    Start Camera
-                  </button>
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>

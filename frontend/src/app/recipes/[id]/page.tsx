@@ -42,7 +42,7 @@ export default function RecipeDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [imageVersion, setImageVersion] = useState(0);
+  const [imageVersions, setImageVersions] = useState<Record<number, number>>({ 0: 0, 1: 0 });
   const [isRotating, setIsRotating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
@@ -119,7 +119,7 @@ export default function RecipeDetailPage() {
     setIsRotating(true);
     try {
       await rotateRecipePhoto(id, index);
-      setImageVersion(v => v + 1);
+      setImageVersions(v => ({ ...v, [index]: (v[index] ?? 0) + 1 }));
     } catch (err) {
       alert('Failed to rotate image');
       console.error(err);
@@ -135,7 +135,7 @@ export default function RecipeDetailPage() {
     setIsUploading(true);
     try {
       await uploadRecipePhoto(id, file);
-      setImageVersion(v => v + 1);
+      setImageVersions(v => ({ ...v, 0: (v[0] ?? 0) + 1 }));
       refetch(); // New hero path might have changed
     } catch (err) {
       alert('Failed to upload image');
@@ -200,7 +200,7 @@ export default function RecipeDetailPage() {
               aria-label="View full-size image"
             >
               <img
-                src={`/api/v1/recipes/${recipe.id}/image?index=0&v=${imageVersion}`}
+                src={`/api/v1/recipes/${recipe.id}/image?index=0&v=${imageVersions[0]}`}
                 alt={recipe.title}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
@@ -213,18 +213,8 @@ export default function RecipeDetailPage() {
               </div>
             </button>
 
-            {/* Photo Controls */}
+            {/* Photo Controls — upload only; rotation is available in fullscreen */}
             <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => handleRotate(0)}
-                disabled={isRotating}
-                className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:bg-white/40 transition-colors shadow-lg"
-                title="Rotate image"
-              >
-                <svg className={`w-5 h-5 ${isRotating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
               <label className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white hover:bg-white/40 transition-colors shadow-lg cursor-pointer">
                 <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={isUploading} />
                 <svg className={`w-5 h-5 ${isUploading ? 'animate-pulse' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -752,8 +742,8 @@ export default function RecipeDetailPage() {
           onClick={(e) => e.stopPropagation()}
         >
           <img
-            key={`${lightboxIndex}-${imageVersion}`}
-            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}&v=${imageVersion}`}
+            key={`${lightboxIndex}-${imageVersions[lightboxIndex]}`}
+            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}&v=${imageVersions[lightboxIndex] ?? 0}`}
             alt={`${recipe.title} — ${lightboxIndex === 0 ? 'front' : 'back'}`}
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             style={{
@@ -764,24 +754,40 @@ export default function RecipeDetailPage() {
           />
         </div>
 
-        {/* Bottom controls — flip + dots, floating above image */}
-        {recipe.image_count > 1 && (
-          <div
-            className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-10"
-            onClick={(e) => e.stopPropagation()}
-          >
+        {/* Bottom controls — rotate always visible; flip + dots when 2 images */}
+        <div
+          className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-3">
             <button
-              onClick={handleFlip}
-              disabled={isFlipping}
+              onClick={() => handleRotate(lightboxIndex)}
+              disabled={isRotating}
               className="flex items-center gap-2 bg-black/70 hover:bg-black/90 disabled:opacity-40 text-white text-sm font-semibold px-5 py-2.5 rounded-full border border-white/20 shadow-lg transition-colors"
-              aria-label="Flip card"
+              aria-label="Rotate image"
               style={{ WebkitTapHighlightColor: 'transparent' }}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              <svg className={`w-4 h-4 ${isRotating ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Flip to {lightboxIndex === 0 ? 'Back' : 'Front'}
+              Rotate
             </button>
+            {recipe.image_count > 1 && (
+              <button
+                onClick={handleFlip}
+                disabled={isFlipping}
+                className="flex items-center gap-2 bg-black/70 hover:bg-black/90 disabled:opacity-40 text-white text-sm font-semibold px-5 py-2.5 rounded-full border border-white/20 shadow-lg transition-colors"
+                aria-label="Flip card"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                Flip to {lightboxIndex === 0 ? 'Back' : 'Front'}
+              </button>
+            )}
+          </div>
+          {recipe.image_count > 1 && (
             <div className="flex gap-2">
               {[0, 1].map((i) => (
                 <button
@@ -794,8 +800,8 @@ export default function RecipeDetailPage() {
                 />
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>,
       document.body
     )}

@@ -182,6 +182,7 @@ const FUN_MESSAGES: Record<ApiStatus, string[]> = {
 export default function IngestPage() {
   const [flowState, setFlowState] = useState<FlowState>('upload');
   const [capturedPhotos, setCapturedPhotos] = useState<{ file: File; url: string }[]>([]);
+  const [photoRotations, setPhotoRotations] = useState<number[]>([0, 0]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [reviewPayload, setReviewPayload] = useState<IngestReviewPayload | null>(null);
   const [savedRecipeId, setSavedRecipeId] = useState<string | null>(null);
@@ -221,6 +222,33 @@ export default function IngestPage() {
     return () => { if (tickerRef.current) clearInterval(tickerRef.current); };
   }, [flowState, apiStatus]);
 
+  // Apply canvas rotation to a File (used at upload time)
+  async function applyRotation(file: File, degrees: number): Promise<File> {
+    if (degrees === 0) return file;
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    const rad = (degrees * Math.PI) / 180;
+    if (degrees === 90 || degrees === 270) {
+      canvas.width = bitmap.height;
+      canvas.height = bitmap.width;
+    } else {
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+    }
+    const ctx = canvas.getContext('2d')!;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(rad);
+    ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+    bitmap.close();
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        (blob) => resolve(new File([blob!], file.name, { type: 'image/jpeg' })),
+        'image/jpeg',
+        JPEG_QUALITY,
+      );
+    });
+  }
+
   // File picker: replaces all selected files (supports multi-select)
   async function handleFilesSelected(files: FileList | null) {
     try {
@@ -233,6 +261,7 @@ export default function IngestPage() {
       capturedPhotos.forEach((p) => URL.revokeObjectURL(p.url));
       const newPhotos = resized.map((f) => ({ file: f, url: URL.createObjectURL(f) }));
       setCapturedPhotos(newPhotos);
+      setPhotoRotations([0, 0]);
     } catch (err: any) {
       alert(`Photo capture error: ${err.message || 'Unknown error'}`);
     }
@@ -261,8 +290,10 @@ export default function IngestPage() {
       if (capturedPhotos.length >= 2) {
         URL.revokeObjectURL(capturedPhotos[1].url);
         setCapturedPhotos([capturedPhotos[0], newItem]);
+        setPhotoRotations((r) => [r[0], 0]);
       } else {
         setCapturedPhotos([...capturedPhotos, newItem]);
+        setPhotoRotations((r) => [...r.slice(0, capturedPhotos.length), 0]);
       }
     } catch (err: any) {
       alert(`Camera error: ${err.message || 'Unknown error'}`);
@@ -304,9 +335,14 @@ export default function IngestPage() {
   async function handleUpload() {
     if (capturedPhotos.length !== 2) return;
 
+    // Apply any user-requested rotations before fingerprinting or uploading
+    const rotatedFiles = await Promise.all(
+      capturedPhotos.map((p, i) => applyRotation(p.file, photoRotations[i] ?? 0)),
+    );
+
     // Duplicate check — compare pixel fingerprints before paying for a Bedrock call
     try {
-      const [fpA, fpB] = await Promise.all(capturedPhotos.map((p) => fingerprintImage(p.file)));
+      const [fpA, fpB] = await Promise.all(rotatedFiles.map((f) => fingerprintImage(f)));
       const similarity = pixelSimilarity(fpA, fpB);
       if (similarity >= DUPLICATE_THRESHOLD) {
         setProcessingError(
@@ -319,7 +355,7 @@ export default function IngestPage() {
     }
 
     const fd = new FormData();
-    capturedPhotos.forEach((p) => fd.append('images', p.file));
+    rotatedFiles.forEach((f) => fd.append('images', f));
 
     try {
       setApiStatus('uploading');
@@ -497,16 +533,31 @@ export default function IngestPage() {
             <div className="flex gap-3">
               {capturedPhotos.map((p, i) => (
                 <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
-                  <img src={p.url} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={p.url}
+                    alt={`Preview ${i + 1}`}
+                    className="w-full h-full object-contain transition-transform duration-300"
+                    style={{ transform: `rotate(${photoRotations[i] ?? 0}deg)` }}
+                  />
                   <button
                     onClick={() => {
                       URL.revokeObjectURL(p.url);
                       setCapturedPhotos((prev) => prev.filter((_, idx) => idx !== i));
+                      setPhotoRotations((r) => r.map((v, ri) => (ri === i ? 0 : v)));
                     }}
                     className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-black/70"
                     aria-label="Remove photo"
                   >
                     ×
+                  </button>
+                  <button
+                    onClick={() => setPhotoRotations((r) => r.map((v, ri) => (ri === i ? (v + 90) % 360 : v)))}
+                    className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                    aria-label="Rotate photo"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                   </button>
                   <span className="absolute bottom-1 left-1 text-xs bg-black/40 text-white px-1.5 py-0.5 rounded">
                     {i + 1}

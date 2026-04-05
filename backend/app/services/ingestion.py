@@ -154,7 +154,10 @@ def _validate_llm_result(parsed: dict) -> list[str]:
 
     for ing in ingredients:
         qty = ing.get("quantity")
-        if qty is None or not isinstance(qty, (int, float)) or qty <= 0:
+        # None means optional/garnish (e.g. "for decoration", "to taste") — coerce to 0
+        if qty is None:
+            ing["quantity"] = 0
+        elif not isinstance(qty, (int, float)) or qty < 0:
             errors.append(
                 f"Ingredient {ing.get('raw_name')!r} has invalid quantity: {qty!r}"
             )
