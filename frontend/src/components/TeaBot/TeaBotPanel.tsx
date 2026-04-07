@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Send, Command } from 'lucide-react';
+import { X, Send, Command } from 'lucide-react';
+import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { RenderA2UI, type A2UIDescriptor } from '@/lib/a2ui';
 import { endCookingSession, createCookingSession, fetchCurrentPlan, setWeekPlan } from '@/lib/api';
@@ -40,7 +41,9 @@ export function TeaBotPanel() {
   const [isMobile, setIsMobile] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const threadIdRef = useRef<string | null>(null);
+  const threadIdRef = useRef<string | null>(
+    typeof window !== 'undefined' ? localStorage.getItem('teabot_thread_id') : null
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -128,9 +131,9 @@ export function TeaBotPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-    const userContent = input.trim();
+  const handleSend = async (override?: string) => {
+    const userContent = (override ?? input).trim();
+    if (!userContent || isLoading) return;
     setInput('');
 
     const newMessages: ChatMessage[] = [...messages, { role: 'user', content: userContent }];
@@ -201,6 +204,7 @@ export function TeaBotPanel() {
               });
             } else if (event.type === 'done' && event.thread_id) {
               threadIdRef.current = event.thread_id;
+              localStorage.setItem('teabot_thread_id', event.thread_id);
             } else if (event.type === 'error') {
               throw new Error(event.message ?? 'Stream error');
             }
@@ -277,8 +281,8 @@ export function TeaBotPanel() {
             {/* Header */}
             <header className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500 rounded-lg text-white">
-                  <Bot size={20} />
+                <div className="rounded-xl overflow-hidden shadow-md w-10 h-10 flex-shrink-0">
+                  <Image src="/teabot-chef.png" alt="TeaBot Chef" width={40} height={40} className="object-cover" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-sm">TeaBot</h2>
@@ -302,10 +306,31 @@ export function TeaBotPanel() {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-40">
-                  <Bot size={48} className="mb-4" />
-                  <p className="text-sm font-medium">Hello! I'm TeaBot.</p>
-                  <p className="text-xs">Ask me anything about recipes, your pantry, or meal planning.</p>
+                <div className="h-full flex flex-col items-center justify-center p-6 gap-6">
+                  <div className="text-center">
+                    <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden shadow-lg border-4 border-indigo-100 dark:border-indigo-900">
+                      <Image src="/teabot-chef.png" alt="TeaBot Chef" width={96} height={96} className="object-cover" />
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Hello! I'm TeaBot.</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your kitchen assistant — ask me anything.</p>
+                  </div>
+                  <div className="w-full space-y-2">
+                    {[
+                      "What's for tea tonight?",
+                      "What can I cook right now?",
+                      "Plan this week's meals",
+                      "What's going off in my pantry?",
+                      "Show me something quick and easy",
+                    ].map((prompt) => (
+                      <button
+                        key={prompt}
+                        onClick={() => handleSend(prompt)}
+                        className="w-full text-left px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700 transition-colors"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 messages.map((msg, i) => (
@@ -395,7 +420,7 @@ export function TeaBotPanel() {
                     </svg>
                   </button>
                   <button
-                    onClick={handleSend}
+                    onClick={() => handleSend()}
                     disabled={!input.trim() || isLoading}
                     className="p-2 bg-indigo-500 text-white rounded-lg disabled:opacity-50 disabled:grayscale transition-all shadow-md active:scale-95"
                   >

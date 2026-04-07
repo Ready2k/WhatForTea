@@ -10,7 +10,7 @@ either renders (recipe_card, pantry_confirm) or executes silently
 import json
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date, timedelta, timezone
 from typing import List, Optional
 
 import boto3
@@ -101,6 +101,7 @@ async def _build_context(user_id: Optional[str] = None) -> str:
         from sqlalchemy import select as sa_select
         from app.database import AsyncSessionLocal
         from app.models.recipe import Recipe as RecipeModel
+        from app.models.session import CookingSession as CookingSessionModel
         from app.services.cooking import get_active_session
         from app.services.matcher import score_all_recipes
         from app.services.pantry import get_available
@@ -144,18 +145,58 @@ async def _build_context(user_id: Optional[str] = None) -> str:
             except Exception:
                 pass
 
-            # Top matches — detailed (score, missing ingredients)
+            # Recently cooked — completed sessions in the last 14 days
+            cutoff = date.today() - timedelta(days=14)
+            cutoff_dt = cutoff.isoformat()
+            recent_stmt = (
+                sa_select(CookingSessionModel)
+                .where(CookingSessionModel.ended_at.isnot(None))
+                .where(CookingSessionModel.ended_at >= cutoff_dt)
+                .order_by(CookingSessionModel.ended_at.desc())
+            )
+            recent_sessions = (await db.execute(recent_stmt)).scalars().all()
+            if recent_sessions:
+                recently_cooked: dict[str, int] = {}
+                for s in recent_sessions:
+                    rid = str(s.recipe_id)
+                    if rid not in recently_cooked:
+                        days_ago = (date.today() - s.ended_at.date()).days
+                        recently_cooked[rid] = days_ago
+                cooked_parts = []
+                for rid, days_ago in list(recently_cooked.items())[:10]:
+                    cooked_parts.append(f"[id:{rid}] {days_ago}d ago")
+                lines.append("Recently cooked (avoid suggesting within 5 days): " + ", ".join(cooked_parts))
+
+            # Top matches — detailed (score, missing ingredients, ingredient list)
             matches = await score_all_recipes(db)
             match_ids: set = set()
+            match_map: dict = {}
+            ingredient_map: dict = {}
             if matches:
-                match_map = {}
                 for m in matches[:8]:
-                    match_ids.add(str(m.recipe.id))
+                    rid = str(m.recipe.id)
+                    match_ids.add(rid)
                     missing_names = [d.raw_name for d in (m.hard_missing or [])][:3]
-                    match_map[str(m.recipe.id)] = (
+                    match_map[rid] = (
                         f"{m.score:.0f}% match"
                         + (f", missing: {', '.join(missing_names)}" if missing_names else "")
                     )
+
+            # Load ingredients for top-8 recipes
+            if match_ids:
+                top_stmt = (
+                    sa_select(RecipeModel)
+                    .where(RecipeModel.id.in_([uuid.UUID(rid) for rid in match_ids]))
+                    .options(__import__("sqlalchemy.orm", fromlist=["selectinload"]).selectinload(RecipeModel.ingredients))
+                )
+                top_recipes = (await db.execute(top_stmt)).scalars().all()
+                for r in top_recipes:
+                    parts = []
+                    for ing in r.ingredients:
+                        qty = f"{ing.quantity:.0f}" if ing.quantity == int(ing.quantity) else f"{ing.quantity}"
+                        unit = f" {ing.unit}" if ing.unit else ""
+                        parts.append(f"{qty}{unit} {ing.raw_name}")
+                    ingredient_map[str(r.id)] = parts
 
             # Full recipe library — compact index so TeaBot knows ALL recipes
             all_recipes_stmt = sa_select(RecipeModel).order_by(RecipeModel.title)
@@ -166,16 +207,16 @@ async def _build_context(user_id: Optional[str] = None) -> str:
                 for r in all_recipes:
                     tags = ", ".join(r.mood_tags) if r.mood_tags else ""
                     cook_time = f"{r.cooking_time_mins}m" if r.cooking_time_mins else ""
-                    # Combine compact info
                     meta = " | ".join(filter(None, [cook_time, tags]))
                     line = f"- {r.title} [id:{r.id}]"
                     if meta:
                         line += f" ({meta})"
 
-                    # Append match detail for top recipes
                     rid = str(r.id)
                     if rid in match_ids:
                         line += f" ← {match_map[rid]}"
+                        if rid in ingredient_map:
+                            line += f"\n  Ingredients: {', '.join(ingredient_map[rid])}"
 
                     recipe_lines.append(line)
 
