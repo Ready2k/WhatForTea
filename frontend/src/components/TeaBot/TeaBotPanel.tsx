@@ -35,6 +35,12 @@ function parseWidgets(raw: string): { text: string; widgets: A2UIDescriptor[] } 
 /** Widget types that are executed silently by the frontend, not rendered as UI */
 const AUTO_EXECUTE_TYPES = new Set(['end_cooking_session', 'navigate', 'start_cooking', 'plan_meal']);
 
+/** Paths the navigate widget is allowed to route to */
+const ALLOWED_NAV_PATHS = new Set(['/pantry', '/recipes', '/planner', '/ingest', '/collections', '/profile']);
+
+/** Loose UUID v4 check — rejects obviously bad LLM-hallucinated IDs */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function TeaBotPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -64,14 +70,19 @@ export function TeaBotPanel() {
         }
 
       } else if (w.type === 'start_cooking') {
-        try {
-          await createCookingSession(w.recipe_id as string);
-          queryClient.invalidateQueries({ queryKey: ['cookingSession'] });
-          router.push(`/recipes/${w.recipe_id}/cook`);
-          setIsOpen(false);
-          results.push(`✓ Starting "${w.recipe_title}"…`);
-        } catch {
-          results.push(`⚠ Could not start cooking session. Try opening the recipe manually.`);
+        const recipeId = w.recipe_id as string;
+        if (!UUID_RE.test(recipeId)) {
+          results.push('⚠ Could not start cooking — invalid recipe reference.');
+        } else {
+          try {
+            await createCookingSession(recipeId);
+            queryClient.invalidateQueries({ queryKey: ['cookingSession'] });
+            router.push(`/recipes/${recipeId}/cook`);
+            setIsOpen(false);
+            results.push(`✓ Starting "${w.recipe_title}"…`);
+          } catch {
+            results.push(`⚠ Could not start cooking session. Try opening the recipe manually.`);
+          }
         }
 
       } else if (w.type === 'plan_meal') {
@@ -100,10 +111,14 @@ export function TeaBotPanel() {
 
       } else if (w.type === 'navigate') {
         const path = w.path as string;
-        const label = (w.label as string) || path;
-        router.push(path);
-        setIsOpen(false);
-        results.push(`→ Taking you to ${label}…`);
+        if (!ALLOWED_NAV_PATHS.has(path)) {
+          results.push(`⚠ Navigation to "${path}" is not allowed.`);
+        } else {
+          const label = (w.label as string) || path;
+          router.push(path);
+          setIsOpen(false);
+          results.push(`→ Taking you to ${label}…`);
+        }
 
       } else {
         // pantry_confirm, recipe_card, etc. — rendered as UI

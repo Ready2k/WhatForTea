@@ -14,7 +14,7 @@ from datetime import date, timedelta, timezone
 from typing import List, Optional
 
 import boto3
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -228,6 +228,11 @@ async def _build_context(user_id: Optional[str] = None) -> str:
     return "\n".join(lines)
 
 
+_MAX_MESSAGES = 40          # ~20 turns — enough for any real conversation
+_MAX_MSG_CHARS = 4_000      # single message cap (~1k tokens)
+_ALLOWED_ROLES = {"user", "assistant"}
+
+
 class ChatMessage(BaseModel):
     role: str  # "user" | "assistant"
     content: str
@@ -240,6 +245,15 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat")
 async def chat(body: ChatRequest, request: Request):
+    # Input validation — reject obviously abusive payloads before touching Bedrock
+    if len(body.messages) > _MAX_MESSAGES:
+        raise HTTPException(status_code=400, detail="Too many messages in conversation history.")
+    for msg in body.messages:
+        if msg.role not in _ALLOWED_ROLES:
+            raise HTTPException(status_code=400, detail=f"Invalid message role: {msg.role!r}")
+        if len(msg.content) > _MAX_MSG_CHARS:
+            raise HTTPException(status_code=400, detail="Message content exceeds maximum length.")
+
     thread_id = body.thread_id or str(uuid.uuid4())
     user_id = getattr(request.state, "user_id", None)
 
