@@ -1,20 +1,8 @@
 import React, { useState } from 'react';
 import { DownloadCloud, Check, X } from 'lucide-react';
-import { useCopilotAction } from '@copilotkit/react-core';
 
 export function IngestReview({ job_id, parsed_recipe, className = '' }: any) {
   const [status, setStatus] = useState<'reviewing' | 'confirmed' | 'rejected'>('reviewing');
-  
-  useCopilotAction({
-    name: 'confirm_recipe_ingestion',
-    description: 'Confirm the ingestion of the scanned or linked recipe.',
-    parameters: [
-      { name: 'confirmed', type: 'boolean', description: 'True to add recipe, false to discard' }
-    ],
-    handler: ({ confirmed }) => {
-      setStatus(confirmed ? 'confirmed' : 'rejected');
-    }
-  });
 
   if (!parsed_recipe) return null;
 

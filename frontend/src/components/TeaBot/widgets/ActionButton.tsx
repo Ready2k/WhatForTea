@@ -1,17 +1,6 @@
 import React from 'react';
-import { useCopilotAction } from '@copilotkit/react-core';
 
 export function ActionButton({ label, action, style = 'primary', className = '' }: any) {
-  useCopilotAction({
-    name: action,
-    description: `Execute action ${action}`,
-    parameters: [],
-    handler: () => {
-      // Typically the handler interacts with the shared state.
-      console.log(`Action triggered: ${action}`);
-    }
-  });
-
   return (
     <button
       onClick={() => console.log(`Triggering action ${action}`)}

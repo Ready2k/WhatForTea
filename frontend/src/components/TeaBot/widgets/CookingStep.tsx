@@ -1,20 +1,7 @@
 import React from 'react';
 import { ChefHat, CheckCircle2, Circle } from 'lucide-react';
-import { useCopilotAction } from '@copilotkit/react-core';
 
 export function CookingStep({ session_id, step_number, total_steps, text, timers = {}, className = '' }: any) {
-  
-  useCopilotAction({
-    name: 'advance_cooking_step',
-    description: 'Advance the cooking step to the next index, or complete the recipe.',
-    parameters: [
-      { name: 'next_step', type: 'number', description: 'The step number to advance to' }
-    ],
-    handler: ({ next_step }) => {
-      console.log(`Advancing to step ${next_step}`);
-    }
-  });
-
   return (
     <div className={`p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/10 shadow-sm ${className}`}>
       <div className="flex items-center gap-2 mb-4 border-b border-emerald-100 dark:border-emerald-800/50 pb-3">

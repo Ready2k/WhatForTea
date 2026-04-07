@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
 
   // Proxy /api/* → backend container so the browser never needs to know
   // the backend host, and CORS is a non-issue.
+  async redirects() {
+    return [{ source: '/dashboard', destination: '/', permanent: true }];
+  },
+
   async rewrites() {
     const apiUrl = process.env.API_URL ?? "http://api:8000";
     return [

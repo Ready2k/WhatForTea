@@ -1,7 +1,8 @@
 from typing import TypedDict, Literal, List, Optional
-from langgraph.graph import StateGraph, END
+
+from copilotkit import LangGraphAGUIAgent
 from langchain_core.messages import BaseMessage
-from app.agents.teabot import teabot_node
+from langgraph.graph import StateGraph, END
 
 class PendingUpsert(TypedDict):
     """
@@ -95,7 +96,6 @@ workflow.add_edge("pantry", END)
 
 pantry_agent = workflow.compile()
 
-from copilotkit import LangGraphAGUIAgent
 pantry_coagent = LangGraphAGUIAgent(
     name="pantry",
     description="Manages pantry inventory and availability.",

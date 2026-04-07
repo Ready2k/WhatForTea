@@ -412,8 +412,16 @@ export function removeRecipeFromCollection(collectionId: string, recipeId: strin
 
 // ── User / Household ──────────────────────────────────────────────────────────
 
-export function getCurrentUser(): Promise<UserProfile> {
-  return request<UserProfile>('/api/auth/me');
+export async function getCurrentUser(): Promise<UserProfile | null> {
+  try {
+    return await request<UserProfile>('/api/auth/me');
+  } catch (err: any) {
+    // 404 = legacy "household" user with no profile record — treat as logged in but no profile
+    if (err.message && (err.message.includes('404') || err.message.includes('No user profile'))) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export function updateUserProfile(data: { display_name?: string }): Promise<UserProfile> {

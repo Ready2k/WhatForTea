@@ -1,19 +1,7 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { useCopilotAction } from '@copilotkit/react-core';
 
 export function RecipeCard({ recipe_id, title, match_score, cook_time, missing_ingredients, className = '' }: any) {
-  // Setup action for the agent to navigate to recipe
-  useCopilotAction({
-    name: `open_recipe_${recipe_id}`,
-    description: `Open the details page for recipe ${title}`,
-    parameters: [],
-    handler: () => {
-      // Need a router, or we return an action signal
-      window.location.href = `/recipes/${recipe_id}`;
-    }
-  });
-
   return (
     <div className={`p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm transition-all hover:border-indigo-300 ${className}`}>
       <div className="flex justify-between items-start mb-2">

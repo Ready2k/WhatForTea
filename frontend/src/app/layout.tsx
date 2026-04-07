@@ -2,9 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Nav } from "@/components/nav";
-import { CopilotKit } from "@copilotkit/react-core";
 import { TeaBotPanel } from "@/components/TeaBot/TeaBotPanel";
-import "@copilotkit/react-ui/styles.css";
 
 export const metadata: Metadata = {
   title: "What's for Tea?",
@@ -34,21 +32,19 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white antialiased font-sans">
-        <CopilotKit runtimeUrl="/api/copilot">
-          <Providers>
-            <div className="min-h-screen pb-16">
-              {children}
-            </div>
-            <Nav />
-            <TeaBotPanel />
-            {/* Release version info */}
-            <div className="fixed bottom-16 left-2 z-40 p-1">
-              <span className="text-[10px] font-mono text-gray-300 dark:text-gray-600 select-none opacity-50 hover:opacity-100 transition-opacity">
-                {process.env.NEXT_PUBLIC_RELEASE_ID || 'dev'}
-              </span>
-            </div>
-          </Providers>
-        </CopilotKit>
+        <Providers>
+          <div className="min-h-screen pb-16">
+            {children}
+          </div>
+          <Nav />
+          <TeaBotPanel />
+          {/* Release version info */}
+          <div className="fixed bottom-16 left-2 z-40 p-1">
+            <span className="text-[10px] font-mono text-gray-300 dark:text-gray-600 select-none opacity-50 hover:opacity-100 transition-opacity">
+              {process.env.NEXT_PUBLIC_RELEASE_ID || 'dev'}
+            </span>
+          </div>
+        </Providers>
       </body>
     </html>
   );

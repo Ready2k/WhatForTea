@@ -24,7 +24,6 @@ _SKIP_PATHS = {
     "/docs",
     "/redoc",
     "/openapi.json",
-    "/api/copilot",  # CopilotRuntime SSE endpoint — auth handled by CopilotKit runtime
 }
 
 
