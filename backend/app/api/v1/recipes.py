@@ -146,12 +146,19 @@ async def get_ingest_review(
     parsed = llm_out.parsed_result
     unresolved = parsed.get("unresolved_ingredients", [])
 
+    raw_nutrition = parsed.get("nutrition")
+    nutrition = None
+    if raw_nutrition and any(raw_nutrition.get(k) is not None for k in ("calories_kcal", "protein_g", "fat_g", "carbs_g")):
+        from app.schemas.recipe import NutritionEstimate
+        nutrition = NutritionEstimate(**{k: raw_nutrition.get(k) for k in NutritionEstimate.model_fields})
+
     recipe_create = RecipeCreate(
         title=parsed.get("title", ""),
         cooking_time_mins=parsed.get("cooking_time_mins"),
         hello_fresh_style=parsed.get("hello_fresh_style"),
         base_servings=parsed.get("base_servings", 2),
         mood_tags=parsed.get("mood_tags", []),
+        nutrition=nutrition,
         ingredients=[
             {
                 "raw_name": ing["raw_name"],
@@ -208,13 +215,14 @@ async def confirm_ingest(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    # Queue nutrition estimation as a background arq task (non-blocking)
-    try:
-        arq_pool = await create_pool(_redis_settings())
-        await arq_pool.enqueue_job("task_estimate_nutrition", str(recipe.id))
-        await arq_pool.aclose()
-    except Exception:
-        pass  # nutrition is best-effort; never fail a confirm because of this
+    # Queue nutrition estimation only if the card didn't already provide it
+    if recipe.nutrition_estimate is None:
+        try:
+            arq_pool = await create_pool(_redis_settings())
+            await arq_pool.enqueue_job("task_estimate_nutrition", str(recipe.id))
+            await arq_pool.aclose()
+        except Exception:
+            pass  # nutrition is best-effort; never fail a confirm because of this
 
     return recipe
 

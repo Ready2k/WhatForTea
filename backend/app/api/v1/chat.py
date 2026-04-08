@@ -66,6 +66,7 @@ Rules:
 
 
 def _build_llm() -> ChatBedrock:
+    from app.services.bedrock import _model_id
     client = boto3.client(
         service_name="bedrock-runtime",
         aws_access_key_id=settings.aws_access_key_id or None,
@@ -74,7 +75,7 @@ def _build_llm() -> ChatBedrock:
     )
     return ChatBedrock(
         client=client,
-        model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0",
+        model_id=_model_id(vision=False),
         streaming=True,
     )
 

@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useIngestRecipe } from '@/lib/hooks';
-import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl } from '@/lib/api';
-import type { IngestReviewPayload } from '@/lib/types';
+import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, ingestReceipt } from '@/lib/api';
+import { ReceiptReview } from '@/components/ReceiptReview';
+import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
 
 const MAX_DIMENSION = 1500;
 const JPEG_QUALITY = 0.85;
@@ -189,8 +190,16 @@ export default function IngestPage() {
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState<{ id: string; title: string } | null>(null);
-  const [uploadTab, setUploadTab] = useState<'scan' | 'url'>('scan');
+  const [uploadTab, setUploadTab] = useState<'scan' | 'url' | 'receipt'>('scan');
   const [urlInput, setUrlInput] = useState('');
+  const [receiptFlowState, setReceiptFlowState] = useState<'upload' | 'extracting' | 'review'>('upload');
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[] | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [receiptInputMode, setReceiptInputMode] = useState<'photo' | 'pdf' | 'text'>('photo');
+  const [receiptText, setReceiptText] = useState('');
+  const receiptCameraRef = useRef<HTMLInputElement>(null);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
+  const receiptPdfRef = useRef<HTMLInputElement>(null);
   const [urlLoading, setUrlLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<ApiStatus>('uploading');
   const [funMessageIdx, setFunMessageIdx] = useState(0);
@@ -409,6 +418,27 @@ export default function IngestPage() {
     }
   }
 
+  async function handleReceiptSubmit(source: File | FileList | string) {
+    setReceiptError(null);
+    setReceiptFlowState('extracting');
+    const fd = new FormData();
+    if (typeof source === 'string') {
+      fd.append('text_content', source);
+    } else if (source instanceof File) {
+      fd.append('pdf', source);
+    } else {
+      Array.from(source).forEach((f) => fd.append('images', f));
+    }
+    try {
+      const result = await ingestReceipt(fd);
+      setReceiptItems(result.items);
+      setReceiptFlowState('review');
+    } catch (err: any) {
+      setReceiptError(err?.message ?? 'Receipt processing failed. Please try again.');
+      setReceiptFlowState('upload');
+    }
+  }
+
   function handleStartOver() {
     if (pollRef.current) clearInterval(pollRef.current);
     if (tickerRef.current) clearInterval(tickerRef.current);
@@ -453,7 +483,17 @@ export default function IngestPage() {
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
-            Import from URL
+            Import URL
+          </button>
+          <button
+            onClick={() => setUploadTab('receipt')}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              uploadTab === 'receipt'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            Receipt
           </button>
         </div>
 
@@ -487,6 +527,146 @@ export default function IngestPage() {
             <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
               Works best with structured recipe pages. JavaScript-heavy sites may not work.
             </p>
+          </div>
+        )}
+
+        {/* Receipt tab */}
+        {uploadTab === 'receipt' && (
+          <div className="space-y-4">
+            {receiptFlowState === 'review' && receiptItems ? (
+              <ReceiptReview
+                items={receiptItems}
+                onDone={() => {
+                  setReceiptFlowState('upload');
+                  setReceiptItems(null);
+                  setReceiptText('');
+                }}
+              />
+            ) : (
+              <>
+                {/* Sub-tab: photo / pdf / text */}
+                <div className="flex gap-1 bg-gray-50 dark:bg-gray-900 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                  {(['photo', 'pdf', 'text'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setReceiptInputMode(mode)}
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+                        receiptInputMode === mode
+                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                      }`}
+                    >
+                      {mode === 'photo' ? 'Photo' : mode === 'pdf' ? 'PDF' : 'Paste Text'}
+                    </button>
+                  ))}
+                </div>
+
+                {receiptError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+                    {receiptError}
+                  </div>
+                )}
+
+                {receiptInputMode === 'photo' && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Take a photo of your supermarket receipt or upload an image.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => receiptCameraRef.current?.click()}
+                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
+                      >
+                        <span className="text-3xl">📷</span>
+                        <span className="text-sm font-medium">Camera</span>
+                      </button>
+                      <button
+                        onClick={() => receiptFileRef.current?.click()}
+                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
+                      >
+                        <span className="text-3xl">📁</span>
+                        <span className="text-sm font-medium">Choose File</span>
+                      </button>
+                    </div>
+                    <input
+                      ref={receiptCameraRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => { if (e.target.files?.length) handleReceiptSubmit(e.target.files); }}
+                    />
+                    <input
+                      ref={receiptFileRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => { if (e.target.files?.length) handleReceiptSubmit(e.target.files); }}
+                    />
+                    {receiptFlowState === 'extracting' && (
+                      <div className="text-center py-6 space-y-2">
+                        <div className="w-8 h-8 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Reading your receipt…</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {receiptInputMode === 'pdf' && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Upload an Ocado, Amazon Fresh, or other grocery order PDF.
+                    </p>
+                    <button
+                      onClick={() => receiptPdfRef.current?.click()}
+                      disabled={receiptFlowState === 'extracting'}
+                      className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800 disabled:opacity-50"
+                    >
+                      <span className="text-3xl">📄</span>
+                      <span className="text-sm font-medium">
+                        {receiptFlowState === 'extracting' ? 'Processing…' : 'Choose PDF'}
+                      </span>
+                    </button>
+                    <input
+                      ref={receiptPdfRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => { if (e.target.files?.[0]) handleReceiptSubmit(e.target.files[0]); }}
+                    />
+                    {receiptFlowState === 'extracting' && (
+                      <div className="text-center py-4 space-y-2">
+                        <div className="w-8 h-8 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Extracting items from PDF…</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {receiptInputMode === 'text' && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Paste the text from an online order confirmation email.
+                    </p>
+                    <textarea
+                      value={receiptText}
+                      onChange={(e) => setReceiptText(e.target.value)}
+                      placeholder="Paste your order items here…"
+                      rows={8}
+                      className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                    />
+                    <button
+                      onClick={() => receiptText.trim() && handleReceiptSubmit(receiptText.trim())}
+                      disabled={!receiptText.trim() || receiptFlowState === 'extracting'}
+                      className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {receiptFlowState === 'extracting' ? 'Processing…' : 'Extract Items'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 

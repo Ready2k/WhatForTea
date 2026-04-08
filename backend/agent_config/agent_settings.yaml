@@ -2,8 +2,16 @@
 # Edit this file to tune model behaviour without touching Python code.
 # The API server reads this file at startup (and on each LLM call).
 
-# ── Model ─────────────────────────────────────────────────────────────────────
-model_id: us.anthropic.claude-sonnet-4-6
+# ── Models ────────────────────────────────────────────────────────────────────
+# vision_model_id: used for tasks that require image understanding
+#   (recipe card scanning, receipt photo scanning)
+# text_model_id: used for text-only tasks
+#   (ingredient normaliser, voice commands, nutrition estimation, TeaBot chat,
+#    URL recipe import, receipt text extraction)
+# Keeping Sonnet for vision ensures accurate card extraction.
+# Haiku for text tasks cuts cost ~20x with no meaningful quality loss.
+vision_model_id: us.anthropic.claude-sonnet-4-6
+text_model_id: us.anthropic.claude-haiku-4-5-20251001-v1:0
 temperature: 0.2
 max_tokens: 4096
 

@@ -427,6 +427,69 @@ async def run_url_ingestion(
         logger.error("url ingestion failed", extra={"job_id": str(job_id), "error": str(exc)}, exc_info=True)
 
 
+# ── Receipt ingestion ─────────────────────────────────────────────────────────
+
+def extract_text_from_pdf(file_bytes: bytes) -> str:
+    """Extract plain text from a PDF (e.g. Ocado order confirmation)."""
+    import io
+    import pdfplumber
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        return "\n".join(page.extract_text() or "" for page in pdf.pages)
+
+
+async def run_receipt_ingestion(
+    image_paths: list[Path] | None,
+    text_content: str | None,
+    db: AsyncSession,
+    redis_client,
+) -> list[dict]:
+    """
+    Synchronous receipt pipeline: LLM extraction → normalise each item.
+
+    Returns a list of enriched dicts:
+      {raw_name, quantity, unit, ingredient_id, resolved}
+
+    No IngestJob needed — the flow is stateless; the frontend holds results
+    until the user confirms, then calls /api/v1/pantry/bulk-confirm.
+    """
+    from app.services.bedrock import call_receipt_llm
+    from app.services.normaliser import resolve_ingredient
+    from app.services.rate_limiter import check_and_increment
+
+    await check_and_increment(redis_client)
+
+    _, items = await call_receipt_llm(image_paths, text_content)
+
+    enriched: list[dict] = []
+    for item in items:
+        raw_name = item.get("raw_name", "").strip()
+        if not raw_name:
+            continue
+        result = await resolve_ingredient(
+            raw_name=raw_name,
+            db=db,
+            redis_client=redis_client,
+            use_llm=False,
+        )
+        entry = {
+            "raw_name": raw_name,
+            "quantity": item.get("quantity", 1),
+            "unit": item.get("unit"),
+            "ingredient_id": str(result.ingredient.id) if result.ingredient else None,
+            "resolved": result.ingredient is not None,
+        }
+        enriched.append(entry)
+
+    logger.info(
+        "receipt ingestion complete",
+        extra={
+            "item_count": len(enriched),
+            "resolved_count": sum(1 for e in enriched if e["resolved"]),
+        },
+    )
+    return enriched
+
+
 # ── Confirm ───────────────────────────────────────────────────────────────────
 
 def _crop_step_image(
@@ -576,6 +639,10 @@ async def confirm_recipe(
     if not source_url and llm_out and llm_out.parsed_result:
         source_url = llm_out.parsed_result.get("source_url")
 
+    from datetime import datetime, timezone
+    nutrition_dict = recipe_data.nutrition.model_dump() if recipe_data.nutrition else None
+    nutrition_at = datetime.now(timezone.utc) if nutrition_dict else None
+
     recipe = Recipe(
         title=recipe_data.title,
         hello_fresh_style=recipe_data.hello_fresh_style,
@@ -587,6 +654,8 @@ async def confirm_recipe(
         mood_tags=recipe_data.mood_tags,
         hero_image_path=hero_image_path,
         image_fingerprint=fingerprint,
+        nutrition_estimate=nutrition_dict,
+        nutrition_estimated_at=nutrition_at,
     )
     db.add(recipe)
     await db.flush()  # get recipe.id

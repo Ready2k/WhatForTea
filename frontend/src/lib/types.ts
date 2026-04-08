@@ -67,6 +67,19 @@ export interface RecipeSummary {
   last_cooked_at?: string | null;
 }
 
+export interface ReceiptItem {
+  raw_name: string;
+  quantity: number;
+  unit: string | null;
+  ingredient_id: string | null;
+  resolved: boolean;
+}
+
+export interface ReceiptIngestResponse {
+  items: ReceiptItem[];
+  unresolved_count: number;
+}
+
 export interface PantryItem {
   id: string;
   ingredient_id: string;

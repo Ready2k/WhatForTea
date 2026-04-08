@@ -43,6 +43,7 @@ You are a recipe data extraction assistant. You will be shown {{ num_images }} i
   - `2` = coloured header
   - `3` = illustrated
 - Generate 2 to 4 short `mood_tags` describing the dish, based on the recipe title and finished-dish image.
+- If a nutrition panel is visible on the card, extract the values for the smallest serving size shown. Set each field to `null` if the panel is absent or the value is unreadable. `per_servings` should match `base_servings`.
 
 {% if num_images == 2 %}
 - Identify which image is the front cover, meaning the side that shows the finished dish photo and recipe title.
@@ -79,6 +80,14 @@ You are a recipe data extraction assistant. You will be shown {{ num_images }} i
       "image_description": "string or null",
       "image_bbox": [0.0, 0.0, 1.0, 1.0]
     }
-  ]
+  ],
+  "nutrition": {
+    "calories_kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "carbs_g": 0,
+    "fibre_g": 0,
+    "per_servings": 2
+  }
 }
 ```

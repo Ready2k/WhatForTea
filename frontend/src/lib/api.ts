@@ -11,6 +11,7 @@ import type {
   ShoppingList,
   IngestStatusResponse,
   IngestReviewPayload,
+  ReceiptIngestResponse,
   UserProfile,
 } from './types';
 
@@ -212,6 +213,13 @@ export function autoFillWeek(data: {
 
 export function ingestRecipe(formData: FormData): Promise<{ job_id: string }> {
   return request<{ job_id: string }>('/api/v1/recipes/ingest', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export function ingestReceipt(formData: FormData): Promise<ReceiptIngestResponse> {
+  return request<ReceiptIngestResponse>('/api/v1/pantry/ingest-receipt', {
     method: 'POST',
     body: formData,
   });

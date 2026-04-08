@@ -48,6 +48,15 @@ class RecipeIngredient(RecipeIngredientBase):
     model_config = {"from_attributes": True}
 
 
+class NutritionEstimate(BaseModel):
+    calories_kcal: Optional[float] = None
+    protein_g: Optional[float] = None
+    fat_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fibre_g: Optional[float] = None
+    per_servings: Optional[int] = None
+
+
 class RecipeBase(BaseModel):
     title: str
     hello_fresh_style: Optional[int] = None
@@ -62,6 +71,7 @@ class RecipeBase(BaseModel):
 class RecipeCreate(RecipeBase):
     ingredients: list[RecipeIngredientCreate] = []
     steps: list[StepCreate] = []
+    nutrition: Optional[NutritionEstimate] = None  # extracted from card; None = estimate post-confirm
 
 
 class RecipeIngredientUpdate(RecipeIngredientBase):
@@ -77,15 +87,6 @@ class StepUpdate(BaseModel):
 class RecipeUpdate(BaseModel):
     ingredients: Optional[list[RecipeIngredientUpdate]] = None
     steps: Optional[list[StepUpdate]] = None
-
-
-class NutritionEstimate(BaseModel):
-    calories_kcal: Optional[float] = None
-    protein_g: Optional[float] = None
-    fat_g: Optional[float] = None
-    carbs_g: Optional[float] = None
-    fibre_g: Optional[float] = None
-    per_servings: Optional[int] = None
 
 
 class Recipe(RecipeBase):

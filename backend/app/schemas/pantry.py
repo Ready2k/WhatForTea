@@ -53,6 +53,19 @@ class PantryAvailability(BaseModel):
     expires_at: Optional[date] = None
 
 
+class ReceiptItem(BaseModel):
+    raw_name: str
+    quantity: float
+    unit: Optional[str] = None
+    ingredient_id: Optional[uuid.UUID] = None
+    resolved: bool = False
+
+
+class ReceiptIngestResponse(BaseModel):
+    items: list[ReceiptItem]
+    unresolved_count: int
+
+
 class PantryReservationBase(BaseModel):
     pantry_item_id: uuid.UUID
     recipe_id: uuid.UUID

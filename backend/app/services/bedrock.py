@@ -26,11 +26,19 @@ def _load_settings() -> dict:
     path = _AGENT_CONFIG_DIR / "agent_settings.yaml"
     with open(path) as f:
         cfg = yaml.safe_load(f)
-    # Allow .env BEDROCK_MODEL_ID to override the YAML value
+    # Allow .env BEDROCK_MODEL_ID to override; applies to vision model for back-compat
     from app.config import settings
     if settings.bedrock_model_id:
-        cfg["model_id"] = settings.bedrock_model_id
+        cfg["vision_model_id"] = settings.bedrock_model_id
     return cfg
+
+
+def _model_id(vision: bool = False) -> str:
+    """Return the appropriate model ID for vision vs text tasks."""
+    cfg = _load_settings()
+    if vision:
+        return cfg.get("vision_model_id") or cfg.get("model_id", "us.anthropic.claude-sonnet-4-6")
+    return cfg.get("text_model_id") or cfg.get("model_id", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
 def _load_prompt(filename: str) -> str:
@@ -56,6 +64,7 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
     Returns a dict: {calories_kcal, protein_g, fat_g, carbs_g, fibre_g, per_servings}
     """
     cfg = _load_settings()
+    model = _model_id(vision=False)
     template_src = _load_prompt("nutrition_prompt.md")
     parts = template_src.split("## System", 1)
     system_prompt = ("## System" + parts[1]).strip() if len(parts) > 1 else template_src.strip()
@@ -81,7 +90,7 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
 
     client = _get_client()
     response = client.invoke_model(
-        modelId=cfg["model_id"],
+        modelId=model,
         body=json.dumps(body),
         contentType="application/json",
         accept="application/json",
@@ -104,6 +113,7 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
         (raw_bedrock_response, parsed_recipe_dict)
     """
     cfg = _load_settings()
+    model = _model_id(vision=False)
     template_src = _load_prompt("url_ingestion_prompt.md")
     rendered = Template(template_src).render(source_domain=source_domain)
 
@@ -132,7 +142,7 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
 
     client = _get_client()
     response = client.invoke_model(
-        modelId=cfg["model_id"],
+        modelId=model,
         body=json.dumps(body),
         contentType="application/json",
         accept="application/json",
@@ -152,7 +162,7 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
     logger.info(
         "url ingestion LLM call",
         extra={
-            "model": raw_response.get("model", cfg.get("model_id")),
+            "model": raw_response.get("model", model),
             "source_domain": source_domain,
             "prompt_tokens": usage.get("input_tokens"),
             "completion_tokens": usage.get("output_tokens"),
@@ -170,6 +180,7 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
     Returns a dict with keys: intent, item, note, direction.
     """
     cfg = _load_settings()
+    model = _model_id(vision=False)
     system_prompt = _load_prompt("voice_command_prompt.md")
 
     context_hint = f"\nContext: {context}" if context else ""
@@ -186,7 +197,7 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
     try:
         client = _get_client()
         response = client.invoke_model(
-            modelId=cfg["model_id"],
+            modelId=model,
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -215,6 +226,7 @@ async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
     Returns {"match": bool, "confidence": float, "reasoning": str}
     """
     cfg = _load_settings()
+    model = _model_id(vision=False)
     template_src = _load_prompt("normaliser_prompt.md")
 
     # Render template variables
@@ -236,7 +248,7 @@ async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
     try:
         client = _get_client()
         response = client.invoke_model(
-            modelId=cfg["model_id"],
+            modelId=model,
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -276,6 +288,89 @@ _MEDIA_TYPE_MAP = {
 }
 
 
+async def call_receipt_llm(
+    image_paths: list[Path] | None,
+    text_content: str | None,
+) -> tuple[dict, list[dict]]:
+    """
+    Extract food/drink line items from a receipt image or plain text.
+
+    Returns:
+        (raw_bedrock_response, list of {raw_name, quantity, unit} dicts)
+    """
+    cfg = _load_settings()
+    model = _model_id(vision=bool(image_paths))
+    system_prompt = _load_prompt("receipt_prompt.md")
+
+    content_blocks: list[dict] = []
+
+    if image_paths:
+        for path in image_paths:
+            media_type = _MEDIA_TYPE_MAP.get(path.suffix.lower(), "image/jpeg")
+            image_data = base64.b64encode(path.read_bytes()).decode()
+            content_blocks.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": image_data,
+                },
+            })
+        content_blocks.append({
+            "type": "text",
+            "text": "Extract all food and drink line items from the receipt image(s) above and return the JSON array.",
+        })
+    else:
+        content_blocks.append({
+            "type": "text",
+            "text": (
+                f"Here is the text content of a grocery order or receipt:\n\n{text_content}\n\n"
+                "Extract all food and drink line items and return the JSON array."
+            ),
+        })
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 2048,
+        "temperature": 0.1,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": content_blocks}],
+    }
+
+    client = _get_client()
+    response = client.invoke_model(
+        modelId=model,
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json",
+    )
+    raw_response = json.loads(response["body"].read())
+
+    text = raw_response["content"][0]["text"].strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+
+    parsed = json.loads(text)
+    if not isinstance(parsed, list):
+        parsed = []
+
+    usage = raw_response.get("usage", {})
+    logger.info(
+        "receipt LLM call",
+        extra={
+            "model": raw_response.get("model", cfg.get("model_id")),
+            "prompt_tokens": usage.get("input_tokens"),
+            "completion_tokens": usage.get("output_tokens"),
+            "item_count": len(parsed),
+            "source": "image" if image_paths else "text",
+        },
+    )
+    return raw_response, parsed
+
+
 async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
     """
     Send recipe card image(s) to Claude via Bedrock for structured extraction.
@@ -287,6 +382,7 @@ async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
     and intentionally NOT written to logs (avoids bloating NAS log volumes).
     """
     cfg = _load_settings()
+    model = _model_id(vision=True)
     template_src = _load_prompt("ingestion_prompt.md")
     rendered = Template(template_src).render(num_images=len(image_paths))
 
@@ -327,7 +423,7 @@ async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
 
     client = _get_client()
     response = client.invoke_model(
-        modelId=cfg["model_id"],
+        modelId=model,
         body=json.dumps(body),
         contentType="application/json",
         accept="application/json",
@@ -350,7 +446,7 @@ async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
     logger.info(
         "ingestion LLM call",
         extra={
-            "model": raw_response.get("model", cfg.get("model_id")),
+            "model": raw_response.get("model", model),
             "provider": "bedrock",
             "prompt_tokens": usage.get("input_tokens"),
             "completion_tokens": usage.get("output_tokens"),
