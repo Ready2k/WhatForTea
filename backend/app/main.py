@@ -86,7 +86,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="WhatsForTea API",
-    version="2.0.1",
+    version="v2.1.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",

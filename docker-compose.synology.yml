@@ -23,6 +23,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - whatsfortea-network
     restart: unless-stopped
 
   redis:
@@ -35,14 +37,16 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    networks:
+      - whatsfortea-network
     restart: unless-stopped
 
   api:
     image: ready2k/whatsfortea-api:latest
+    container_name: whatsfortea-api
     volumes:
       - /volume1/docker/whatsfortea/recipes:/data/recipes
-    ports:
-      - "${API_PORT:-8000}:8000"
+    # No host port binding — accessed internally by the frontend proxy and caddy-proxy network
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-whatsfortea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-whatsfortea}
@@ -52,6 +56,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - whatsfortea-network
     restart: unless-stopped
 
   worker:
@@ -68,33 +74,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - whatsfortea-network
     restart: unless-stopped
 
   frontend:
     image: ready2k/whatsfortea-frontend:latest
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+    container_name: whatsfortea-frontend
+    # No host port binding — caddy-proxy reaches this via whatsfortea-network
     environment:
       # Internal Docker network URL — frontend proxies /api/* to this
       API_URL: http://api:8000
     depends_on:
       - api
+    networks:
+      - whatsfortea-network
     restart: unless-stopped
 
-#  caddy:
-#    image: caddy:2-alpine
-#    ports:
-#      - "80:80"
-#      - "443:443"
-#      - "443:443/udp"
-#    volumes:
-#      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-#      - caddy_data:/data
-#      - caddy_config:/config
-#    depends_on:
-#      - frontend
-#    restart: unless-stopped
-
-# volumes:
-#   caddy_data:
-#   caddy_config:
+networks:
+  whatsfortea-network:
+    name: whatsfortea-network
+    driver: bridge

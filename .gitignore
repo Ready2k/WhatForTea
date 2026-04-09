@@ -25,3 +25,6 @@ __pycache__/
 backend/.venv/
 
 # Alembic (don't ignore versions — migrations are source-controlled)
+
+# Error logs
+error_logs/
