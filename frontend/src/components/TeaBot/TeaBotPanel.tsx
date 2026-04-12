@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Command } from 'lucide-react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
-import { RenderA2UI, type A2UIDescriptor } from '@/lib/a2ui';
+import { RenderA2UI, type A2UIDescriptor, type OnResumeFn } from '@/lib/a2ui';
 import { endCookingSession, createCookingSession, fetchCurrentPlan, setWeekPlan } from '@/lib/api';
 
 interface ChatMessage {
@@ -50,6 +50,7 @@ export function TeaBotPanel() {
   const threadIdRef = useRef<string | null>(
     typeof window !== 'undefined' ? localStorage.getItem('teabot_thread_id') : null
   );
+  const pendingHitlWidget = useRef<(A2UIDescriptor & { thread_id: string }) | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -128,6 +129,84 @@ export function TeaBotPanel() {
 
     return { displayWidgets, actionResult: results.length ? results.join(' ') : undefined };
   }, [router, queryClient]);
+
+  /** Called by PantryConfirm (HITL mode) — resumes the paused graph and streams the result. */
+  const handleResume: OnResumeFn = useCallback(async (decision, quantity) => {
+    const tid = threadIdRef.current;
+    if (!tid) return;
+
+    setIsLoading(true);
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+    try {
+      const resumeBody = JSON.stringify({ thread_id: tid, decision, quantity });
+      let res = await fetch('/api/v1/chat/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: resumeBody,
+      });
+      if (res.status === 401) {
+        const refreshed = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+        if (!refreshed.ok) { window.location.href = '/login'; return; }
+        res = await fetch('/api/v1/chat/resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: resumeBody,
+        });
+      }
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+          try {
+            const event = JSON.parse(raw);
+            if (event.type === 'text_delta' && event.content) {
+              accumulated += event.content;
+              setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
+                return updated;
+              });
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      const { text } = parseWidgets(accumulated);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { ...updated[updated.length - 1], content: text };
+        return updated;
+      });
+    } catch (err: any) {
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: `Sorry, something went wrong. ${err?.message ?? ''}`.trim(),
+        };
+        return updated;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -217,6 +296,8 @@ export function TeaBotPanel() {
                 };
                 return updated;
               });
+            } else if (event.type === 'hitl_waiting' && event.widget) {
+                pendingHitlWidget.current = { ...event.widget, thread_id: event.thread_id };
             } else if (event.type === 'done' && event.thread_id) {
               threadIdRef.current = event.thread_id;
               localStorage.setItem('teabot_thread_id', event.thread_id);
@@ -231,7 +312,12 @@ export function TeaBotPanel() {
 
       // Stream complete — parse widgets from local variable (not state)
       const { text, widgets } = parseWidgets(accumulated);
-      const displayWidgets = widgets.filter(w => !AUTO_EXECUTE_TYPES.has(w.type));
+      // If the graph signalled a HITL interrupt, inject thread_id into the pantry_confirm widget
+      const hitlWidget = pendingHitlWidget.current;
+      pendingHitlWidget.current = null;
+      const displayWidgets = widgets
+        .filter(w => !AUTO_EXECUTE_TYPES.has(w.type))
+        .map(w => (w.type === 'pantry_confirm' && hitlWidget ? { ...w, thread_id: hitlWidget.thread_id } : w));
       const actionWidgets  = widgets.filter(w =>  AUTO_EXECUTE_TYPES.has(w.type));
 
       // Update message with clean text + display widgets
@@ -387,7 +473,7 @@ export function TeaBotPanel() {
                       <div className="w-full mt-2 space-y-2">
                         {msg.widgets.map((descriptor, j) => (
                           <div key={j}>
-                            {RenderA2UI(descriptor)}
+                            {RenderA2UI(descriptor, handleResume)}
                           </div>
                         ))}
                       </div>

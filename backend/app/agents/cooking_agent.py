@@ -87,9 +87,3 @@ workflow.add_edge("cook", END)
 
 cooking_agent = workflow.compile()
 
-from copilotkit import LangGraphAGUIAgent
-cooking_coagent = LangGraphAGUIAgent(
-    name="cooking",
-    description="Manages active cooking sessions, reads steps, and sets timers.",
-    graph=cooking_agent,
-)

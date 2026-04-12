@@ -32,7 +32,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
       const retryRes = await fetch(`${BASE}${url}`, { credentials: 'include', ...options });
       if (retryRes.status === 401) {
         // Still unauthorized after refresh — redirect to login
-        if (typeof window !== 'undefined') window.location.href = '/login';
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') window.location.href = '/login';
         throw new Error('Authentication required');
       }
       if (!retryRes.ok) {

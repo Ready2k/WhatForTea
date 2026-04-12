@@ -72,10 +72,4 @@ workflow.add_edge("discover", END)
 
 recipe_agent = workflow.compile()
 
-from copilotkit import LangGraphAGUIAgent
-recipe_coagent = LangGraphAGUIAgent(
-    name="recipes",
-    description="Finds and matches recipes based on current pantry availability.",
-    graph=recipe_agent,
-)
 

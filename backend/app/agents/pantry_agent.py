@@ -1,6 +1,5 @@
 from typing import TypedDict, Literal, List, Optional
 
-from copilotkit import LangGraphAGUIAgent
 from langchain_core.messages import BaseMessage
 from langgraph.graph import StateGraph, END
 
@@ -96,10 +95,5 @@ workflow.add_edge("pantry", END)
 
 pantry_agent = workflow.compile()
 
-pantry_coagent = LangGraphAGUIAgent(
-    name="pantry",
-    description="Manages pantry inventory and availability.",
-    graph=pantry_agent,
-)
 
 

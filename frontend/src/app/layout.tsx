@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { Nav } from "@/components/nav";
-import { TeaBotPanel } from "@/components/TeaBot/TeaBotPanel";
+import { ShellUI } from "@/components/ShellUI";
 
 export const metadata: Metadata = {
   title: "What's for Tea?",
@@ -36,8 +35,7 @@ export default function RootLayout({
           <div className="min-h-screen pb-16">
             {children}
           </div>
-          <Nav />
-          <TeaBotPanel />
+          <ShellUI />
           {/* Release version info */}
           <div className="fixed bottom-16 left-2 z-40 p-1">
             <span className="text-[10px] font-mono text-gray-300 dark:text-gray-600 select-none opacity-50 hover:opacity-100 transition-opacity">

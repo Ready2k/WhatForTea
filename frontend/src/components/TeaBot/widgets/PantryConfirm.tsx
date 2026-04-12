@@ -4,26 +4,46 @@ import React, { useState, useEffect } from 'react';
 import { Check, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { fetchIngredients, upsertPantryItem } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import type { OnResumeFn } from '@/lib/a2ui';
 
-export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingredient_id, className = '' }: any) {
+interface PantryConfirmProps {
+  raw_name: string;
+  quantity?: number;
+  unit?: string;
+  ingredient_id?: string;
+  /** Present when this widget is backed by a LangGraph interrupt (HITL mode). */
+  onResume?: OnResumeFn;
+  className?: string;
+}
+
+export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingredient_id, onResume, className = '' }: PantryConfirmProps) {
   const [quantity, setQuantity] = useState(default_quantity ?? 1);
   const [status, setStatus] = useState<'waiting' | 'saving' | 'applied' | 'rejected' | 'error'>('waiting');
   const [errorMsg, setErrorMsg] = useState('');
   const queryClient = useQueryClient();
 
-  // 5-minute timeout
+  // 5-minute timeout — auto-reject if user ignores
   useEffect(() => {
     if (status !== 'waiting') return;
-    const timeout = setTimeout(() => setStatus('rejected'), 5 * 60 * 1000);
+    const timeout = setTimeout(() => {
+      if (onResume) onResume('reject');
+      setStatus('rejected');
+    }, 5 * 60 * 1000);
     return () => clearTimeout(timeout);
-  }, [status]);
+  }, [status, onResume]);
 
   const handleConfirm = async () => {
     setStatus('saving');
     try {
-      let resolvedId: string | null = ingredient_id ?? null;
+      if (onResume) {
+        // HITL mode: hand back to the graph — it owns the upsert
+        onResume('confirm', quantity);
+        setStatus('applied');
+        return;
+      }
 
-      // If no ID provided, search by name
+      // Standalone mode: execute upsert directly from the frontend
+      let resolvedId: string | null = ingredient_id ?? null;
       if (!resolvedId) {
         const results = await fetchIngredients(raw_name);
         if (results.length > 0) {
@@ -51,7 +71,10 @@ export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingr
     }
   };
 
-  const handleReject = () => setStatus('rejected');
+  const handleReject = () => {
+    if (onResume) onResume('reject');
+    setStatus('rejected');
+  };
 
   const borderColor =
     status === 'waiting' || status === 'saving' ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/10' :

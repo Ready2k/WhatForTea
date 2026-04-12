@@ -54,11 +54,14 @@ const REGISTRY: Record<string, React.ComponentType<any>> = {
 };
 
 
+export type OnResumeFn = (decision: 'confirm' | 'reject', quantity?: number) => void;
+
 /**
  * Maps A2UI JSON to React widgets safely.
  * Section 11.3: Render nothing in prod for unknown types; warning in dev.
+ * onResume is forwarded to any widget that supports HITL (e.g. PantryConfirm).
  */
-export function RenderA2UI(descriptor: A2UIDescriptor): React.ReactNode {
+export function RenderA2UI(descriptor: A2UIDescriptor, onResume?: OnResumeFn): React.ReactNode {
   const Widget = REGISTRY[descriptor.type as string];
 
   if (!Widget) {
@@ -72,5 +75,5 @@ export function RenderA2UI(descriptor: A2UIDescriptor): React.ReactNode {
     return null;
   }
 
-  return <Widget {...descriptor} />;
+  return <Widget {...descriptor} onResume={onResume} />;
 }

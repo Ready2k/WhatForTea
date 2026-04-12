@@ -78,9 +78,38 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("APScheduler started", extra={"jobs": [j.id for j in scheduler.get_jobs()]})
 
+    # ── LangGraph: compile teabot graph with Postgres checkpointer ────────────
+    from app.agents.teabot import teabot_workflow
+    _checkpointer_cm = None
+    try:
+        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        # psycopg3 needs plain postgresql:// — strip the +asyncpg driver suffix
+        pg_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
+        _checkpointer_cm = AsyncPostgresSaver.from_conn_string(pg_url)
+        checkpointer = await _checkpointer_cm.__aenter__()
+        try:
+            await checkpointer.setup()
+        except Exception as setup_exc:
+            if "already exists" in str(setup_exc):
+                logger.info("Postgres checkpointer schema already initialised")
+            else:
+                raise
+        app.state.teabot_graph = teabot_workflow.compile(checkpointer=checkpointer)
+        logger.info("TeaBot graph compiled with Postgres checkpointer")
+    except Exception as exc:
+        logger.warning(
+            "Postgres checkpointer unavailable — falling back to MemorySaver (no thread persistence)",
+            extra={"reason": str(exc)},
+        )
+        _checkpointer_cm = None
+        from langgraph.checkpoint.memory import MemorySaver
+        app.state.teabot_graph = teabot_workflow.compile(checkpointer=MemorySaver())
+
     yield
 
     scheduler.shutdown(wait=False)
+    if _checkpointer_cm is not None:
+        await _checkpointer_cm.__aexit__(None, None, None)
     logger.info("WhatsForTea API shutting down")
 
 

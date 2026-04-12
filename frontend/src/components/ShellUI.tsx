@@ -1,0 +1,21 @@
+'use client';
+
+/**
+ * Renders Nav + TeaBotPanel only for authenticated pages.
+ * Suppresses them on /login to prevent unauthenticated API calls
+ * that would otherwise cause a redirect loop.
+ */
+import { usePathname } from 'next/navigation';
+import { Nav } from '@/components/nav';
+import { TeaBotPanel } from '@/components/TeaBot/TeaBotPanel';
+
+export function ShellUI() {
+  const pathname = usePathname();
+  if (pathname === '/login') return null;
+  return (
+    <>
+      <Nav />
+      <TeaBotPanel />
+    </>
+  );
+}

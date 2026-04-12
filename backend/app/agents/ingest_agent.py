@@ -70,9 +70,3 @@ workflow.add_edge("ingest", END)
 
 ingest_agent = workflow.compile()
 
-from copilotkit import LangGraphAGUIAgent
-ingest_coagent = LangGraphAGUIAgent(
-    name="ingest",
-    description="Handles importing recipes via URL or photo extraction.",
-    graph=ingest_agent,
-)

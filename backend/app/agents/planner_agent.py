@@ -96,10 +96,4 @@ workflow.add_edge("plan", END)
 
 planner_agent = workflow.compile()
 
-from copilotkit import LangGraphAGUIAgent
-planner_coagent = LangGraphAGUIAgent(
-    name="planner",
-    description="Manages weekly meal plans and shopping lists.",
-    graph=planner_agent,
-)
 

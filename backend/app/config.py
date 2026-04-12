@@ -24,6 +24,9 @@ class Settings(BaseSettings):
 
     # Observability
     log_level: str = "INFO"
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
 
 
 settings = Settings()
