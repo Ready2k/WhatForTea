@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { useCurrentPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
-import { autoFillWeek, type AutoFillEntry } from '@/lib/api';
+import { autoFillWeek, type AutoFillEntry, fetchShoppingItems, addShoppingItem, patchShoppingItem, deleteShoppingItem, clearDoneShoppingItems, type ShoppingItem } from '@/lib/api';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -40,6 +41,38 @@ export default function PlannerPage() {
   const setWeekPlanMutation = useSetWeekPlan();
   const { data: shoppingList, isLoading: shopLoading, isError: shopError, refetch: refetchShopping } = useShoppingList();
   const bulkConfirmMutation = useBulkConfirmPantry();
+  const qc = useQueryClient();
+  const { data: manualItems = [] } = useQuery<ShoppingItem[]>({ queryKey: ['shoppingList'], queryFn: fetchShoppingItems });
+  const addManualMutation = useMutation({
+    mutationFn: (d: { raw_name: string; quantity: number; unit: string }) => addShoppingItem(d),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shoppingList'] }),
+  });
+  const toggleDoneMutation = useMutation({
+    mutationFn: ({ id, done }: { id: string; done: boolean }) => patchShoppingItem(id, done),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shoppingList'] }),
+  });
+  const deleteManualMutation = useMutation({
+    mutationFn: (id: string) => deleteShoppingItem(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shoppingList'] }),
+  });
+  const clearDoneMutation = useMutation({
+    mutationFn: () => clearDoneShoppingItems(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shoppingList'] }),
+  });
+  const [manualInput, setManualInput] = useState('');
+  const [manualQty, setManualQty] = useState('1');
+  const [manualUnit, setManualUnit] = useState('count');
+
+  const handleAddManual = () => {
+    const name = manualInput.trim();
+    if (!name) return;
+    addManualMutation.mutate({ raw_name: name, quantity: parseFloat(manualQty) || 1, unit: manualUnit || 'count' });
+    setManualInput('');
+    setManualQty('1');
+  };
+
+  const pendingManual = manualItems.filter(i => !i.done);
+  const doneManual = manualItems.filter(i => i.done);
 
   // Merge server plan with local overrides
   const resolvedPlan: Record<number, string | null> = {};
@@ -364,6 +397,100 @@ export default function PlannerPage() {
               >
                 Retry
               </button>
+            </div>
+          )}
+
+          {/* Manual shopping list */}
+          {!shopLoading && (
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">My list</h3>
+                {doneManual.length > 0 && (
+                  <button
+                    onClick={() => clearDoneMutation.mutate()}
+                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    Clear done ({doneManual.length})
+                  </button>
+                )}
+              </div>
+
+              {/* Add row */}
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Add item…"
+                  value={manualInput}
+                  onChange={e => setManualInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddManual()}
+                  className="flex-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  value={manualQty}
+                  onChange={e => setManualQty(e.target.value)}
+                  className="w-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-2 py-2 text-sm text-center"
+                  min="0.1"
+                  step="0.5"
+                />
+                <button
+                  onClick={handleAddManual}
+                  disabled={!manualInput.trim() || addManualMutation.isPending}
+                  className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Pending items */}
+              {pendingManual.length > 0 && (
+                <ul className="space-y-1 mb-1">
+                  {pendingManual.map(item => (
+                    <li key={item.id} className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2.5 shadow-sm">
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })}
+                        className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer"
+                      />
+                      <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">
+                        {item.raw_name}
+                        <span className="text-gray-400 dark:text-gray-500 ml-2 text-xs">
+                          {item.quantity !== 1 || item.unit !== 'count' ? `${item.quantity} ${item.unit}` : ''}
+                        </span>
+                      </span>
+                      <button onClick={() => deleteManualMutation.mutate(item.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Done items (collapsed) */}
+              {doneManual.length > 0 && (
+                <ul className="space-y-1 opacity-50">
+                  {doneManual.map(item => (
+                    <li key={item.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })}
+                        className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer"
+                      />
+                      <span className="flex-1 text-sm text-gray-400 line-through">{item.raw_name}</span>
+                      <button onClick={() => deleteManualMutation.mutate(item.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {manualItems.length === 0 && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">
+                  Nothing on your list yet — add items above or ask TeaBot.
+                </p>
+              )}
+
+              <div className="border-t border-gray-100 dark:border-gray-700 mt-4 mb-4" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">From meal plan</h3>
             </div>
           )}
 

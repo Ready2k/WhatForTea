@@ -65,16 +65,23 @@ Set confirmed=true only if user explicitly says they finished and want pantry de
 Include ingredient_id if the item appears in the pantry context. Omit it for new items.
 Units: g, kg, ml, l, count, tbsp, tsp, bunch, pack, sachet
 
+### Add an item to the shopping list (user says "add X to my shopping list", "I need to buy X", "remind me to get X"):
+<widget>{"type":"shopping_add","raw_name":"eggs","quantity":6,"unit":"count"}</widget>
+Use this ONLY for items the user wants to remember to buy — NOT for items they already have.
+Do NOT use pantry_confirm for shopping list requests.
+
 ### Navigate to a page (user asks to go somewhere):
 <widget>{"type":"navigate","path":"/pantry","label":"My Pantry"}</widget>
-Valid paths: /pantry  /recipes  /planner  /ingest  /collections
+Valid paths: /pantry  /recipes  /planner  /shopping-list  /ingest  /collections
 
 Rules:
 - Only emit a widget when it directly answers the user's request.
 - Only use IDs present in the context — never fabricate them.
-- start_cooking, end_cooking_session, plan_meal, navigate are executed automatically.
+- start_cooking, end_cooking_session, plan_meal, navigate, shopping_add are executed automatically.
 - pantry_confirm and recipe_card are shown to the user.
-- One widget per response maximum."""
+- One widget per response maximum.
+- "I have X" / "I bought X" → pantry_confirm. "I need to buy X" / "add to shopping list" → shopping_add. Never confuse these.
+- When reporting what's on the shopping list, ONLY list items from "My shopping list" or "Meal plan shopping list" in the context. Never invent items. If both are empty, say so."""
 
 
 # ── Context builder ────────────────────────────────────────────────────────────
@@ -153,6 +160,41 @@ async def _build_context(user_id: Optional[str] = None) -> str:
                         recently_cooked[rid] = (date.today() - s.ended_at.date()).days
                 cooked_parts = [f"[id:{rid}] {days}d ago" for rid, days in list(recently_cooked.items())[:10]]
                 lines.append("Recently cooked (avoid suggesting within 5 days): " + ", ".join(cooked_parts))
+
+            # Manual shopping list — items added by user / TeaBot via shopping_add widget
+            try:
+                from app.models.shopping import ShoppingListItem as ShoppingListItemModel
+                shop_stmt = (
+                    sa_select(ShoppingListItemModel)
+                    .where(ShoppingListItemModel.done.is_(False))
+                    .order_by(ShoppingListItemModel.added_at)
+                )
+                shop_items = (await db.execute(shop_stmt)).scalars().all()
+                if shop_items:
+                    shop_parts = [
+                        f"{s.raw_name} ({s.quantity:g} {s.unit})" for s in shop_items
+                    ]
+                    lines.append("My shopping list (pending): " + ", ".join(shop_parts))
+                else:
+                    lines.append("My shopping list: empty")
+            except Exception:
+                pass
+
+            # Meal plan shopping list — ingredients still needed based on planned recipes vs pantry
+            try:
+                from app.services.planner import generate_shopping_list
+                shopping = await generate_shopping_list(date.fromisoformat(week_start), db)
+                all_shop_items = [item for zone_items in shopping.zones.values() for item in zone_items]
+                if all_shop_items:
+                    shop_parts = [
+                        f"{i.canonical_name} ({i.rounded_quantity} {i.rounded_unit})"
+                        for i in all_shop_items
+                    ]
+                    lines.append("Meal plan shopping list (ingredients still needed): " + ", ".join(shop_parts))
+                else:
+                    lines.append("Meal plan shopping list: nothing needed (pantry covers everything)")
+            except Exception:
+                pass
 
             matches = await score_all_recipes(db)
             match_ids: set = set()
@@ -295,7 +337,12 @@ async def teabot_node(state: TeaBotAgentState) -> dict:
     if context:
         system_content += f"\n\n## Current kitchen context\n{context}"
 
-    llm_messages: List[BaseMessage] = [SystemMessage(content=system_content)] + list(state["messages"])
+    # Trim history to last 20 messages (~10 exchanges) to cap token growth.
+    # Live kitchen context (pantry, plan, recipes) is rebuilt fresh each turn,
+    # so old accumulated messages beyond this window add cost without benefit.
+    _MAX_HISTORY = 20
+    recent_messages = list(state["messages"])[-_MAX_HISTORY:]
+    llm_messages: List[BaseMessage] = [SystemMessage(content=system_content)] + recent_messages
     llm = _build_llm()
     response: AIMessage = await llm.ainvoke(llm_messages)
 

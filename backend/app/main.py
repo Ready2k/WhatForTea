@@ -20,6 +20,7 @@ from app.api.v1.barcode import router as barcode_router
 from app.api.v1.collections import router as collections_router
 from app.api.v1.users import router as users_router
 from app.api.v1.voice import router as voice_router
+from app.api.v1.shopping import router as shopping_router
 from app.middleware.auth import AuthMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.services.scheduler import create_scheduler
@@ -146,3 +147,4 @@ app.include_router(barcode_router)
 app.include_router(collections_router)
 app.include_router(users_router)
 app.include_router(voice_router)
+app.include_router(shopping_router)

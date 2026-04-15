@@ -8,7 +8,7 @@ import { X, Send, Command } from 'lucide-react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { RenderA2UI, type A2UIDescriptor, type OnResumeFn } from '@/lib/a2ui';
-import { endCookingSession, createCookingSession, fetchCurrentPlan, setWeekPlan, submitChatFeedback } from '@/lib/api';
+import { endCookingSession, createCookingSession, fetchCurrentPlan, setWeekPlan, submitChatFeedback, addShoppingItem } from '@/lib/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -35,10 +35,10 @@ function parseWidgets(raw: string): { text: string; widgets: A2UIDescriptor[] } 
 }
 
 /** Widget types that are executed silently by the frontend, not rendered as UI */
-const AUTO_EXECUTE_TYPES = new Set(['end_cooking_session', 'navigate', 'start_cooking', 'plan_meal']);
+const AUTO_EXECUTE_TYPES = new Set(['end_cooking_session', 'navigate', 'start_cooking', 'plan_meal', 'shopping_add']);
 
 /** Paths the navigate widget is allowed to route to */
-const ALLOWED_NAV_PATHS = new Set(['/pantry', '/recipes', '/planner', '/ingest', '/collections', '/profile']);
+const ALLOWED_NAV_PATHS = new Set(['/pantry', '/recipes', '/planner', '/shopping-list', '/ingest', '/collections', '/profile']);
 
 /** Loose UUID v4 check — rejects obviously bad LLM-hallucinated IDs */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -112,6 +112,19 @@ export function TeaBotPanel() {
           results.push(`⚠ Could not update the meal plan. Try the Planner page.`);
         }
 
+      } else if (w.type === 'shopping_add') {
+        try {
+          await addShoppingItem({
+            raw_name: w.raw_name as string,
+            quantity: (w.quantity as number) ?? 1,
+            unit: (w.unit as string) ?? 'count',
+          });
+          queryClient.invalidateQueries({ queryKey: ['shoppingList'] });
+          results.push(`✓ "${w.raw_name}" added to your shopping list.`);
+        } catch {
+          results.push(`⚠ Could not add to shopping list — try the Planner page.`);
+        }
+
       } else if (w.type === 'navigate') {
         const path = w.path as string;
         if (!ALLOWED_NAV_PATHS.has(path)) {
@@ -164,6 +177,7 @@ export function TeaBotPanel() {
       const decoder = new TextDecoder();
       let buffer = '';
       let accumulated = '';
+      let resumeHitlWidget: (A2UIDescriptor & { thread_id: string }) | null = null;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -189,6 +203,8 @@ export function TeaBotPanel() {
               updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
               return updated;
             });
+          } else if (event.type === 'hitl_waiting' && event.widget) {
+            resumeHitlWidget = { ...event.widget, thread_id: event.thread_id };
           } else if (event.type === 'error') {
             throw new Error(event.message ?? 'Stream error');
           }
@@ -196,7 +212,13 @@ export function TeaBotPanel() {
       }
 
       const { text, widgets } = parseWidgets(accumulated);
-      const displayWidgets = widgets.filter(w => !AUTO_EXECUTE_TYPES.has(w.type));
+      const displayWidgets = widgets
+        .filter(w => !AUTO_EXECUTE_TYPES.has(w.type))
+        .map(w => (w.type === 'pantry_confirm' && resumeHitlWidget ? { ...w, thread_id: resumeHitlWidget.thread_id } : w));
+      // If no pantry_confirm came through the text but a hitl_waiting arrived, inject it directly
+      if (resumeHitlWidget && !displayWidgets.some(w => w.type === 'pantry_confirm')) {
+        displayWidgets.push(resumeHitlWidget);
+      }
       const actionWidgets  = widgets.filter(w =>  AUTO_EXECUTE_TYPES.has(w.type));
 
       setMessages(prev => {
@@ -282,8 +304,11 @@ export function TeaBotPanel() {
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
     try {
+      // Only send the current user message — LangGraph checkpointer holds full
+      // thread history on the backend; sending the entire array wastes bandwidth
+      // and doesn't change what the LLM sees (backend uses user_messages[-1] only).
       const body = JSON.stringify({
-        messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+        messages: [{ role: 'user', content: userContent }],
         thread_id: threadIdRef.current ?? undefined,
       });
 

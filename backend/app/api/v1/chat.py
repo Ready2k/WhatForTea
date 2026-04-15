@@ -182,6 +182,13 @@ async def chat_resume(body: ResumeRequest, request: Request):
                     if chunk.content:
                         yield f"data: {json.dumps({'type': 'text_delta', 'content': chunk.content})}\n\n"
 
+            # If the graph paused at a new interrupt (e.g. the LLM generated
+            # another pantry_confirm after resume), surface it so the frontend
+            # can wire up the HITL card with the correct thread_id.
+            widget = await _check_for_interrupt(graph, config)
+            if widget:
+                yield f"data: {json.dumps({'type': 'hitl_waiting', 'thread_id': body.thread_id, 'widget': widget})}\n\n"
+
             yield f"data: {json.dumps({'type': 'done', 'thread_id': body.thread_id})}\n\n"
 
         except Exception as exc:

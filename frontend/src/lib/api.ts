@@ -499,6 +499,45 @@ export function joinHousehold(data: {
   });
 }
 
+// ── Shopping List ─────────────────────────────────────────────────────────────
+
+export interface ShoppingItem {
+  id: string;
+  raw_name: string;
+  quantity: number;
+  unit: string;
+  done: boolean;
+  added_at: string;
+}
+
+export function fetchShoppingItems(): Promise<ShoppingItem[]> {
+  return request<ShoppingItem[]>('/api/v1/shopping-list');
+}
+
+export function addShoppingItem(data: { raw_name: string; quantity?: number; unit?: string }): Promise<ShoppingItem> {
+  return request<ShoppingItem>('/api/v1/shopping-list', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function patchShoppingItem(id: string, done: boolean): Promise<ShoppingItem> {
+  return request<ShoppingItem>(`/api/v1/shopping-list/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ done }),
+  });
+}
+
+export function deleteShoppingItem(id: string): Promise<void> {
+  return request<void>(`/api/v1/shopping-list/${id}`, { method: 'DELETE' });
+}
+
+export function clearDoneShoppingItems(): Promise<void> {
+  return request<void>('/api/v1/shopping-list/done/clear', { method: 'DELETE' });
+}
+
 export interface VoiceCommandResponse {
   intent: 'add_to_list' | 'session_note' | 'navigation' | 'unknown';
   item?: string | null;
