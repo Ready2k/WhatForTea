@@ -15,6 +15,7 @@ from typing import Any
 import boto3
 import yaml
 from jinja2 import Template
+from langfuse.decorators import langfuse_context, observe
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def _get_client():
     )
 
 
+@observe(as_type="generation", name="nutrition_llm")
 async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings: int) -> dict:
     """
     Estimate macro-nutrients for a recipe.
@@ -102,9 +104,18 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
         if text.startswith("json"):
             text = text[4:]
         text = text.strip()
-    return json.loads(text)
+    result = json.loads(text)
+    usage = raw.get("usage", {})
+    langfuse_context.update_current_observation(
+        model=model,
+        input={"title": title, "servings": base_servings, "ingredients": ingredients},
+        output=result,
+        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+    )
+    return result
 
 
+@observe(as_type="generation", name="url_ingestion_llm")
 async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[dict, dict]:
     """
     Extract a structured recipe from the plain-text content of a recipe web page.
@@ -159,6 +170,12 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
     parsed = json.loads(text)
 
     usage = raw_response.get("usage", {})
+    langfuse_context.update_current_observation(
+        model=raw_response.get("model", model),
+        input={"source_domain": source_domain, "page_text_preview": page_text[:500]},
+        output={"title": parsed.get("title"), "ingredient_count": len(parsed.get("ingredients", [])), "step_count": len(parsed.get("steps", []))},
+        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+    )
     logger.info(
         "url ingestion LLM call",
         extra={
@@ -174,6 +191,7 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
     return raw_response, parsed
 
 
+@observe(as_type="generation", name="voice_command_llm")
 async def call_voice_command_llm(transcript: str, context: str | None = None) -> dict:
     """
     Parse a voice transcript into a structured command intent.
@@ -210,6 +228,13 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
                 text = text[4:]
             text = text.strip()
         parsed = json.loads(text)
+        usage = raw.get("usage", {})
+        langfuse_context.update_current_observation(
+            model=model,
+            input={"transcript": transcript, "context": context},
+            output=parsed,
+            usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+        )
         logger.info(
             "voice command LLM call",
             extra={"transcript": transcript[:80], "intent": parsed.get("intent")},
@@ -220,6 +245,7 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
         return {"intent": "unknown"}
 
 
+@observe(as_type="generation", name="normaliser_llm")
 async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
     """
     Ask the LLM whether raw_name matches the candidate canonical ingredient.
@@ -264,6 +290,13 @@ async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
             text = text.strip()
 
         parsed = json.loads(text)
+        usage = result_body.get("usage", {})
+        langfuse_context.update_current_observation(
+            model=model,
+            input={"raw_name": raw_name, "candidate": candidate},
+            output=parsed,
+            usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+        )
         logger.info(
             "normaliser LLM call",
             extra={
@@ -288,6 +321,7 @@ _MEDIA_TYPE_MAP = {
 }
 
 
+@observe(as_type="generation", name="receipt_llm")
 async def call_receipt_llm(
     image_paths: list[Path] | None,
     text_content: str | None,
@@ -358,6 +392,12 @@ async def call_receipt_llm(
         parsed = []
 
     usage = raw_response.get("usage", {})
+    langfuse_context.update_current_observation(
+        model=raw_response.get("model", model),
+        input={"source": "image" if image_paths else "text", "image_count": len(image_paths) if image_paths else 0},
+        output={"item_count": len(parsed), "items": parsed},
+        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+    )
     logger.info(
         "receipt LLM call",
         extra={
@@ -371,6 +411,84 @@ async def call_receipt_llm(
     return raw_response, parsed
 
 
+@observe(as_type="generation", name="auto_crop_llm")
+async def call_auto_crop_llm(image_path: Path) -> dict:
+    """
+    Ask Claude vision to identify the food photograph bounding box within a recipe card image.
+    Returns {x, y, width, height} as fractions (0.0–1.0) of the image dimensions.
+    """
+    model = _model_id(vision=True)
+    media_type = _MEDIA_TYPE_MAP.get(image_path.suffix.lower(), "image/jpeg")
+    image_data = base64.b64encode(image_path.read_bytes()).decode()
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 256,
+        "temperature": 0.1,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": media_type, "data": image_data},
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "This is a photo of a physical HelloFresh recipe card. "
+                            "Identify the bounding box of the main food photograph — "
+                            "the area showing the finished dish — excluding recipe text, "
+                            "ingredient lists, logos, step numbers, borders, and background. "
+                            "Return ONLY valid JSON with this exact schema, no other text:\n"
+                            '{"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}\n'
+                            "Where x and y are the top-left corner and width/height are the "
+                            "size, all as fractions of the total image dimensions (0.0–1.0). "
+                            "If the image is already a clean food photo with no card content, "
+                            "return {\"x\":0,\"y\":0,\"width\":1,\"height\":1}."
+                        ),
+                    },
+                ],
+            }
+        ],
+    }
+
+    client = _get_client()
+    response = client.invoke_model(
+        modelId=model,
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json",
+    )
+    raw = json.loads(response["body"].read())
+    text = raw["content"][0]["text"].strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+
+    result = json.loads(text)
+    # Clamp to valid range and ensure width/height are positive
+    crop = {
+        "x":      max(0.0, min(1.0,  float(result.get("x", 0.0)))),
+        "y":      max(0.0, min(1.0,  float(result.get("y", 0.0)))),
+        "width":  max(0.05, min(1.0, float(result.get("width", 1.0)))),
+        "height": max(0.05, min(1.0, float(result.get("height", 1.0)))),
+    }
+
+    usage = raw.get("usage", {})
+    langfuse_context.update_current_observation(
+        model=model,
+        input={"image": image_path.name},
+        output=crop,
+        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+    )
+    logger.info("auto_crop LLM", extra={"image": image_path.name, "crop": crop})
+    return crop
+
+
+@observe(as_type="generation", name="ingestion_llm")
 async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
     """
     Send recipe card image(s) to Claude via Bedrock for structured extraction.
@@ -443,6 +561,12 @@ async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
 
     # Structured trace log — first 200 chars only; full response in llm_outputs table
     usage = raw_response.get("usage", {})
+    langfuse_context.update_current_observation(
+        model=raw_response.get("model", model),
+        input={"image_count": len(image_paths)},
+        output={"title": parsed.get("title"), "ingredient_count": len(parsed.get("ingredients", [])), "step_count": len(parsed.get("steps", []))},
+        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+    )
     logger.info(
         "ingestion LLM call",
         extra={

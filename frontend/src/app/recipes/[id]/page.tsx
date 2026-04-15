@@ -8,6 +8,7 @@ import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
 import { rotateRecipePhoto, uploadRecipePhoto } from '@/lib/api';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import type { IngredientMatchDetail, RecipeIngredient, Recipe } from '@/lib/types';
 import { updateRecipe, getCookingHistory } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -45,6 +46,7 @@ export default function RecipeDetailPage() {
   const [imageVersions, setImageVersions] = useState<Record<number, number>>({ 0: 0, 1: 0 });
   const [isRotating, setIsRotating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
   
   // Ingredient edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -772,6 +774,17 @@ export default function RecipeDetailPage() {
               </svg>
               Rotate
             </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setCropModalOpen(true); }}
+              className="flex items-center gap-2 bg-black/70 hover:bg-black/90 text-white text-sm font-semibold px-5 py-2.5 rounded-full border border-white/20 shadow-lg transition-colors"
+              aria-label="Crop image"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14" />
+              </svg>
+              Crop
+            </button>
             {recipe.image_count > 1 && (
               <button
                 onClick={handleFlip}
@@ -804,6 +817,16 @@ export default function RecipeDetailPage() {
         </div>
       </div>,
       document.body
+    )}
+
+    {cropModalOpen && mounted && (
+      <ImageCropModal
+        recipeId={id}
+        imageIndex={lightboxIndex}
+        imageVersion={imageVersions[lightboxIndex] ?? 0}
+        onClose={() => setCropModalOpen(false)}
+        onSaved={() => setImageVersions(v => ({ ...v, [lightboxIndex]: (v[lightboxIndex] ?? 0) + 1 }))}
+      />
     )}
     </>
   );

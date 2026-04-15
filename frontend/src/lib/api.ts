@@ -90,6 +90,14 @@ export async function logout(): Promise<void> {
   window.location.href = '/login';
 }
 
+export async function submitChatFeedback(traceId: string, value: 1 | -1, comment?: string): Promise<void> {
+  await request<void>('/api/v1/chat/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trace_id: traceId, value, comment }),
+  });
+}
+
 export function fetchIngredients(q?: string): Promise<Ingredient[]> {
   const params = q ? `?q=${encodeURIComponent(q)}` : '';
   return request<Ingredient[]>(`/api/v1/ingredients${params}`);
@@ -347,6 +355,24 @@ export function getCookingHistory(recipeId?: string, limit = 20): Promise<Cookin
 
 export function rotateRecipePhoto(recipeId: string, index = 0): Promise<void> {
   return request<void>(`/api/v1/recipes/${recipeId}/photo/rotate?index=${index}`, {
+    method: 'POST',
+  });
+}
+
+export function cropRecipePhoto(
+  recipeId: string,
+  crop: { x: number; y: number; width: number; height: number },
+  index = 0,
+): Promise<void> {
+  return request<void>(`/api/v1/recipes/${recipeId}/photo/crop?index=${index}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(crop),
+  });
+}
+
+export function autoCropRecipePhoto(recipeId: string, index = 0): Promise<void> {
+  return request<void>(`/api/v1/recipes/${recipeId}/photo/auto-crop?index=${index}`, {
     method: 'POST',
   });
 }

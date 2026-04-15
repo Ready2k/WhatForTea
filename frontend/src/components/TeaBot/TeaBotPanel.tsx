@@ -8,13 +8,15 @@ import { X, Send, Command } from 'lucide-react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { RenderA2UI, type A2UIDescriptor, type OnResumeFn } from '@/lib/a2ui';
-import { endCookingSession, createCookingSession, fetchCurrentPlan, setWeekPlan } from '@/lib/api';
+import { endCookingSession, createCookingSession, fetchCurrentPlan, setWeekPlan, submitChatFeedback } from '@/lib/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   widgets?: A2UIDescriptor[];  // display widgets (recipe_card, pantry_confirm, …)
   actionResult?: string;       // inline status from auto-executed actions
+  traceId?: string;            // Langfuse trace ID for this response
+  feedback?: 'up' | 'down';   // user rating, set after submission
 }
 
 /** Extract <widget>JSON</widget> blocks from text, return clean text + descriptors */
@@ -174,26 +176,48 @@ export function TeaBotPanel() {
           if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
           if (!raw) continue;
+          let event: any;
           try {
-            const event = JSON.parse(raw);
-            if (event.type === 'text_delta' && event.content) {
-              accumulated += event.content;
-              setMessages(prev => {
-                const updated = [...prev];
-                updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
-                return updated;
-              });
-            }
-          } catch { /* ignore */ }
+            event = JSON.parse(raw);
+          } catch {
+            continue; // genuinely malformed JSON — skip
+          }
+          if (event.type === 'text_delta' && event.content) {
+            accumulated += event.content;
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
+              return updated;
+            });
+          } else if (event.type === 'error') {
+            throw new Error(event.message ?? 'Stream error');
+          }
         }
       }
 
-      const { text } = parseWidgets(accumulated);
+      const { text, widgets } = parseWidgets(accumulated);
+      const displayWidgets = widgets.filter(w => !AUTO_EXECUTE_TYPES.has(w.type));
+      const actionWidgets  = widgets.filter(w =>  AUTO_EXECUTE_TYPES.has(w.type));
+
       setMessages(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { ...updated[updated.length - 1], content: text };
+        updated[updated.length - 1] = { ...updated[updated.length - 1], content: text, widgets: displayWidgets };
         return updated;
       });
+
+      if (actionWidgets.length > 0) {
+        const { actionResult } = await executeActions(actionWidgets);
+        if (actionResult) {
+          setMessages(prev => {
+            const updated = [...prev];
+            const idx = updated.length - 1;
+            if (updated[idx]?.role === 'assistant') {
+              updated[idx] = { ...updated[idx], actionResult };
+            }
+            return updated;
+          });
+        }
+      }
     } catch (err: any) {
       setMessages(prev => {
         const updated = [...prev];
@@ -206,7 +230,27 @@ export function TeaBotPanel() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [executeActions]);
+
+  const handleFeedback = useCallback(async (msgIndex: number, value: 1 | -1) => {
+    const msg = messages[msgIndex];
+    if (!msg?.traceId || msg.feedback) return;
+    setMessages(prev => {
+      const updated = [...prev];
+      updated[msgIndex] = { ...updated[msgIndex], feedback: value === 1 ? 'up' : 'down' };
+      return updated;
+    });
+    try {
+      await submitChatFeedback(msg.traceId, value);
+    } catch {
+      // Revert on failure
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[msgIndex] = { ...updated[msgIndex], feedback: undefined };
+        return updated;
+      });
+    }
+  }, [messages]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -284,28 +328,39 @@ export function TeaBotPanel() {
           if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
           if (!raw) continue;
+          let event: any;
           try {
-            const event = JSON.parse(raw);
-            if (event.type === 'text_delta' && event.content) {
-              accumulated += event.content;
+            event = JSON.parse(raw);
+          } catch {
+            continue; // genuinely malformed JSON — skip
+          }
+          if (event.type === 'text_delta' && event.content) {
+            accumulated += event.content;
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated,
+              };
+              return updated;
+            });
+          } else if (event.type === 'hitl_waiting' && event.widget) {
+            pendingHitlWidget.current = { ...event.widget, thread_id: event.thread_id };
+          } else if (event.type === 'done' && event.thread_id) {
+            threadIdRef.current = event.thread_id;
+            localStorage.setItem('teabot_thread_id', event.thread_id);
+            if (event.trace_id) {
               setMessages(prev => {
                 const updated = [...prev];
-                updated[updated.length - 1] = {
-                  ...updated[updated.length - 1],
-                  content: accumulated,
-                };
+                const idx = updated.length - 1;
+                if (updated[idx]?.role === 'assistant') {
+                  updated[idx] = { ...updated[idx], traceId: event.trace_id };
+                }
                 return updated;
               });
-            } else if (event.type === 'hitl_waiting' && event.widget) {
-                pendingHitlWidget.current = { ...event.widget, thread_id: event.thread_id };
-            } else if (event.type === 'done' && event.thread_id) {
-              threadIdRef.current = event.thread_id;
-              localStorage.setItem('teabot_thread_id', event.thread_id);
-            } else if (event.type === 'error') {
-              throw new Error(event.message ?? 'Stream error');
             }
-          } catch {
-            // ignore malformed SSE lines
+          } else if (event.type === 'error') {
+            throw new Error(event.message ?? 'Stream error');
           }
         }
       }
@@ -465,6 +520,40 @@ export function TeaBotPanel() {
                     {msg.role === 'assistant' && msg.actionResult && (
                       <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                         {msg.actionResult}
+                      </div>
+                    )}
+
+                    {/* Feedback thumbs — only on completed assistant messages with a trace */}
+                    {msg.role === 'assistant' && msg.traceId && !(isLoading && i === messages.length - 1) && (
+                      <div className="mt-1.5 flex items-center gap-1">
+                        <button
+                          onClick={() => handleFeedback(i, 1)}
+                          disabled={!!msg.feedback}
+                          aria-label="Helpful"
+                          className={`p-1 rounded-md transition-colors ${
+                            msg.feedback === 'up'
+                              ? 'text-emerald-500'
+                              : 'text-gray-300 dark:text-gray-600 hover:text-emerald-500 dark:hover:text-emerald-400 disabled:opacity-40'
+                          }`}
+                        >
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                            <path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2.144 2.144 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a9.84 9.84 0 0 0-.443.05 9.365 9.365 0 0 0-.062-4.509A1.38 1.38 0 0 0 9.125.111L8.864.046z"/>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleFeedback(i, -1)}
+                          disabled={!!msg.feedback}
+                          aria-label="Not helpful"
+                          className={`p-1 rounded-md transition-colors ${
+                            msg.feedback === 'down'
+                              ? 'text-rose-500'
+                              : 'text-gray-300 dark:text-gray-600 hover:text-rose-500 dark:hover:text-rose-400 disabled:opacity-40'
+                          }`}
+                        >
+                          <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                            <path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.108 7.395.026 8 .026c.524 0 .968.068 1.376.19.406.12.76.298 1.07.468l.017.009c.285.157.58.322.917.44.346.12.75.19 1.22.19h.013c.658 0 1.108.224 1.394.564.287.34.395.79.359 1.237-.035.432-.196.835-.467 1.127.09.22.146.467.146.724 0 .27-.058.527-.162.76.09.22.14.463.14.713 0 .27-.058.528-.163.761.09.22.14.463.14.713 0 .527-.186 1.03-.504 1.407-.317.376-.79.617-1.385.617H8c-.523 0-.967-.068-1.376-.19a4.37 4.37 0 0 1-1.07-.468l-.017-.01a5.338 5.338 0 0 0-.917-.44C4.273 6.34 3.87 6.27 3.4 6.27H3.39c-.66 0-1.11-.224-1.396-.564-.287-.34-.394-.79-.358-1.237.035-.432.196-.835.467-1.127a2.12 2.12 0 0 1-.146-.724c0-.27.057-.528.162-.76a2.258 2.258 0 0 1-.14-.714c0-.27.058-.528.163-.761a2.078 2.078 0 0 1-.14-.713c0-.528.186-1.03.504-1.407.317-.376.79-.618 1.385-.618h3.5c.937 0 1.6.477 1.934 1.064.232.41.348.9.254 1.39l.022.016z"/>
+                          </svg>
+                        </button>
                       </div>
                     )}
 

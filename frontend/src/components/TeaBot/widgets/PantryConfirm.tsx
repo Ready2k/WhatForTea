@@ -37,7 +37,7 @@ export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingr
     try {
       if (onResume) {
         // HITL mode: hand back to the graph — it owns the upsert
-        onResume('confirm', quantity);
+        await onResume('confirm', quantity);
         setStatus('applied');
         return;
       }
@@ -71,8 +71,8 @@ export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingr
     }
   };
 
-  const handleReject = () => {
-    if (onResume) onResume('reject');
+  const handleReject = async () => {
+    if (onResume) await onResume('reject');
     setStatus('rejected');
   };
 

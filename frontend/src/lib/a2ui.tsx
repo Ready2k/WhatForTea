@@ -54,7 +54,7 @@ const REGISTRY: Record<string, React.ComponentType<any>> = {
 };
 
 
-export type OnResumeFn = (decision: 'confirm' | 'reject', quantity?: number) => void;
+export type OnResumeFn = (decision: 'confirm' | 'reject', quantity?: number) => Promise<void>;
 
 /**
  * Maps A2UI JSON to React widgets safely.

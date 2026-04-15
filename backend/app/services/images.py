@@ -8,6 +8,37 @@ from fastapi import UploadFile
 
 logger = logging.getLogger(__name__)
 
+async def crop_image(path: Path, x: float, y: float, width: float, height: float) -> bool:
+    """
+    Crop image at path using fractional coordinates (0.0–1.0).
+    x, y: top-left corner; width, height: size — all as fractions of image dimensions.
+    Overwrites the original file.
+    """
+    if not path.exists():
+        logger.error(f"Cannot crop image: file not found at {path}")
+        return False
+
+    try:
+        with Image.open(path) as img:
+            img_w, img_h = img.size
+            left   = int(x * img_w)
+            top    = int(y * img_h)
+            right  = int((x + width) * img_w)
+            bottom = int((y + height) * img_h)
+            # Clamp to image bounds
+            left   = max(0, min(left, img_w))
+            top    = max(0, min(top, img_h))
+            right  = max(left + 1, min(right, img_w))
+            bottom = max(top + 1, min(bottom, img_h))
+            cropped = img.crop((left, top, right, bottom))
+            cropped.save(path)
+        logger.info(f"Image cropped: {path} → ({left},{top},{right},{bottom})")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to crop image {path}: {e}")
+        return False
+
+
 async def rotate_image(path: Path, degrees: int = -90) -> bool:
     """
     Rotate image at path by the given degrees (default -90 for 90deg clockwise).

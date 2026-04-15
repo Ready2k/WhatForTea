@@ -30,7 +30,8 @@ from app.schemas.ingest import (
     UrlImportRequest,
 )
 from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary, RecipeUpdate
-from app.services.images import rotate_image, save_manual_photo
+from pydantic import BaseModel, confloat
+from app.services.images import crop_image, rotate_image, save_manual_photo
 from app.services.ingestion import (
     confirm_recipe,
     save_images,
@@ -607,6 +608,69 @@ async def rotate_recipe_photo(
         raise HTTPException(status_code=500, detail="Failed to rotate image")
 
     return {"status": "ok"}
+
+
+class CropRequest(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+def _resolve_image_path(recipe: Recipe, index: int) -> Path:
+    """Return the image file path for the given index, or raise HTTPException."""
+    if not recipe.hero_image_path:
+        raise HTTPException(status_code=404, detail="Recipe has no images")
+    if index == 0:
+        return Path(recipe.hero_image_path)
+    img_dir = Path(recipe.hero_image_path).parent
+    all_images = sorted(img_dir.glob("image_*"))
+    if index >= len(all_images):
+        raise HTTPException(status_code=404, detail=f"Image index {index} not found")
+    return all_images[index]
+
+
+@router.post("/{recipe_id}/photo/crop")
+async def crop_recipe_photo(
+    recipe_id: uuid.UUID,
+    body: CropRequest,
+    index: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    """Crop a recipe photo using fractional coordinates (0.0–1.0)."""
+    recipe = await db.get(Recipe, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    image_path = _resolve_image_path(recipe, index)
+    success = await crop_image(image_path, body.x, body.y, body.width, body.height)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to crop image")
+    return {"status": "ok"}
+
+
+@router.post("/{recipe_id}/photo/auto-crop")
+async def auto_crop_recipe_photo(
+    recipe_id: uuid.UUID,
+    index: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    """Use Claude vision to auto-crop a recipe card photo down to just the food image."""
+    recipe = await db.get(Recipe, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    image_path = _resolve_image_path(recipe, index)
+
+    from app.services.bedrock import call_auto_crop_llm
+    try:
+        crop = await call_auto_crop_llm(image_path)
+    except Exception as exc:
+        logger.error("auto_crop LLM failed", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Auto-crop failed: {exc}")
+
+    success = await crop_image(image_path, crop["x"], crop["y"], crop["width"], crop["height"])
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to apply crop")
+    return {"status": "ok", "crop": crop}
 
 
 @router.post("/{recipe_id}/photo")

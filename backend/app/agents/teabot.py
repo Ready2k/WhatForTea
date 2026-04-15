@@ -224,20 +224,33 @@ def _parse_pantry_confirm(text: str) -> Optional[dict]:
 
 
 async def _do_pantry_upsert(widget: dict, quantity: float) -> None:
-    """Execute the pantry upsert after HITL confirmation."""
-    ingredient_id_str = widget.get("ingredient_id")
-    if not ingredient_id_str:
-        logger.warning("pantry_confirm upsert skipped — no ingredient_id in widget")
-        return
+    """Execute the pantry upsert after HITL confirmation.
 
+    Raises RuntimeError if the ingredient cannot be resolved, so callers
+    receive a real failure rather than a silent no-op.
+    """
     from app.database import AsyncSessionLocal
     from app.schemas.pantry import PantryItemCreate
     from app.services.pantry import upsert_pantry_item
 
+    ingredient_id_str = widget.get("ingredient_id")
+
     async with AsyncSessionLocal() as db:
+        if not ingredient_id_str:
+            raw_name = widget.get("raw_name", "")
+            if not raw_name:
+                raise RuntimeError("pantry_confirm widget missing both ingredient_id and raw_name")
+            from app.services.normaliser import resolve_ingredient
+            result = await resolve_ingredient(raw_name, db)
+            if result.ingredient is None:
+                raise RuntimeError(f"Could not resolve ingredient '{raw_name}' — add it via the Pantry page first.")
+            ingredient_id = result.ingredient.id
+        else:
+            ingredient_id = uuid.UUID(ingredient_id_str)
+
         await upsert_pantry_item(
             PantryItemCreate(
-                ingredient_id=uuid.UUID(ingredient_id_str),
+                ingredient_id=ingredient_id,
                 quantity=quantity,
                 unit=widget.get("unit", "count"),
                 confidence=1.0,
@@ -298,7 +311,15 @@ async def teabot_node(state: TeaBotAgentState) -> dict:
         unit = pantry_widget.get("unit", "")
 
         if dec == "confirm":
-            await _do_pantry_upsert(pantry_widget, qty)
+            try:
+                await _do_pantry_upsert(pantry_widget, qty)
+            except RuntimeError as exc:
+                return {
+                    "messages": [AIMessage(content=f"Sorry, I couldn't save that — {exc}")],
+                    "hitl_status": "rejected",
+                    "a2ui": [],
+                    "error": str(exc),
+                }
             qty_str = f"{qty:g}"
             unit_str = f" {unit}" if unit else ""
             confirmation = f"Done! I've added **{qty_str}{unit_str} {raw_name}** to your pantry."

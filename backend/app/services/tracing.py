@@ -8,7 +8,17 @@ Usage in any LangGraph / LangChain call:
     handler = get_langfuse_handler(user_id="abc", session_id=thread_id)
     await graph.ainvoke(state, config={"callbacks": [handler]})
 
-Returns None when Langfuse is not configured so callers can pass
+Usage in raw boto3 LLM calls (bedrock.py):
+
+    from langfuse.decorators import observe, langfuse_context
+
+    @observe(as_type="generation", name="my_llm_call")
+    async def call_something_llm(...):
+        ...
+        langfuse_context.update_current_observation(model=model, input=..., output=text,
+            usage={"input": prompt_tokens, "output": completion_tokens})
+
+Returns None from get_langfuse_handler when Langfuse is not configured so callers can pass
 ``callbacks=[h for h in [handler] if h]`` without branching.
 """
 import logging
@@ -19,6 +29,16 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 _langfuse_client = None
+
+
+def init_langfuse() -> None:
+    """
+    Eagerly initialise the Langfuse client at startup so the enabled/disabled
+    log fires immediately rather than on the first LLM request.
+    """
+    _client()
+    if not _langfuse_client:
+        logger.info("Langfuse tracing disabled (keys not configured)")
 
 
 def _client():
@@ -39,6 +59,27 @@ def _client():
     except Exception:
         logger.warning("Langfuse initialisation failed — tracing disabled", exc_info=True)
     return _langfuse_client
+
+
+def score_trace(trace_id: str, value: float, comment: Optional[str] = None) -> None:
+    """
+    Attach a numeric score to a Langfuse trace.
+    value=1 → thumbs up, value=-1 → thumbs down.
+    No-op if Langfuse is not configured.
+    """
+    client = _client()
+    if client is None:
+        return
+    try:
+        client.score(
+            trace_id=trace_id,
+            name="user_feedback",
+            value=value,
+            data_type="NUMERIC",
+            comment=comment,
+        )
+    except Exception:
+        logger.warning("Failed to submit Langfuse score", exc_info=True)
 
 
 def get_langfuse_handler(

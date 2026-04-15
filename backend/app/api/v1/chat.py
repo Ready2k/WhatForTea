@@ -21,7 +21,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from pydantic import BaseModel
 
-from app.services.tracing import get_langfuse_handler
+from app.services.tracing import get_langfuse_handler, score_trace
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,12 @@ class ResumeRequest(BaseModel):
     thread_id: str
     decision: Literal["confirm", "reject"]
     quantity: Optional[float] = None
+
+
+class FeedbackRequest(BaseModel):
+    trace_id: str
+    value: Literal[1, -1]
+    comment: Optional[str] = None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -121,13 +127,27 @@ async def chat(body: ChatRequest, request: Request):
             if widget:
                 yield f"data: {json.dumps({'type': 'hitl_waiting', 'thread_id': thread_id, 'widget': widget})}\n\n"
 
-            yield f"data: {json.dumps({'type': 'done', 'thread_id': thread_id})}\n\n"
+            trace_id = None
+            try:
+                if handler is not None and getattr(handler, "trace", None) is not None:
+                    trace_id = handler.trace.id
+            except Exception:
+                pass
+            yield f"data: {json.dumps({'type': 'done', 'thread_id': thread_id, 'trace_id': trace_id})}\n\n"
 
         except Exception as exc:
             logger.error("Chat stream error", exc_info=True)
             yield f"data: {json.dumps({'type': 'error', 'message': str(exc)})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers=_SSE_HEADERS)
+
+
+# ── POST /api/v1/chat/feedback ────────────────────────────────────────────────
+
+@router.post("/chat/feedback", status_code=204)
+async def chat_feedback(body: FeedbackRequest, request: Request):
+    """Submit thumbs-up (value=1) or thumbs-down (value=-1) for a TeaBot response."""
+    score_trace(trace_id=body.trace_id, value=body.value, comment=body.comment)
 
 
 # ── POST /api/v1/chat/resume ──────────────────────────────────────────────────

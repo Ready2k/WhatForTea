@@ -74,6 +74,9 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Default user seed skipped", extra={"reason": str(exc)})
 
+    from app.services.tracing import init_langfuse
+    init_langfuse()
+
     scheduler = create_scheduler()
     scheduler.start()
     logger.info("APScheduler started", extra={"jobs": [j.id for j in scheduler.get_jobs()]})

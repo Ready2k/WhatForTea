@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRecipe } from '@/lib/hooks';
 import { StepTimer } from '@/components/StepTimer';
 import { createCookingSession, patchCookingSession, endCookingSession, sendVoiceCommand } from '@/lib/api';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import type { Step } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -98,6 +99,8 @@ export default function CookingModePage() {
   const [isSavingRating, setIsSavingRating] = useState(false);
   const [teabotActive, setTeabotActive] = useState(false);
   const [voiceNotesActive, setVoiceNotesActive] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cardImageVersion, setCardImageVersion] = useState(0);
   const sessionIdRef = useRef<string | null>(null);
   const patchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -464,22 +467,36 @@ export default function CookingModePage() {
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700/60">
-        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[70%]">{recipe.title}</span>
-        <button
-          onClick={async () => {
-            if (sessionIdRef.current) {
-              await endCookingSession(sessionIdRef.current).catch(() => {});
-              sessionIdRef.current = null;
-            }
-            router.push(`/recipes/${id}`);
-          }}
-          className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
-          aria-label="Exit"
-        >
-          <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[55%]">{recipe.title}</span>
+        <div className="flex items-center gap-2">
+          {recipe.hero_image_path && (
+            <button
+              onClick={() => setCropModalOpen(true)}
+              className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+              aria-label="View and crop recipe card"
+              title="View / crop recipe card"
+            >
+              <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 2v14a2 2 0 002 2h14M2 6h14a2 2 0 012 2v14" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={async () => {
+              if (sessionIdRef.current) {
+                await endCookingSession(sessionIdRef.current).catch(() => {});
+                sessionIdRef.current = null;
+              }
+              router.push(`/recipes/${id}`);
+            }}
+            className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+            aria-label="Exit"
+          >
+            <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* Step navigator — dots for plain steps, bell icons for timed steps */}
@@ -796,6 +813,16 @@ export default function CookingModePage() {
           </div>
         ))}
       </div>
+
+      {cropModalOpen && (
+        <ImageCropModal
+          recipeId={id}
+          imageIndex={0}
+          imageVersion={cardImageVersion}
+          onClose={() => setCropModalOpen(false)}
+          onSaved={() => setCardImageVersion(v => v + 1)}
+        />
+      )}
     </div>
   );
 }
