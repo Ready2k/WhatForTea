@@ -27,10 +27,13 @@ def _load_settings() -> dict:
     path = _AGENT_CONFIG_DIR / "agent_settings.yaml"
     with open(path) as f:
         cfg = yaml.safe_load(f)
-    # Allow .env BEDROCK_MODEL_ID to override; applies to vision model for back-compat
+    # .env overrides take priority over agent_settings.yaml so model IDs can be
+    # changed without a code or config-file deployment — just update .env and restart.
     from app.config import settings
     if settings.bedrock_model_id:
         cfg["vision_model_id"] = settings.bedrock_model_id
+    if settings.bedrock_text_model_id:
+        cfg["text_model_id"] = settings.bedrock_text_model_id
     return cfg
 
 

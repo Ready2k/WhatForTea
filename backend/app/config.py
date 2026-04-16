@@ -14,7 +14,8 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
-    bedrock_model_id: str = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+    bedrock_model_id: str = "us.anthropic.claude-sonnet-4-6"          # vision tasks
+    bedrock_text_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"  # text/chat tasks
 
     # Auth
     jwt_secret: str = "dev-secret-change-in-production"

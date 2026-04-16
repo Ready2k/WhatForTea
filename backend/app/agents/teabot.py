@@ -91,10 +91,46 @@ def _week_start() -> str:
     return (today - timedelta(days=today.weekday())).isoformat()
 
 
-async def _build_context(user_id: Optional[str] = None) -> str:
+async def _build_recipe_library() -> str:
     """
-    Build the live kitchen context injected into every chat request.
-    Built fresh each turn — not persisted in graph state.
+    Build the static recipe library section — changes only when recipes are
+    added or edited, so it is a good candidate for prompt caching.
+
+    Returns a plain-text block listing all recipes with title, ID, mood tags,
+    and cook time. Capped at 150 recipes to bound token usage at scale.
+    """
+    lines: List[str] = []
+    try:
+        from sqlalchemy import select as sa_select
+        from app.database import AsyncSessionLocal
+        from app.models.recipe import Recipe as RecipeModel
+
+        async with AsyncSessionLocal() as db:
+            stmt = sa_select(RecipeModel).order_by(RecipeModel.title).limit(150)
+            all_recipes = (await db.execute(stmt)).scalars().all()
+            if all_recipes:
+                recipe_lines = []
+                for r in all_recipes:
+                    tags = ", ".join(r.mood_tags) if r.mood_tags else ""
+                    cook_time = f"{r.cooking_time_mins}m" if r.cooking_time_mins else ""
+                    meta = " | ".join(filter(None, [cook_time, tags]))
+                    line = f"- {r.title} [id:{r.id}]"
+                    if meta:
+                        line += f" ({meta})"
+                    recipe_lines.append(line)
+                lines.append("Your recipe library:\n" + "\n".join(recipe_lines))
+    except Exception:
+        logger.warning("Could not build recipe library context", exc_info=True)
+    return "\n".join(lines)
+
+
+async def _build_dynamic_context() -> str:
+    """
+    Build the live kitchen state — changes every turn (pantry, plan, sessions,
+    shopping lists, match scores). Never cached.
+
+    Top pantry matches (with full ingredients) are included here because they
+    depend on current pantry stock.
     """
     lines: List[str] = []
     try:
@@ -161,7 +197,7 @@ async def _build_context(user_id: Optional[str] = None) -> str:
                 cooked_parts = [f"[id:{rid}] {days}d ago" for rid, days in list(recently_cooked.items())[:10]]
                 lines.append("Recently cooked (avoid suggesting within 5 days): " + ", ".join(cooked_parts))
 
-            # Manual shopping list — items added by user / TeaBot via shopping_add widget
+            # Manual shopping list
             try:
                 from app.models.shopping import ShoppingListItem as ShoppingListItemModel
                 shop_stmt = (
@@ -171,16 +207,14 @@ async def _build_context(user_id: Optional[str] = None) -> str:
                 )
                 shop_items = (await db.execute(shop_stmt)).scalars().all()
                 if shop_items:
-                    shop_parts = [
-                        f"{s.raw_name} ({s.quantity:g} {s.unit})" for s in shop_items
-                    ]
+                    shop_parts = [f"{s.raw_name} ({s.quantity:g} {s.unit})" for s in shop_items]
                     lines.append("My shopping list (pending): " + ", ".join(shop_parts))
                 else:
                     lines.append("My shopping list: empty")
             except Exception:
                 pass
 
-            # Meal plan shopping list — ingredients still needed based on planned recipes vs pantry
+            # Meal plan shopping list
             try:
                 from app.services.planner import generate_shopping_list
                 shopping = await generate_shopping_list(date.fromisoformat(week_start), db)
@@ -196,55 +230,40 @@ async def _build_context(user_id: Optional[str] = None) -> str:
             except Exception:
                 pass
 
+            # Top pantry matches with full ingredient detail (dynamic — depends on pantry stock)
             matches = await score_all_recipes(db)
-            match_ids: set = set()
-            match_map: dict = {}
-            ingredient_map: dict = {}
             if matches:
-                for m in matches[:8]:
-                    rid = str(m.recipe.id)
-                    match_ids.add(rid)
-                    missing_names = [d.raw_name for d in (m.hard_missing or [])][:3]
-                    match_map[rid] = (
-                        f"{m.score:.0f}% match"
-                        + (f", missing: {', '.join(missing_names)}" if missing_names else "")
-                    )
-
-            if match_ids:
+                match_lines = []
+                top_ids = [str(m.recipe.id) for m in matches[:8]]
                 top_stmt = (
                     sa_select(RecipeModel)
-                    .where(RecipeModel.id.in_([uuid.UUID(rid) for rid in match_ids]))
+                    .where(RecipeModel.id.in_([uuid.UUID(rid) for rid in top_ids]))
                     .options(selectinload(RecipeModel.ingredients))
                 )
-                top_recipes = (await db.execute(top_stmt)).scalars().all()
-                for r in top_recipes:
-                    parts = []
+                top_recipes = {str(r.id): r for r in (await db.execute(top_stmt)).scalars().all()}
+                for m in matches[:8]:
+                    rid = str(m.recipe.id)
+                    r = top_recipes.get(rid)
+                    if not r:
+                        continue
+                    missing_names = [d.raw_name for d in (m.hard_missing or [])][:3]
+                    score_str = f"{m.score:.0f}% match"
+                    if missing_names:
+                        score_str += f", missing: {', '.join(missing_names)}"
+                    ing_parts = []
                     for ing in r.ingredients:
                         qty = f"{ing.quantity:.0f}" if ing.quantity == int(ing.quantity) else f"{ing.quantity}"
                         unit = f" {ing.unit}" if ing.unit else ""
-                        parts.append(f"{qty}{unit} {ing.raw_name}")
-                    ingredient_map[str(r.id)] = parts
-
-            all_recipes = (await db.execute(sa_select(RecipeModel).order_by(RecipeModel.title))).scalars().all()
-            if all_recipes:
-                recipe_lines = []
-                for r in all_recipes:
-                    tags = ", ".join(r.mood_tags) if r.mood_tags else ""
-                    cook_time = f"{r.cooking_time_mins}m" if r.cooking_time_mins else ""
-                    meta = " | ".join(filter(None, [cook_time, tags]))
-                    line = f"- {r.title} [id:{r.id}]"
-                    if meta:
-                        line += f" ({meta})"
-                    rid = str(r.id)
-                    if rid in match_ids:
-                        line += f" ← {match_map[rid]}"
-                        if rid in ingredient_map:
-                            line += f"\n  Ingredients: {', '.join(ingredient_map[rid])}"
-                    recipe_lines.append(line)
-                lines.append("Your recipe library:\n" + "\n".join(recipe_lines))
+                        ing_parts.append(f"{qty}{unit} {ing.raw_name}")
+                    line = f"- {r.title} [id:{rid}] ← {score_str}"
+                    if ing_parts:
+                        line += f"\n  Ingredients: {', '.join(ing_parts)}"
+                    match_lines.append(line)
+                if match_lines:
+                    lines.append("Top pantry matches (cook these now):\n" + "\n".join(match_lines))
 
     except Exception:
-        logger.warning("Could not load chat context", exc_info=True)
+        logger.warning("Could not load dynamic kitchen context", exc_info=True)
 
     return "\n".join(lines)
 
@@ -316,6 +335,10 @@ def _build_llm() -> ChatBedrock:
         client=client,
         model_id=_model_id(vision=False),
         streaming=True,
+        # Enable prompt caching — required for cache_control blocks to take effect.
+        # Bedrock charges ~25% of normal input price for cache writes,
+        # and ~10% for cache reads. At >1 turn per session this is net positive.
+        model_kwargs={"anthropic_beta": ["prompt-caching-2024-07-31"]},
     )
 
 
@@ -332,17 +355,36 @@ async def teabot_node(state: TeaBotAgentState) -> dict:
     """
     user_id: Optional[str] = state.get("_user_id")
 
-    context = await _build_context(user_id)
-    system_content = SYSTEM_PROMPT
-    if context:
-        system_content += f"\n\n## Current kitchen context\n{context}"
+    # Build context in two parts:
+    #   1. Recipe library — stable, marked for prompt caching (5-min TTL on Bedrock)
+    #   2. Dynamic kitchen state — pantry, plan, sessions, shopping, match scores
+    recipe_library = await _build_recipe_library()
+    dynamic_context = await _build_dynamic_context()
+
+    # Compose the system message as two content blocks so Bedrock can cache
+    # the stable portion independently of the dynamic portion.
+    # The cache breakpoint sits after block 1; block 2 is always sent fresh.
+    cached_text = SYSTEM_PROMPT
+    if recipe_library:
+        cached_text += f"\n\n## Your recipe library\n{recipe_library}"
+
+    system_blocks: list = [
+        {
+            "type": "text",
+            "text": cached_text,
+            "cache_control": {"type": "ephemeral"},
+        },
+    ]
+    if dynamic_context:
+        system_blocks.append({
+            "type": "text",
+            "text": f"## Current kitchen state\n{dynamic_context}",
+        })
 
     # Trim history to last 20 messages (~10 exchanges) to cap token growth.
-    # Live kitchen context (pantry, plan, recipes) is rebuilt fresh each turn,
-    # so old accumulated messages beyond this window add cost without benefit.
     _MAX_HISTORY = 20
     recent_messages = list(state["messages"])[-_MAX_HISTORY:]
-    llm_messages: List[BaseMessage] = [SystemMessage(content=system_content)] + recent_messages
+    llm_messages: List[BaseMessage] = [SystemMessage(content=system_blocks)] + recent_messages
     llm = _build_llm()
     response: AIMessage = await llm.ainvoke(llm_messages)
 
