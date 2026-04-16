@@ -6,6 +6,7 @@ import { ShellUI } from "@/components/ShellUI";
 export const metadata: Metadata = {
   title: "What's for Tea?",
   description: "Locally-hosted recipe manager and kitchen assistant",
+  icons: { icon: "/favicon.ico" },
 };
 
 export const viewport: Viewport = {

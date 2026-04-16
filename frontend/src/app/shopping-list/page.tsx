@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
+import { useShoppingList, useBulkConfirmPantry, useIngredients } from '@/lib/hooks';
 import {
   fetchShoppingItems,
   addShoppingItem,
@@ -11,7 +11,7 @@ import {
   clearDoneShoppingItems,
   type ShoppingItem,
 } from '@/lib/api';
-import type { ShoppingListItem } from '@/lib/types';
+import type { Ingredient, ShoppingListItem } from '@/lib/types';
 
 export default function ShoppingListPage() {
   const qc = useQueryClient();
@@ -44,17 +44,22 @@ export default function ShoppingListPage() {
       .filter(item => item.ingredient_id && checkedItems.has(itemKey(item)))
       .map(item => ({ ingredient_id: item.ingredient_id!, quantity: item.rounded_quantity, unit: item.rounded_unit }));
     if (toConfirm.length > 0) {
-      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* ignore */ }
+      try {
+        await bulkConfirmMutation.mutateAsync(toConfirm);
+        setCheckedItems(new Set());
+      } catch { /* ignore */ }
     }
   }
 
   async function handleMarkAll() {
-    setCheckedItems(new Set(allPlanItems.map(itemKey)));
     const toConfirm = allPlanItems
       .filter(item => item.ingredient_id)
       .map(item => ({ ingredient_id: item.ingredient_id!, quantity: item.rounded_quantity, unit: item.rounded_unit }));
     if (toConfirm.length > 0) {
-      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* ignore */ }
+      try {
+        await bulkConfirmMutation.mutateAsync(toConfirm);
+        setCheckedItems(new Set());
+      } catch { /* ignore */ }
     }
   }
 
@@ -63,6 +68,7 @@ export default function ShoppingListPage() {
     queryKey: ['shoppingList'],
     queryFn: fetchShoppingItems,
   });
+  const { data: ingredients = [] } = useIngredients();
 
   const addMutation = useMutation({
     mutationFn: (d: { raw_name: string; quantity: number; unit: string }) => addShoppingItem(d),
@@ -82,19 +88,52 @@ export default function ShoppingListPage() {
   });
 
   const [input, setInput] = useState('');
+  const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null);
   const [qty, setQty] = useState('1');
   const [unit, setUnit] = useState('count');
+  const [inputFocused, setInputFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const pendingManual = manualItems.filter(i => !i.done);
-  const doneManual = manualItems.filter(i => i.done);
+  const suggestions = useMemo(() => {
+    if (selectedIngredient || !inputFocused) return [];
+    const q = input.trim().toLowerCase();
+    if (!q) return [];
+    return ingredients
+      .filter(i => i.canonical_name.toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [input, selectedIngredient, ingredients, inputFocused]);
+
+  function handleSelectIngredient(ing: Ingredient) {
+    setSelectedIngredient(ing);
+    setInput(ing.canonical_name);
+    setUnit(ing.typical_unit || 'count');
+    setInputFocused(false);
+    inputRef.current?.blur();
+  }
+
+  function handleClearSelection() {
+    setSelectedIngredient(null);
+    setInput('');
+    setUnit('count');
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
 
   function handleAdd() {
     const name = input.trim();
     if (!name) return;
-    addMutation.mutate({ raw_name: name, quantity: parseFloat(qty) || 1, unit: unit || 'count' });
+    addMutation.mutate({
+      raw_name: selectedIngredient ? selectedIngredient.canonical_name : name,
+      quantity: parseFloat(qty) || 1,
+      unit: unit || 'count',
+    });
     setInput('');
     setQty('1');
+    setUnit('count');
+    setSelectedIngredient(null);
   }
+
+  const pendingManual = manualItems.filter(i => !i.done);
+  const doneManual = manualItems.filter(i => i.done);
 
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-28">
@@ -115,30 +154,65 @@ export default function ShoppingListPage() {
         </div>
 
         {/* Add row */}
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            placeholder="Add item…"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            className="flex-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-3 py-2 text-sm"
-          />
-          <input
-            type="number"
-            value={qty}
-            onChange={e => setQty(e.target.value)}
-            className="w-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-2 py-2 text-sm text-center"
-            min="0.1"
-            step="0.5"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={!input.trim() || addMutation.isPending}
-            className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
-          >
-            +
-          </button>
+        <div className="relative mb-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search ingredient or type item…"
+                value={input}
+                onChange={e => {
+                  setInput(e.target.value);
+                  if (selectedIngredient) setSelectedIngredient(null);
+                }}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setTimeout(() => setInputFocused(false), 150)}
+                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                className={`w-full bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-3 py-2 text-sm pr-7 ${selectedIngredient ? 'text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
+              />
+              {selectedIngredient && (
+                <button
+                  onClick={handleClearSelection}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-base leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <input
+              type="number"
+              value={qty}
+              onChange={e => setQty(e.target.value)}
+              className="w-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-2 py-2 text-sm text-center"
+              min="0.1"
+              step="0.5"
+            />
+            <button
+              onClick={handleAdd}
+              disabled={!input.trim() || addMutation.isPending}
+              className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
+            >
+              +
+            </button>
+          </div>
+
+          {/* Autocomplete dropdown */}
+          {suggestions.length > 0 && (
+            <ul className="absolute z-20 left-0 right-16 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+              {suggestions.map(ing => (
+                <li key={ing.id}>
+                  <button
+                    onMouseDown={() => handleSelectIngredient(ing)}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors flex items-center justify-between"
+                  >
+                    <span>{ing.canonical_name}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{ing.typical_unit || 'count'}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Pending */}

@@ -119,6 +119,7 @@ export function useBulkConfirmPantry() {
       qc.invalidateQueries({ queryKey: ['pantry'] });
       qc.invalidateQueries({ queryKey: ['available'] });
       qc.invalidateQueries({ queryKey: ['matches'] });
+      qc.invalidateQueries({ queryKey: ['shopping-list'] });
     },
   });
 }

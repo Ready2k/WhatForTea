@@ -602,9 +602,9 @@ export default function PlannerPage() {
 
       {/* Auto-fill bottom sheet */}
       {showAutoFill && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAutoFill(false)} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-t-3xl shadow-2xl p-6 pb-8 space-y-5">
+          <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 pb-8 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-gray-900 dark:text-white">Auto-fill week</h2>
               <button onClick={() => setShowAutoFill(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
