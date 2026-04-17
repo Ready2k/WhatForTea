@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
-import { rotateRecipePhoto, uploadRecipePhoto } from '@/lib/api';
+import { rotateRecipePhoto, rotateStepImage, uploadRecipePhoto } from '@/lib/api';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import type { IngredientMatchDetail, RecipeIngredient } from '@/lib/types';
 import { updateRecipe, getCookingHistory } from '@/lib/api';
@@ -45,6 +45,8 @@ export default function RecipeDetailPage() {
   const [mounted, setMounted] = useState(false);
   const [imageVersions, setImageVersions] = useState<Record<number, number>>({ 0: 0, 1: 0 });
   const [isRotating, setIsRotating] = useState(false);
+  const [stepImageVersions, setStepImageVersions] = useState<Record<number, number>>({});
+  const [rotatingStep, setRotatingStep] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   
@@ -127,6 +129,20 @@ export default function RecipeDetailPage() {
       console.error(err);
     } finally {
       setIsRotating(false);
+    }
+  }
+
+  async function handleRotateStep(stepOrder: number) {
+    if (rotatingStep !== null) return;
+    setRotatingStep(stepOrder);
+    try {
+      await rotateStepImage(id, stepOrder);
+      setStepImageVersions(v => ({ ...v, [stepOrder]: (v[stepOrder] ?? 0) + 1 }));
+    } catch (err) {
+      alert('Failed to rotate step image');
+      console.error(err);
+    } finally {
+      setRotatingStep(null);
     }
   }
 
@@ -620,11 +636,23 @@ export default function RecipeDetailPage() {
                   </span>
                   <div className="flex-1 pt-0.5">
                     {step.image_crop_path && (
-                      <img
-                        src={`/api/v1/recipes/${recipe.id}/steps/${step.order}/image`}
-                        alt={step.image_description ?? `Step ${idx + 1}`}
-                        className="w-full max-h-32 object-contain rounded-xl mb-2 bg-gray-100 dark:bg-gray-700"
-                      />
+                      <div className="relative group mb-2">
+                        <img
+                          src={`/api/v1/recipes/${recipe.id}/steps/${step.order}/image?v=${stepImageVersions[step.order] ?? 0}`}
+                          alt={step.image_description ?? `Step ${idx + 1}`}
+                          className="w-full max-h-32 object-contain rounded-xl bg-gray-100 dark:bg-gray-700"
+                        />
+                        <button
+                          onClick={() => handleRotateStep(step.order)}
+                          disabled={rotatingStep === step.order}
+                          className="absolute top-1.5 right-1.5 w-8 h-8 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-40"
+                          aria-label="Rotate step image"
+                        >
+                          <svg className={`w-4 h-4 ${rotatingStep === step.order ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                      </div>
                     )}
                     <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{step.text}</p>
                     {step.image_description && (

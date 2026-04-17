@@ -1,31 +1,67 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCurrentPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
+import { useWeekPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
 import { autoFillWeek, type AutoFillEntry, fetchShoppingItems, addShoppingItem, patchShoppingItem, deleteShoppingItem, clearDoneShoppingItems, type ShoppingItem } from '@/lib/api';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
 const MOOD_OPTIONS = ['Comfort', 'Quick', 'Light', 'Vegetarian', 'Spicy', 'Family', 'Fancy', 'Healthy', 'Indulgent'];
 
 type Tab = 'week' | 'shopping';
 
-// day_of_week: 0=Monday ... 6=Sunday
-function getWeekStart(): string {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sunday
-  const diff = day === 0 ? -6 : 1 - day; // offset to Monday
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split('T')[0];
+function getMondayOf(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(d.getDate() + n);
+  return r;
+}
+
+function toDateStr(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
+function formatWeekRange(monday: Date): string {
+  const sunday = addDays(monday, 6);
+  const sameMonth = monday.getMonth() === sunday.getMonth();
+  const month = sunday.toLocaleDateString('en-GB', { month: 'short' });
+  if (sameMonth) {
+    return `${monday.getDate()}–${sunday.getDate()} ${month}`;
+  }
+  return `${monday.getDate()} ${monday.toLocaleDateString('en-GB', { month: 'short' })} – ${sunday.getDate()} ${month}`;
+}
+
+function formatDayLabel(date: Date): string {
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
 }
 
 export default function PlannerPage() {
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const thisMonday = useMemo(() => getMondayOf(today), [today]);
+  const nextMonday = useMemo(() => addDays(thisMonday, 7), [thisMonday]);
+  const weeks = useMemo(() => [thisMonday, nextMonday], [thisMonday, nextMonday]);
+
+  const [weekOffset, setWeekOffset] = useState(0);
+  const selectedMonday = weeks[weekOffset];
+  const weekStart = toDateStr(selectedMonday);
+
   const [activeTab, setActiveTab] = useState<Tab>('week');
-  const [dayPlan, setDayPlan] = useState<Record<number, string | null>>({});
-  const [servingsPlan, setServingsPlan] = useState<Record<number, number | null>>({});
+  const [dayPlan, setDayPlan] = useState<Record<string, Record<number, string | null>>>({});
+  const [servingsPlan, setServingsPlan] = useState<Record<string, Record<number, number | null>>>({});
   const [showPickerFor, setShowPickerFor] = useState<number | null>(null);
   const [showServingPickerFor, setShowServingPickerFor] = useState<number | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
@@ -36,13 +72,14 @@ export default function PlannerPage() {
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const [autoFillError, setAutoFillError] = useState<string | null>(null);
 
-  const { data: plan, isLoading: planLoading } = useCurrentPlan();
+  const { data: plan, isLoading: planLoading } = useWeekPlan(weekStart);
   const { data: recipes } = useRecipes();
   const setWeekPlanMutation = useSetWeekPlan();
-  const { data: shoppingList, isLoading: shopLoading, isError: shopError, refetch: refetchShopping } = useShoppingList();
+  const { data: shoppingList, isLoading: shopLoading, isError: shopError, refetch: refetchShopping } = useShoppingList(weekStart);
   const bulkConfirmMutation = useBulkConfirmPantry();
   const qc = useQueryClient();
   const { data: manualItems = [] } = useQuery<ShoppingItem[]>({ queryKey: ['shoppingList'], queryFn: fetchShoppingItems });
+
   const addManualMutation = useMutation({
     mutationFn: (d: { raw_name: string; quantity: number; unit: string }) => addShoppingItem(d),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shoppingList'] }),
@@ -59,6 +96,7 @@ export default function PlannerPage() {
     mutationFn: () => clearDoneShoppingItems(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['shoppingList'] }),
   });
+
   const [manualInput, setManualInput] = useState('');
   const [manualQty, setManualQty] = useState('1');
   const [manualUnit] = useState('count');
@@ -74,18 +112,28 @@ export default function PlannerPage() {
   const pendingManual = manualItems.filter(i => !i.done);
   const doneManual = manualItems.filter(i => i.done);
 
-  // Merge server plan with local overrides
+  // Local overrides are keyed by weekStart so switching weeks doesn't bleed state
+  const localDayPlan = dayPlan[weekStart] ?? {};
+  const localServingsPlan = servingsPlan[weekStart] ?? {};
+
   const resolvedPlan: Record<number, string | null> = {};
   const resolvedServings: Record<number, number | null> = {};
   for (let d = 0; d < 7; d++) {
-    if (d in dayPlan) {
-      resolvedPlan[d] = dayPlan[d];
-      resolvedServings[d] = servingsPlan[d] ?? null;
+    if (d in localDayPlan) {
+      resolvedPlan[d] = localDayPlan[d];
+      resolvedServings[d] = localServingsPlan[d] ?? null;
     } else {
       const entry = plan?.entries.find((e) => e.day_of_week === d);
       resolvedPlan[d] = entry?.recipe_id ?? null;
       resolvedServings[d] = entry?.servings ?? null;
     }
+  }
+
+  function setLocalDay(dayIdx: number, recipeId: string | null) {
+    setDayPlan(p => ({ ...p, [weekStart]: { ...(p[weekStart] ?? {}), [dayIdx]: recipeId } }));
+  }
+  function setLocalServings(dayIdx: number, servings: number | null) {
+    setServingsPlan(p => ({ ...p, [weekStart]: { ...(p[weekStart] ?? {}), [dayIdx]: servings } }));
   }
 
   function getRecipeSummary(recipeId: string | null): RecipeSummary | undefined {
@@ -106,17 +154,17 @@ export default function PlannerPage() {
         setAutoFillError('No matching recipes found. Try fewer mood filters.');
         return;
       }
-      const newDayPlan: Record<number, string | null> = {};
-      const newServings: Record<number, number | null> = {};
+      const newDays: Record<number, string | null> = {};
+      const newSrv: Record<number, number | null> = {};
       entries.forEach((e) => {
-        newDayPlan[e.day_of_week] = e.recipe_id;
-        newServings[e.day_of_week] = e.servings;
+        newDays[e.day_of_week] = e.recipe_id;
+        newSrv[e.day_of_week] = e.servings;
       });
-      setDayPlan(newDayPlan);
-      setServingsPlan(newServings);
+      setDayPlan(p => ({ ...p, [weekStart]: newDays }));
+      setServingsPlan(p => ({ ...p, [weekStart]: newSrv }));
       setShowAutoFill(false);
-    } catch (err: any) {
-      setAutoFillError(err.message ?? 'Auto-fill failed');
+    } catch (err: unknown) {
+      setAutoFillError(err instanceof Error ? err.message : 'Auto-fill failed');
     } finally {
       setAutoFillLoading(false);
     }
@@ -127,26 +175,15 @@ export default function PlannerPage() {
       .filter(([, recipeId]) => recipeId !== null)
       .map(([dayStr, recipeId]) => {
         const d = parseInt(dayStr);
-        return {
-          day_of_week: d,
-          recipe_id: recipeId as string,
-          servings: resolvedServings[d] ?? undefined,
-        };
+        return { day_of_week: d, recipe_id: recipeId as string, servings: resolvedServings[d] ?? undefined };
       });
-
     try {
-      await setWeekPlanMutation.mutateAsync({
-        week_start: getWeekStart(),
-        entries,
-      });
-      setDayPlan({});
-      setServingsPlan({});
-    } catch {
-      // errors shown via mutation state
-    }
+      await setWeekPlanMutation.mutateAsync({ week_start: weekStart, entries });
+      setDayPlan(p => ({ ...p, [weekStart]: {} }));
+      setServingsPlan(p => ({ ...p, [weekStart]: {} }));
+    } catch { /* shown via mutation state */ }
   }
 
-  // Flat list of all shopping items for bulk operations
   const allItems = useMemo<ShoppingListItem[]>(() => {
     if (!shoppingList) return [];
     return Object.values(shoppingList.zones).flat();
@@ -155,8 +192,7 @@ export default function PlannerPage() {
   function toggleItem(key: string) {
     setCheckedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
@@ -166,36 +202,57 @@ export default function PlannerPage() {
   }
 
   async function handleMarkCheckedAsBought() {
-    const toConfirm = allItems.filter(
-      (item) => item.ingredient_id && checkedItems.has(itemKey(item)),
-    ).map((item) => ({
-      ingredient_id: item.ingredient_id!,
-      quantity: item.rounded_quantity,
-      unit: item.rounded_unit,
-    }));
+    const toConfirm = allItems
+      .filter((item) => item.ingredient_id && checkedItems.has(itemKey(item)))
+      .map((item) => ({ ingredient_id: item.ingredient_id!, quantity: item.rounded_quantity, unit: item.rounded_unit }));
     if (toConfirm.length > 0) {
-      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* show nothing extra */ }
+      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* silent */ }
     }
   }
 
   async function handleMarkAllAsBought() {
-    const allKeys = new Set(allItems.map(itemKey));
-    setCheckedItems(allKeys);
+    setCheckedItems(new Set(allItems.map(itemKey)));
     const toConfirm = allItems
       .filter((item) => item.ingredient_id)
-      .map((item) => ({
-        ingredient_id: item.ingredient_id!,
-        quantity: item.rounded_quantity,
-        unit: item.rounded_unit,
-      }));
+      .map((item) => ({ ingredient_id: item.ingredient_id!, quantity: item.rounded_quantity, unit: item.rounded_unit }));
     if (toConfirm.length > 0) {
-      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* show nothing extra */ }
+      try { await bulkConfirmMutation.mutateAsync(toConfirm); } catch { /* silent */ }
     }
   }
 
+  const todayStr = toDateStr(today);
+  const todayFormatted = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4">
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Planner</h1>
+      {/* Header */}
+      <div className="flex items-baseline justify-between mb-4">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Planner</h1>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{todayFormatted}</span>
+      </div>
+
+      {/* Week switcher */}
+      <div className="flex gap-2 mb-4">
+        {weeks.map((monday, i) => {
+          const label = i === 0 ? 'This Week' : 'Next Week';
+          const range = formatWeekRange(monday);
+          const active = weekOffset === i;
+          return (
+            <button
+              key={i}
+              onClick={() => { setWeekOffset(i); setShowPickerFor(null); setShowServingPickerFor(null); }}
+              className={`flex-1 py-2.5 px-3 rounded-xl border text-left transition-colors ${
+                active
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-700'
+              }`}
+            >
+              <div className={`text-xs font-semibold ${active ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}>{label}</div>
+              <div className={`text-sm font-medium leading-tight ${active ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{range}</div>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
@@ -209,15 +266,14 @@ export default function PlannerPage() {
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
-            {tab === 'week' ? 'This Week' : 'Shopping List'}
+            {tab === 'week' ? 'Meal Plan' : 'Shopping List'}
           </button>
         ))}
       </div>
 
-      {/* This Week tab */}
+      {/* Meal Plan tab */}
       {activeTab === 'week' && (
         <div className="space-y-3">
-          {/* Auto-fill button */}
           {!planLoading && (
             <button
               onClick={() => { setShowAutoFill(true); setAutoFillError(null); }}
@@ -236,13 +292,31 @@ export default function PlannerPage() {
           )}
 
           {!planLoading && DAYS.map((dayName, idx) => {
+            const dayDate = addDays(selectedMonday, idx);
+            const dayDateStr = toDateStr(dayDate);
+            const isToday = dayDateStr === todayStr;
+            const isPast = dayDate < today;
             const recipeId = resolvedPlan[idx];
             const recipeSummary = getRecipeSummary(recipeId);
 
             return (
-              <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3 shadow-sm">
+              <div
+                key={idx}
+                className={`rounded-2xl border p-3 shadow-sm transition-colors ${
+                  isToday
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
+                    : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+                }`}
+              >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400 w-20 flex-shrink-0">{dayName}</span>
+                  <div className="flex flex-col w-20 flex-shrink-0">
+                    <span className={`text-sm font-medium ${isToday ? 'text-emerald-700 dark:text-emerald-400' : isPast ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {formatDayLabel(dayDate)}
+                    </span>
+                    {isToday && (
+                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">Today</span>
+                    )}
+                  </div>
 
                   {recipeSummary ? (
                     <div className="flex-1 flex items-center justify-between min-w-0">
@@ -269,10 +343,7 @@ export default function PlannerPage() {
                           Change
                         </button>
                         <button
-                          onClick={() => {
-                            setDayPlan((p) => ({ ...p, [idx]: null }));
-                            setServingsPlan((p) => ({ ...p, [idx]: null }));
-                          }}
+                          onClick={() => { setLocalDay(idx, null); setLocalServings(idx, null); }}
                           className="text-xs text-red-300 hover:text-red-500 transition-colors"
                         >
                           Clear
@@ -289,17 +360,14 @@ export default function PlannerPage() {
                   )}
                 </div>
 
-                {/* Serving Picker */}
+                {/* Serving picker */}
                 {showServingPickerFor === idx && (
                   <div className="mt-3 flex items-center gap-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Servings for {dayName}:</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Servings:</span>
                     {[1, 2, 3, 4, 6, 8].map((n) => (
                       <button
                         key={n}
-                        onClick={() => {
-                          setServingsPlan((p) => ({ ...p, [idx]: n }));
-                          setShowServingPickerFor(null);
-                        }}
+                        onClick={() => { setLocalServings(idx, n); setShowServingPickerFor(null); }}
                         className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
                           resolvedServings[idx] === n
                             ? 'bg-emerald-600 text-white shadow-sm'
@@ -310,10 +378,7 @@ export default function PlannerPage() {
                       </button>
                     ))}
                     <button
-                      onClick={() => {
-                        setServingsPlan((p) => ({ ...p, [idx]: null }));
-                        setShowServingPickerFor(null);
-                      }}
+                      onClick={() => { setLocalServings(idx, null); setShowServingPickerFor(null); }}
                       className="ml-auto text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                     >
                       Default
@@ -321,18 +386,14 @@ export default function PlannerPage() {
                   </div>
                 )}
 
-                {/* Inline picker */}
+                {/* Recipe picker */}
                 {showPickerFor === idx && (
                   <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                     <div className="max-h-40 overflow-y-auto space-y-1">
                       {recipes?.map((r) => (
                         <button
                           key={r.id}
-                          onClick={() => {
-                            setDayPlan((p) => ({ ...p, [idx]: r.id }));
-                            setServingsPlan((p) => ({ ...p, [idx]: 2 }));
-                            setShowPickerFor(null);
-                          }}
+                          onClick={() => { setLocalDay(idx, r.id); setLocalServings(idx, 2); setShowPickerFor(null); }}
                           className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
                         >
                           {r.title}
@@ -364,7 +425,7 @@ export default function PlannerPage() {
                 disabled={setWeekPlanMutation.isPending}
                 className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl transition-colors disabled:opacity-50"
               >
-                {setWeekPlanMutation.isPending ? 'Saving...' : 'Save Week Plan'}
+                {setWeekPlanMutation.isPending ? 'Saving...' : 'Save Plan'}
               </button>
               {setWeekPlanMutation.isSuccess && (
                 <p className="text-center text-sm text-emerald-600 mt-2">Plan saved!</p>
@@ -391,31 +452,23 @@ export default function PlannerPage() {
           {shopError && (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load shopping list</p>
-              <button
-                onClick={() => refetchShopping()}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium"
-              >
+              <button onClick={() => refetchShopping()} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium">
                 Retry
               </button>
             </div>
           )}
 
-          {/* Manual shopping list */}
           {!shopLoading && (
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">My list</h3>
                 {doneManual.length > 0 && (
-                  <button
-                    onClick={() => clearDoneMutation.mutate()}
-                    className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                  >
+                  <button onClick={() => clearDoneMutation.mutate()} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
                     Clear done ({doneManual.length})
                   </button>
                 )}
               </div>
 
-              {/* Add row */}
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
@@ -442,17 +495,11 @@ export default function PlannerPage() {
                 </button>
               </div>
 
-              {/* Pending items */}
               {pendingManual.length > 0 && (
                 <ul className="space-y-1 mb-1">
                   {pendingManual.map(item => (
                     <li key={item.id} className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2.5 shadow-sm">
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })}
-                        className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer"
-                      />
+                      <input type="checkbox" checked={false} onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })} className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer" />
                       <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">
                         {item.raw_name}
                         <span className="text-gray-400 dark:text-gray-500 ml-2 text-xs">
@@ -465,17 +512,11 @@ export default function PlannerPage() {
                 </ul>
               )}
 
-              {/* Done items (collapsed) */}
               {doneManual.length > 0 && (
                 <ul className="space-y-1 opacity-50">
                   {doneManual.map(item => (
                     <li key={item.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })}
-                        className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer"
-                      />
+                      <input type="checkbox" checked={true} onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })} className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer" />
                       <span className="flex-1 text-sm text-gray-400 line-through">{item.raw_name}</span>
                       <button onClick={() => deleteManualMutation.mutate(item.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
                     </li>
@@ -484,9 +525,7 @@ export default function PlannerPage() {
               )}
 
               {manualItems.length === 0 && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">
-                  Nothing on your list yet — add items above or ask TeaBot.
-                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Nothing on your list yet — add items above or ask TeaBot.</p>
               )}
 
               <div className="border-t border-gray-100 dark:border-gray-700 mt-4 mb-4" />
@@ -496,30 +535,26 @@ export default function PlannerPage() {
 
           {!shopLoading && !shopError && shoppingList && (
             <>
-              {/* Action buttons */}
               <div className="flex gap-2 mb-4">
                 <button
-                  onClick={() => {
-                    navigator.clipboard?.writeText(shoppingList.text_export).catch(() => {});
-                  }}
+                  onClick={() => { navigator.clipboard?.writeText(shoppingList.text_export).catch(() => {}); }}
                   className="flex-1 py-2.5 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Copy List
+                  Copy
                 </button>
                 <button
                   onClick={() => window.open(shoppingList.whatsapp_url, '_blank')}
                   className="flex-1 py-2.5 bg-green-500 text-white text-sm font-medium rounded-xl hover:bg-green-600 transition-colors"
                 >
-                  Share via WhatsApp
+                  WhatsApp
                 </button>
               </div>
 
-              {/* Zones */}
               <div className="space-y-4 pb-24">
                 {Object.entries(shoppingList.zones).map(([zone, items]) => (
                   <details key={zone} open className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                     <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 select-none capitalize">
-                      {zone} ({items.length})
+                      ▾ {zone} ({items.length})
                     </summary>
                     <ul className="divide-y divide-gray-50 dark:divide-gray-700">
                       {items.map((item, itemIdx) => {
@@ -532,18 +567,15 @@ export default function PlannerPage() {
                             onClick={() => toggleItem(ck)}
                             className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
                           >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}}
-                              className="w-4 h-4 accent-emerald-600 flex-shrink-0 pointer-events-none"
-                            />
+                            <input type="checkbox" checked={isChecked} onChange={() => {}} className="w-4 h-4 accent-emerald-600 flex-shrink-0 pointer-events-none" />
                             <div className="flex-1 min-w-0">
                               <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
                                 {item.canonical_name}
                               </span>
                               <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                                {item.rounded_quantity} {item.rounded_unit}
+                                {item.rounded_unit === 'pack'
+                                  ? `x ${item.rounded_quantity} pack`
+                                  : `${item.rounded_quantity} ${item.rounded_unit}`}
                               </span>
                             </div>
                           </li>
@@ -556,12 +588,11 @@ export default function PlannerPage() {
                 {Object.keys(shoppingList.zones).length === 0 && (
                   <div className="text-center py-12 text-gray-400 dark:text-gray-500">
                     <p className="text-4xl mb-2">🛒</p>
-                    <p>No items yet — plan your week first!</p>
+                    <p>No items — plan your week first!</p>
                   </div>
                 )}
               </div>
 
-              {/* Floating bottom bar */}
               {allItems.length > 0 && (
                 <div className="fixed bottom-16 left-0 right-0 flex justify-center pointer-events-none">
                   <div className="pointer-events-auto mx-4 max-w-lg w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg px-4 py-3 flex gap-2">
@@ -572,14 +603,9 @@ export default function PlannerPage() {
                           disabled={bulkConfirmMutation.isPending}
                           className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                         >
-                          {bulkConfirmMutation.isPending
-                            ? 'Saving...'
-                            : `Mark ${checkedItems.size} as bought`}
+                          {bulkConfirmMutation.isPending ? 'Saving...' : `Mark ${checkedItems.size} as bought`}
                         </button>
-                        <button
-                          onClick={() => setCheckedItems(new Set())}
-                          className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                        >
+                        <button onClick={() => setCheckedItems(new Set())} className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
                           Clear
                         </button>
                       </>
@@ -600,26 +626,26 @@ export default function PlannerPage() {
         </div>
       )}
 
-      {/* Auto-fill bottom sheet */}
+      {/* Auto-fill modal */}
       {showAutoFill && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAutoFill(false)} />
           <div className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 pb-8 space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white">Auto-fill week</h2>
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">Auto-fill week</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatWeekRange(selectedMonday)}</p>
+              </div>
               <button onClick={() => setShowAutoFill(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
             </div>
 
-            {/* Mood chips */}
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Mood (pick any)</p>
               <div className="flex flex-wrap gap-2">
                 {MOOD_OPTIONS.map((mood) => (
                   <button
                     key={mood}
-                    onClick={() => setSelectedMoods((prev) =>
-                      prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood]
-                    )}
+                    onClick={() => setSelectedMoods((prev) => prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood])}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       selectedMoods.includes(mood)
                         ? 'bg-emerald-600 text-white'
@@ -632,28 +658,20 @@ export default function PlannerPage() {
               </div>
             </div>
 
-            {/* Servings */}
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Servings per meal</p>
               <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-1 py-0.5">
-                <button onClick={() => setAutoFillServings((s) => Math.max(1, s - 1))} disabled={autoFillServings <= 1}
-                  className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">−</button>
+                <button onClick={() => setAutoFillServings((s) => Math.max(1, s - 1))} disabled={autoFillServings <= 1} className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">−</button>
                 <span className="w-5 text-center text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{autoFillServings}</span>
-                <button onClick={() => setAutoFillServings((s) => Math.min(12, s + 1))} disabled={autoFillServings >= 12}
-                  className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">+</button>
+                <button onClick={() => setAutoFillServings((s) => Math.min(12, s + 1))} disabled={autoFillServings >= 12} className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">+</button>
               </div>
             </div>
 
-            {/* Max cook time */}
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Max cook time (optional)</p>
               <div className="flex items-center gap-2">
                 <input
-                  type="number"
-                  min={10}
-                  max={180}
-                  step={5}
-                  value={maxCookTime}
+                  type="number" min={10} max={180} step={5} value={maxCookTime}
                   onChange={(e) => setMaxCookTime(e.target.value ? Number(e.target.value) : '')}
                   placeholder="Any"
                   className="w-20 text-right px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -662,9 +680,7 @@ export default function PlannerPage() {
               </div>
             </div>
 
-            {autoFillError && (
-              <p className="text-sm text-red-600 dark:text-red-400">{autoFillError}</p>
-            )}
+            {autoFillError && <p className="text-sm text-red-600 dark:text-red-400">{autoFillError}</p>}
 
             <button
               onClick={handleAutoFill}

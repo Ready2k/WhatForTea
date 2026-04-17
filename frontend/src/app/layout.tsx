@@ -6,7 +6,10 @@ import { ShellUI } from "@/components/ShellUI";
 export const metadata: Metadata = {
   title: "What's for Tea?",
   description: "Locally-hosted recipe manager and kitchen assistant",
-  icons: { icon: "/favicon.ico" },
+  icons: [
+    { rel: "icon", url: "/teabot-chef.png", type: "image/png" },
+    { rel: "icon", url: "/favicon.ico", sizes: "32x32" },
+  ],
 };
 
 export const viewport: Viewport = {

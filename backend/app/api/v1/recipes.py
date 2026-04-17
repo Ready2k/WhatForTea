@@ -497,6 +497,30 @@ async def get_step_crop_image(
     return FileResponse(str(crop_path), media_type="image/jpeg")
 
 
+@router.post("/{recipe_id}/steps/{step_order}/rotate")
+async def rotate_step_image(
+    recipe_id: uuid.UUID,
+    step_order: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Rotate a step crop image by 90 degrees clockwise."""
+    from app.models.recipe import Step as StepModel
+    stmt = select(StepModel).where(
+        StepModel.recipe_id == recipe_id,
+        StepModel.order == step_order,
+    )
+    step = (await db.execute(stmt)).scalar_one_or_none()
+    if step is None or not step.image_crop_path:
+        raise HTTPException(status_code=404, detail="Step crop image not found")
+    crop_path = Path(step.image_crop_path)
+    if not crop_path.exists():
+        raise HTTPException(status_code=404, detail="Step crop image file not found")
+    success = await rotate_image(crop_path)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to rotate image")
+    return {"status": "ok"}
+
+
 @router.post("/{recipe_id}/estimate-nutrition", status_code=status.HTTP_202_ACCEPTED)
 async def trigger_nutrition_estimate(
     recipe_id: uuid.UUID,

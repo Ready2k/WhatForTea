@@ -13,6 +13,7 @@ import {
   deletePantryItem,
   deleteRecipe,
   fetchCurrentPlan,
+  fetchWeekPlan,
   setWeekPlan,
   fetchShoppingList,
   ingestRecipe,
@@ -92,10 +93,17 @@ export function useCurrentPlan() {
   });
 }
 
-export function useShoppingList() {
+export function useWeekPlan(weekStart: string) {
   return useQuery({
-    queryKey: ['shopping-list'],
-    queryFn: fetchShoppingList,
+    queryKey: ['plan', weekStart],
+    queryFn: () => fetchWeekPlan(weekStart),
+  });
+}
+
+export function useShoppingList(weekStart?: string) {
+  return useQuery({
+    queryKey: ['shopping-list', weekStart ?? 'current'],
+    queryFn: () => fetchShoppingList(weekStart),
   });
 }
 

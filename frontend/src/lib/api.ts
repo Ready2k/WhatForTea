@@ -183,6 +183,10 @@ export function fetchCurrentPlan(): Promise<MealPlan> {
   return request<MealPlan>('/api/v1/planner/week/current');
 }
 
+export function fetchWeekPlan(weekStart: string): Promise<MealPlan> {
+  return request<MealPlan>(`/api/v1/planner/week/${weekStart}`);
+}
+
 export function setWeekPlan(data: {
   week_start: string;
   entries: Array<{ day_of_week: number; recipe_id: string; servings?: number }>;
@@ -194,8 +198,11 @@ export function setWeekPlan(data: {
   });
 }
 
-export function fetchShoppingList(): Promise<ShoppingList> {
-  return request<ShoppingList>('/api/v1/planner/shopping-list');
+export function fetchShoppingList(weekStart?: string): Promise<ShoppingList> {
+  const url = weekStart
+    ? `/api/v1/planner/shopping-list?week_start=${weekStart}`
+    : '/api/v1/planner/shopping-list';
+  return request<ShoppingList>(url);
 }
 
 export interface AutoFillEntry {
@@ -355,6 +362,12 @@ export function getCookingHistory(recipeId?: string, limit = 20): Promise<Cookin
 
 export function rotateRecipePhoto(recipeId: string, index = 0): Promise<void> {
   return request<void>(`/api/v1/recipes/${recipeId}/photo/rotate?index=${index}`, {
+    method: 'POST',
+  });
+}
+
+export function rotateStepImage(recipeId: string, stepOrder: number): Promise<void> {
+  return request<void>(`/api/v1/recipes/${recipeId}/steps/${stepOrder}/rotate`, {
     method: 'POST',
   });
 }

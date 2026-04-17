@@ -352,7 +352,9 @@ export default function ShoppingListPage() {
                                 {item.canonical_name}
                               </span>
                               <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
-                                {item.rounded_quantity} {item.rounded_unit}
+                                {item.rounded_unit === 'pack'
+                                  ? `x ${item.rounded_quantity} pack`
+                                  : `${item.rounded_quantity} ${item.rounded_unit}`}
                               </span>
                             </div>
                           </li>

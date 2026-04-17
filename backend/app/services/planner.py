@@ -101,6 +101,14 @@ def round_to_pack_size(required: float, canonical_name: str, unit: str) -> float
 
 # ── Zone mapping ───────────────────────────────────────────────────────────────
 
+# Units that make sense in recipes but not as purchase quantities.
+# Items measured in these units on the shopping list show as "1 pack".
+_RECIPE_ONLY_UNITS: frozenset[str] = frozenset({
+    "tbsp", "tsp", "tablespoon", "tablespoons", "teaspoon", "teaspoons",
+    "oz", "fl oz", "cup", "cups", "pinch", "handful",
+})
+
+
 _CATEGORY_ZONE: dict[str, str] = {
     "produce": "Fridge & Fresh",
     "dairy": "Fridge & Fresh",
@@ -332,7 +340,12 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
         if shortfall < 0.01:
             continue  # pantry fully covers this ingredient
 
-        rounded = round_to_pack_size(shortfall, ingredient.canonical_name, unit)
+        if unit in _RECIPE_ONLY_UNITS:
+            rounded = 1.0
+            rounded_unit = "pack"
+        else:
+            rounded = round_to_pack_size(shortfall, ingredient.canonical_name, unit)
+            rounded_unit = unit
 
         item = ShoppingListItem(
             ingredient_id=ingredient_id,
@@ -340,21 +353,26 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
             quantity=round(shortfall, 3),
             unit=unit,
             rounded_quantity=rounded,
-            rounded_unit=unit,
+            rounded_unit=rounded_unit,
         )
         zone = _zone(ingredient.category.value)
         shopping_items.append((zone, item))
 
     # Add unresolved ingredients verbatim (can't subtract pantry without ingredient_id)
     for (raw_name, unit), qty in unresolved.items():
-        rounded = round_to_pack_size(qty, raw_name, unit)
+        if unit in _RECIPE_ONLY_UNITS:
+            rounded = 1.0
+            rounded_unit = "pack"
+        else:
+            rounded = round_to_pack_size(qty, raw_name, unit)
+            rounded_unit = unit
         item = ShoppingListItem(
             ingredient_id=None,
             canonical_name=raw_name,
             quantity=round(qty, 3),
             unit=unit,
             rounded_quantity=rounded,
-            rounded_unit=unit,
+            rounded_unit=rounded_unit,
             is_unresolved=True,
         )
         shopping_items.append(("Other", item))
@@ -378,11 +396,13 @@ def _format_text_export(zones: dict[str, list[ShoppingListItem]]) -> str:
         for item in items:
             qty = item.rounded_quantity
             unit = item.rounded_unit
-            # Format: "500g Chicken Breast" or "2 Onion"
+            qty_str = str(int(qty)) if qty == int(qty) else str(qty)
             if unit in ("count", ""):
-                lines.append(f"* {int(qty) if qty == int(qty) else qty} {item.canonical_name}")
+                lines.append(f"* {qty_str} {item.canonical_name}")
+            elif unit == "pack":
+                lines.append(f"* {item.canonical_name} x {qty_str} pack")
             else:
-                lines.append(f"* {int(qty) if qty == int(qty) else qty}{unit} {item.canonical_name}")
+                lines.append(f"* {qty_str}{unit} {item.canonical_name}")
         lines.append("")
     return "\n".join(lines).rstrip()
 
