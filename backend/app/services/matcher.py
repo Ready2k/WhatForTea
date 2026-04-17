@@ -248,7 +248,6 @@ async def score_all_recipes_use_it_up(db: AsyncSession) -> list[RecipeMatchResul
     Score recipes by how many at-risk (low-confidence) pantry ingredients they consume.
     Returns results sorted by urgency_score descending.
     """
-    from functools import lru_cache
     from pathlib import Path
     import yaml
 

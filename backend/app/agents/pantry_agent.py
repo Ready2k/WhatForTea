@@ -3,6 +3,10 @@ from typing import TypedDict, Literal, List, Optional
 from langchain_core.messages import BaseMessage
 from langgraph.graph import StateGraph, END
 
+from app.database import AsyncSessionLocal
+from app.services.pantry import get_available
+
+
 class PendingUpsert(TypedDict):
     """
     State for a pending pantry item add/update—see Section 11.1.
@@ -22,11 +26,6 @@ class PantryAgentState(TypedDict):
     hitl_status: Literal["idle", "waiting", "applied", "rejected"]
     a2ui: List[dict]
     error: Optional[str]
-
-from app.database import AsyncSessionLocal
-from app.services.pantry import get_available, upsert_pantry_item
-from app.schemas.pantry import PantryItemCreate
-import uuid
 
 # Phase 2 Implementation
 async def pantry_node(state: PantryAgentState):

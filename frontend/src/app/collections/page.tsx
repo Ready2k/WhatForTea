@@ -335,7 +335,7 @@ export default function CollectionsPage() {
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-4">
           <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-4">
-            <h2 className="font-bold text-gray-900 dark:text-white">Delete "{deleteConfirm.name}"?</h2>
+            <h2 className="font-bold text-gray-900 dark:text-white">Delete &ldquo;{deleteConfirm.name}&rdquo;?</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               This removes the collection but does not delete any recipes.
             </p>

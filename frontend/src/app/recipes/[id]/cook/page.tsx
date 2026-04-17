@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useRecipe } from '@/lib/hooks';
 import { StepTimer } from '@/components/StepTimer';
 import { createCookingSession, patchCookingSession, endCookingSession, sendVoiceCommand } from '@/lib/api';
@@ -340,7 +339,7 @@ export default function CookingModePage() {
           addToast('Note saved', 'teabot');
           setPendingNotes((prev) => (prev ? `${prev}\n${result.note}` : result.note!));
         } else if (result.intent === 'navigation') {
-          result.direction === 'next' ? goNext() : goPrev();
+          if (result.direction === 'next') { goNext(); } else { goPrev(); }
         } else {
           addToast('Sorry, I didn\'t catch that', 'error');
         }
@@ -408,7 +407,7 @@ export default function CookingModePage() {
   function handleTouchEnd(e: React.TouchEvent) {
     if (touchStartX.current === null) return;
     const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(delta) > 50) { delta > 0 ? goNext() : goPrev(); }
+    if (Math.abs(delta) > 50) { if (delta > 0) { goNext(); } else { goPrev(); } }
     touchStartX.current = null;
   }
 

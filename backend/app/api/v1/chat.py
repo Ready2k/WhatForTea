@@ -131,7 +131,7 @@ async def chat(body: ChatRequest, request: Request):
             try:
                 if handler is not None and getattr(handler, "trace", None) is not None:
                     trace_id = handler.trace.id
-            except Exception:
+            except Exception:  # nosec B110 — Langfuse tracing is optional; never block response
                 pass
             yield f"data: {json.dumps({'type': 'done', 'thread_id': thread_id, 'trace_id': trace_id})}\n\n"
 

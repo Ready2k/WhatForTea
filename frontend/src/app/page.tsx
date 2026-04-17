@@ -113,7 +113,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">What's for Tea?</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">What&apos;s for Tea?</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {mode === 'hangry' ? 'Quick — what can I cook RIGHT NOW?' : 'Plan your week ahead'}
           </p>

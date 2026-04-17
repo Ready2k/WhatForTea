@@ -9,7 +9,7 @@ import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
 import { rotateRecipePhoto, uploadRecipePhoto } from '@/lib/api';
 import { ImageCropModal } from '@/components/ImageCropModal';
-import type { IngredientMatchDetail, RecipeIngredient, Recipe } from '@/lib/types';
+import type { IngredientMatchDetail, RecipeIngredient } from '@/lib/types';
 import { updateRecipe, getCookingHistory } from '@/lib/api';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
@@ -662,7 +662,7 @@ export default function RecipeDetailPage() {
                         <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{session.servings_cooked} servings</span>
                       )}
                       {session.notes && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 italic">"{session.notes}"</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 italic">&ldquo;{session.notes}&rdquo;</p>
                       )}
                     </div>
                   </li>

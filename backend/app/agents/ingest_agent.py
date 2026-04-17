@@ -1,10 +1,6 @@
 from typing import TypedDict, Literal, List, Optional
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage
-from app.database import AsyncSessionLocal
-from app.services.ingestion import run_url_ingestion, confirm_recipe
-import uuid
-import asyncio
 
 class IngestAgentState(TypedDict):
     """

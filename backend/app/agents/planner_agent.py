@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage
 from app.database import AsyncSessionLocal
-from app.services.planner import auto_fill_week, get_or_create_plan, generate_shopping_list
+from app.services.planner import get_or_create_plan, generate_shopping_list
 
 class PlannerAgentState(TypedDict):
     """

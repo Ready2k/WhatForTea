@@ -508,7 +508,7 @@ export function TeaBotPanel() {
                     <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden shadow-lg border-4 border-indigo-100 dark:border-indigo-900">
                       <Image src="/teabot-chef.png" alt="TeaBot Chef" width={96} height={96} className="object-cover" />
                     </div>
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Hello! I'm TeaBot.</p>
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Hello! I&apos;m TeaBot.</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your kitchen assistant — ask me anything.</p>
                   </div>
                   <div className="w-full space-y-2">

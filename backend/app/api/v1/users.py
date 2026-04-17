@@ -89,7 +89,7 @@ async def change_password(body: PasswordChange, request: Request, db: AsyncSessi
 async def get_household(request: Request, db: AsyncSession = Depends(get_db)):
     from app.models.user import Household, User
 
-    uid = _require_user_id(request)
+    _require_user_id(request)
     hid = _require_household_id(request)
 
     household = await db.get(Household, hid)

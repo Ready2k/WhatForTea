@@ -8,9 +8,12 @@ A locally-hosted recipe manager and kitchen assistant designed for Synology NAS 
 
 - **AI Recipe Ingestion** — photograph HelloFresh card fronts and backs; Claude (via AWS Bedrock) extracts structured recipe data with a human review step before saving
 - **Recipe Import from URL** — paste any recipe URL; the LLM extracts and structures it using the same review/confirm flow
+- **Receipt Scanning** — photograph or upload a receipt (PDF/image); AI reads items and bulk-adds them to your pantry
+- **TeaBot AI Assistant** — conversational kitchen assistant powered by LangGraph with human-in-the-loop confirmations; knows your pantry, plan, and shopping list; streams responses in real time
 - **Hangry Matcher** — scores every recipe against your pantry in real time; ranks by what you can actually cook tonight
 - **Pantry Intelligence** — tracks ingredient inventory with confidence decay (fridge items decay faster than pantry staples); supports expiry dates with per-category shelf-life confidence; prevents double-counting via a reservation model
 - **Weekly Planner** — schedule meals Mon–Sun with mood-of-the-week auto-fill; generates a deduplicated, pack-size-rounded shopping list with WhatsApp export
+- **Dedicated Shopping List** — separate page with two sections: manually added items (with ingredient autocomplete) and meal-plan-derived needs; items can be ticked off and bulk-marked as bought
 - **Cooking Mode** — step-by-step full-screen UI with swipe navigation, countdown timers, and voice commands ("TeaBot, add salt to list"); saves session history with ratings and notes
 - **Barcode Scanning** — scan pantry items via camera (BarcodeDetector API) or manual entry; resolves product names against the ingredient database via Open Food Facts
 - **Recipe Collections** — organise recipes into colour-coded folders; filter the library by collection
@@ -55,7 +58,8 @@ A locally-hosted recipe manager and kitchen assistant designed for Synology NAS 
 | Frontend | Next.js 15 (App Router) + TypeScript, Tailwind CSS, React Query |
 | Database | PostgreSQL 16 |
 | Cache | Redis 7 |
-| LLM | AWS Bedrock (Claude 3.5 Sonnet) via boto3 |
+| LLM | AWS Bedrock (Claude Sonnet — vision; Claude Haiku — chat/text) via boto3 + LangGraph |
+| Chat | LangGraph with Postgres checkpointer; SSE streaming; prompt caching |
 | Scheduling | APScheduler (embedded in FastAPI) |
 | Infrastructure | Docker Compose (4 services: `api`, `frontend`, `db`, `redis`) |
 
@@ -106,9 +110,17 @@ WhatsForTea/
 │   └── alembic/                # DB migrations
 ├── frontend/
 │   ├── src/
-│   │   ├── app/                # Next.js App Router pages
-│   │   ├── components/         # Nav, BarcodeScanner, Providers
+│   │   ├── app/
+│   │   │   ├── shopping-list/  # Dedicated shopping list (manually added + meal plan)
+│   │   │   ├── planner/        # Weekly planner + auto-fill
+│   │   │   ├── pantry/         # Pantry CRUD + barcode scan
+│   │   │   ├── recipes/        # Library + recipe detail + cooking mode
+│   │   │   ├── ingest/         # Photo / URL / receipt import
+│   │   │   ├── collections/    # Collection management
+│   │   │   └── profile/        # User profile + household
+│   │   ├── components/         # Nav, BarcodeScanner, TeaBot panel, Providers
 │   │   └── lib/                # types.ts, api.ts, hooks.ts
+│   ├── eslint.config.mjs       # ESLint flat config (Next.js + TypeScript rules)
 │   └── next.config.ts          # API proxy: /api/* → http://api:8000/api/*
 ├── scripts/
 │   ├── push-images.sh          # buildx cross-compile → Docker Hub (linux/amd64)
@@ -206,11 +218,26 @@ All routes are prefixed `/api/v1/`. Auth routes use `/api/auth/`. The frontend p
 | POST | `/api/v1/collections/{id}/recipes/{recipe_id}` | Add recipe to collection |
 | DELETE | `/api/v1/collections/{id}/recipes/{recipe_id}` | Remove recipe from collection |
 
+### Manual Shopping List
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/shopping-list` | All pending manual shopping list items |
+| POST | `/api/v1/shopping-list` | Add an item (raw_name, quantity, unit) |
+| DELETE | `/api/v1/shopping-list/{id}` | Remove an item |
+| POST | `/api/v1/shopping-list/bulk-done` | Mark multiple items as bought |
+
+### TeaBot Chat
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/chat` | Start or continue a chat thread (SSE stream) |
+| POST | `/api/v1/chat/resume` | Resume a HITL-paused graph with user decision |
+
 ### Barcode & Voice
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/v1/barcode/lookup` | Resolve barcode → ingredient via Open Food Facts + normaliser |
 | POST | `/api/v1/voice/command` | Parse voice transcript → structured intent |
+| POST | `/api/v1/pantry/receipt` | Upload receipt image/PDF; bulk-add items to pantry |
 
 ### Error shape
 ```json
@@ -309,13 +336,23 @@ docker-compose -f docker-compose.synology.yml up -d
 
 | File | Purpose |
 |------|---------|
-| `.env` | Secrets: DB password, JWT secret, AWS credentials, household credentials |
+| `.env` | Secrets: DB password, JWT secret, AWS credentials, household credentials, model IDs |
 | `backend/agent_config/agent_settings.yaml` | LLM model ID, temperature, rate limits, fuzzy thresholds |
 | `backend/agent_config/ingestion_prompt.md` | Vision prompt for recipe card parsing (Jinja2) |
 | `backend/agent_config/normaliser_prompt.md` | Ingredient resolution prompt (Jinja2) |
 | `backend/agent_config/nutrition_prompt.md` | Nutrition estimation prompt (Jinja2) |
 | `backend/agent_config/voice_prompt.md` | Voice command intent parsing prompt (Jinja2) |
 | `backend/config/pack_sizes.yaml` | Shopping list rounding rules — edit without restart |
+| `frontend/eslint.config.mjs` | ESLint configuration (flat config for Next.js 15 + ESLint 9) |
+
+### LLM Model Configuration
+
+Two model IDs are configured via environment variables — no code change needed to swap models:
+
+| Variable | Default | Used for |
+|----------|---------|---------|
+| `BEDROCK_MODEL_ID` | `us.anthropic.claude-sonnet-4-6` | Vision tasks: recipe card scan, auto-crop |
+| `BEDROCK_TEXT_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Text tasks: TeaBot chat, normaliser LLM assist, nutrition, voice |
 
 ---
 
@@ -358,6 +395,19 @@ docker-compose -f docker-compose.synology.yml up -d
 | 1.3 — Cooking Session Persistence | ✅ Complete |
 | 1.2 — Ingredient Substitution | ✅ Complete |
 | 1.1 — Zero-Waste Suggestions | ✅ Complete |
+
+### v2 Features
+
+| Feature | Status |
+|---------|--------|
+| TeaBot AI Chat (LangGraph, SSE, HITL) | ✅ Complete |
+| Prompt caching + context scaling | ✅ Complete |
+| Dedicated Shopping List page | ✅ Complete |
+| Ingredient autocomplete (shopping add) | ✅ Complete |
+| Receipt ingestion (PDF + image) | ✅ Complete |
+| Model routing (Sonnet/Haiku via env vars) | ✅ Complete |
+| ESLint 9 flat config | ✅ Complete |
+| Code quality (ruff clean, bandit clean) | ✅ Complete |
 
 ---
 

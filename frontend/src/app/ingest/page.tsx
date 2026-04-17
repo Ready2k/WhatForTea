@@ -7,110 +7,15 @@ import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, i
 import { ReceiptReview } from '@/components/ReceiptReview';
 import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
 
-const MAX_DIMENSION = 1500;
 const JPEG_QUALITY = 0.85;
 const FINGERPRINT_SIZE = 16; // px — tiny canvas used for duplicate detection
 const DUPLICATE_THRESHOLD = 0.92; // fraction of pixels that must match to flag as duplicate
 
-// ── Card bounds detection (Sobel + projection) ────────────────────────────────
-
-function detectCardBounds(
-  canvas: HTMLCanvasElement,
-): { x1: number; y1: number; x2: number; y2: number } {
-  const { width, height } = canvas;
-  const WORK = 400;
-  const scale = Math.min(1, WORK / Math.max(width, height));
-  const ww = Math.round(width * scale);
-  const wh = Math.round(height * scale);
-
-  const work = document.createElement('canvas');
-  work.width = ww;
-  work.height = wh;
-  work.getContext('2d')!.drawImage(canvas, 0, 0, ww, wh);
-  const { data } = work.getContext('2d')!.getImageData(0, 0, ww, wh);
-
-  const g = new Float32Array(ww * wh);
-  for (let i = 0; i < ww * wh; i++) {
-    g[i] = 0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2];
-  }
-
-  const rowE = new Float32Array(wh);
-  const colE = new Float32Array(ww);
-  for (let y = 1; y < wh - 1; y++) {
-    for (let x = 1; x < ww - 1; x++) {
-      const gx =
-        -g[(y - 1) * ww + x - 1] + g[(y - 1) * ww + x + 1] +
-        -2 * g[y * ww + x - 1]   + 2 * g[y * ww + x + 1] +
-        -g[(y + 1) * ww + x - 1] + g[(y + 1) * ww + x + 1];
-      const gy =
-        -g[(y - 1) * ww + x - 1] - 2 * g[(y - 1) * ww + x] - g[(y - 1) * ww + x + 1] +
-        g[(y + 1) * ww + x - 1]  + 2 * g[(y + 1) * ww + x] + g[(y + 1) * ww + x + 1];
-      rowE[y] += Math.sqrt(gx * gx + gy * gy);
-      colE[x] += Math.sqrt(gx * gx + gy * gy);
-    }
-  }
-
-  const rowMax = Math.max(1, ...Array.from(rowE));
-  const colMax = Math.max(1, ...Array.from(colE));
-  const T = 0.08;
-
-  let y1 = 0, y2 = wh - 1, x1 = 0, x2 = ww - 1;
-  for (let y = 0; y < wh; y++)      { if (rowE[y] / rowMax > T) { y1 = y; break; } }
-  for (let y = wh - 1; y >= 0; y--) { if (rowE[y] / rowMax > T) { y2 = y; break; } }
-  for (let x = 0; x < ww; x++)      { if (colE[x] / colMax > T) { x1 = x; break; } }
-  for (let x = ww - 1; x >= 0; x--) { if (colE[x] / colMax > T) { x2 = x; break; } }
-
-  // Skip crop unless it removes at least 5% from some edge AND keeps >70% of the image
-  const cropFraction = (x2 - x1) * (y2 - y1) / (ww * wh);
-  const trimsFraction = 1 - cropFraction;
-  if (trimsFraction < 0.05 || cropFraction < 0.70) return { x1: 0, y1: 0, x2: width, y2: height };
-
-  const px = Math.round(ww * 0.015);
-  const py = Math.round(wh * 0.015);
-  return {
-    x1: Math.max(0,      Math.round((x1 - px) / scale)),
-    y1: Math.max(0,      Math.round((y1 - py) / scale)),
-    x2: Math.min(width,  Math.round((x2 + px) / scale)),
-    y2: Math.min(height, Math.round((y2 + py) / scale)),
-  };
-}
-
-// ── EXIF parser ───────────────────────────────────────────────────────────────
-// Reads the orientation tag directly from the JPEG binary.
-// Returns 1 (no rotation) when orientation cannot be determined.
-
-function readExifOrientation(buffer: ArrayBuffer): number {
-  const view = new DataView(buffer);
-  if (view.byteLength < 12 || view.getUint16(0, false) !== 0xFFD8) return 1;
-  let offset = 2;
-  while (offset + 4 < view.byteLength) {
-    const marker = view.getUint16(offset, false);
-    const segLen = view.getUint16(offset + 2, false);
-    if (marker === 0xFFE1) {
-      if (view.getUint32(offset + 4, false) !== 0x45786966) break; // not "Exif"
-      const tiff = offset + 10;
-      const le = view.getUint16(tiff, false) === 0x4949;
-      const get16 = (o: number) => view.getUint16(o, le);
-      const get32 = (o: number) => view.getUint32(o, le);
-      const ifd0 = tiff + get32(tiff + 4);
-      const entries = get16(ifd0);
-      for (let i = 0; i < entries; i++) {
-        const e = ifd0 + 2 + i * 12;
-        if (e + 12 > view.byteLength) break;
-        if (get16(e) === 0x0112) return get16(e + 8); // Orientation tag
-      }
-      break;
-    }
-    offset += 2 + segLen;
-  }
-  return 1;
-}
-
 /**
  * LIGHTWEIGHT IMAGE PIPELINE
- * To prevent memory crashes on mobile devices, we skip the heavy Sobel-edge detection 
- * and large canvas rotations during ingestion. 
- * Users can rotate the final image on the recipe detail page if needed.
+ * Heavy Sobel-edge detection and canvas rotations are skipped to prevent
+ * memory crashes on mobile devices. Users can rotate images on the recipe
+ * detail page after import if needed.
  */
 async function processImage(file: File): Promise<File> {
   return file;

@@ -299,7 +299,7 @@ def _fetch_page_text(url: str, timeout: int = 10) -> str:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 — URL validated by caller via HttpUrl
             raw = resp.read()
             charset = "utf-8"
             ct = resp.headers.get("Content-Type", "")

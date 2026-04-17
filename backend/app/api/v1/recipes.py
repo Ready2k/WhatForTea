@@ -30,7 +30,7 @@ from app.schemas.ingest import (
     UrlImportRequest,
 )
 from app.schemas.recipe import Recipe as RecipeSchema, RecipeCreate, RecipeSummary, RecipeUpdate
-from pydantic import BaseModel, confloat
+from pydantic import BaseModel
 from app.services.images import crop_image, rotate_image, save_manual_photo
 from app.services.ingestion import (
     confirm_recipe,
@@ -222,8 +222,8 @@ async def confirm_ingest(
             arq_pool = await create_pool(_redis_settings())
             await arq_pool.enqueue_job("task_estimate_nutrition", str(recipe.id))
             await arq_pool.aclose()
-        except Exception:
-            pass  # nutrition is best-effort; never fail a confirm because of this
+        except Exception:  # nosec B110 — nutrition estimation is best-effort; never fail a recipe confirm
+            pass
 
     return recipe
 

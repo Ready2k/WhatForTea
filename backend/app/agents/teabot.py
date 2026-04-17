@@ -14,7 +14,7 @@ from typing import Annotated, List, Literal, Optional, TypedDict
 
 import boto3
 from langchain_aws import ChatBedrock
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
@@ -178,7 +178,7 @@ async def _build_dynamic_context() -> str:
                 else:
                     lines.append("This week's plan: nothing planned yet")
             except Exception:
-                pass
+                logger.debug("Could not load meal plan for TeaBot context", exc_info=True)
 
             cutoff = datetime.now(timezone.utc) - timedelta(days=14)
             recent_stmt = (
@@ -212,7 +212,7 @@ async def _build_dynamic_context() -> str:
                 else:
                     lines.append("My shopping list: empty")
             except Exception:
-                pass
+                logger.debug("Could not load manual shopping list for TeaBot context", exc_info=True)
 
             # Meal plan shopping list
             try:
@@ -228,7 +228,7 @@ async def _build_dynamic_context() -> str:
                 else:
                     lines.append("Meal plan shopping list: nothing needed (pantry covers everything)")
             except Exception:
-                pass
+                logger.debug("Could not load meal plan shopping list for TeaBot context", exc_info=True)
 
             # Top pantry matches with full ingredient detail (dynamic — depends on pantry stock)
             matches = await score_all_recipes(db)
@@ -279,7 +279,7 @@ def _parse_pantry_confirm(text: str) -> Optional[dict]:
         widget = json.loads(match.group(1).strip())
         if isinstance(widget, dict) and widget.get("type") == "pantry_confirm":
             return widget
-    except Exception:
+    except Exception:  # nosec B110 — JSON parse guard; None returned below
         pass
     return None
 
@@ -335,10 +335,6 @@ def _build_llm() -> ChatBedrock:
         client=client,
         model_id=_model_id(vision=False),
         streaming=True,
-        # Enable prompt caching — required for cache_control blocks to take effect.
-        # Bedrock charges ~25% of normal input price for cache writes,
-        # and ~10% for cache reads. At >1 turn per session this is net positive.
-        model_kwargs={"anthropic_beta": ["prompt-caching-2024-07-31"]},
     )
 
 
@@ -353,38 +349,24 @@ async def teabot_node(state: TeaBotAgentState) -> dict:
     and returns a confirmation message — the graph never relies on the frontend
     to mutate data.
     """
-    user_id: Optional[str] = state.get("_user_id")
-
     # Build context in two parts:
     #   1. Recipe library — stable, marked for prompt caching (5-min TTL on Bedrock)
     #   2. Dynamic kitchen state — pantry, plan, sessions, shopping, match scores
     recipe_library = await _build_recipe_library()
     dynamic_context = await _build_dynamic_context()
 
-    # Compose the system message as two content blocks so Bedrock can cache
-    # the stable portion independently of the dynamic portion.
-    # The cache breakpoint sits after block 1; block 2 is always sent fresh.
-    cached_text = SYSTEM_PROMPT
+    # Build the system prompt: stable part (SYSTEM_PROMPT + recipe library)
+    # followed by the dynamic kitchen state (pantry, plan, shopping list, matches).
+    system_text = SYSTEM_PROMPT
     if recipe_library:
-        cached_text += f"\n\n## Your recipe library\n{recipe_library}"
-
-    system_blocks: list = [
-        {
-            "type": "text",
-            "text": cached_text,
-            "cache_control": {"type": "ephemeral"},
-        },
-    ]
+        system_text += f"\n\n## Your recipe library\n{recipe_library}"
     if dynamic_context:
-        system_blocks.append({
-            "type": "text",
-            "text": f"## Current kitchen state\n{dynamic_context}",
-        })
+        system_text += f"\n\n## Current kitchen state\n{dynamic_context}"
 
     # Trim history to last 20 messages (~10 exchanges) to cap token growth.
     _MAX_HISTORY = 20
     recent_messages = list(state["messages"])[-_MAX_HISTORY:]
-    llm_messages: List[BaseMessage] = [SystemMessage(content=system_blocks)] + recent_messages
+    llm_messages: List[BaseMessage] = [SystemMessage(content=system_text)] + recent_messages
     llm = _build_llm()
     response: AIMessage = await llm.ainvoke(llm_messages)
 

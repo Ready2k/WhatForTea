@@ -504,7 +504,6 @@ async def auto_fill_week(
     """
     from datetime import datetime, timedelta, timezone
     from app.models.session import CookingSession
-    from app.services.matcher import score_all_recipes
     from app.services.pantry import get_available
 
     # Fetch all recipes

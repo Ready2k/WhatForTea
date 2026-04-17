@@ -61,7 +61,7 @@ export default function PlannerPage() {
   });
   const [manualInput, setManualInput] = useState('');
   const [manualQty, setManualQty] = useState('1');
-  const [manualUnit, setManualUnit] = useState('count');
+  const [manualUnit] = useState('count');
 
   const handleAddManual = () => {
     const name = manualInput.trim();

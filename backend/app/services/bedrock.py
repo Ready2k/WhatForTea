@@ -68,7 +68,6 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
     Estimate macro-nutrients for a recipe.
     Returns a dict: {calories_kcal, protein_g, fat_g, carbs_g, fibre_g, per_servings}
     """
-    cfg = _load_settings()
     model = _model_id(vision=False)
     template_src = _load_prompt("nutrition_prompt.md")
     parts = template_src.split("## System", 1)
@@ -200,7 +199,6 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
     Parse a voice transcript into a structured command intent.
     Returns a dict with keys: intent, item, note, direction.
     """
-    cfg = _load_settings()
     model = _model_id(vision=False)
     system_prompt = _load_prompt("voice_command_prompt.md")
 

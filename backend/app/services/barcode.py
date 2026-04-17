@@ -29,7 +29,7 @@ def _fetch_off(barcode: str) -> dict:
     url = _OFF_API.format(barcode=barcode)
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=8) as resp:  # nosec B310 — fixed HTTPS URL to Open Food Facts
             return json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"Open Food Facts returned HTTP {exc.code}") from exc

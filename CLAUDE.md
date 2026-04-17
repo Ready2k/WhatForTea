@@ -16,7 +16,9 @@ See `CHECKPOINT.md` for current build status and `plan.md` for the full implemen
 | Frontend | Next.js 15 (App Router) + TypeScript, Tailwind CSS, React Query |
 | Database | PostgreSQL 16 |
 | Cache / Queue | Redis 7 |
-| LLM | AWS Bedrock (Claude 3.5 Sonnet) via boto3 |
+| LLM (vision) | AWS Bedrock Claude Sonnet (`BEDROCK_MODEL_ID`) — recipe scan, auto-crop |
+| LLM (text) | AWS Bedrock Claude Haiku (`BEDROCK_TEXT_MODEL_ID`) — TeaBot, normaliser, nutrition, voice |
+| Chat | LangGraph + Postgres checkpointer; SSE streaming; Anthropic prompt caching |
 | Scheduling | APScheduler (embedded in FastAPI — no Celery) |
 | Infrastructure | Docker Compose (4 services: `api`, `frontend`, `db`, `redis`) |
 
@@ -79,7 +81,7 @@ All 10 core phases and all 4 post-v1 tiers are implemented. The project is featu
 backend/
 ├── app/
 │   ├── main.py             # FastAPI app entry point, lifespan, route registration, default user seeder
-│   ├── config.py           # pydantic-settings (reads .env)
+│   ├── config.py           # pydantic-settings (reads .env); bedrock_model_id + bedrock_text_model_id
 │   ├── database.py         # async SQLAlchemy engine + get_db() dependency
 │   ├── errors.py           # AppError base class + error codes (ErrorCode)
 │   ├── logging_config.py   # JSON structured logging setup
@@ -94,12 +96,15 @@ backend/
 │   │   ├── session.py      # CookingSession (+ user_id FK)
 │   │   ├── ingest.py       # IngestJob, LlmOutput
 │   │   ├── collection.py   # Collection, recipe_collections (M2M)
+│   │   ├── shopping.py     # ShoppingListItem (manual adds)
 │   │   ├── user.py         # Household, User
 │   │   └── normalised_amount.py  # NormalizedAmount value object
 │   ├── schemas/            # Pydantic request/response schemas
+│   ├── agents/
+│   │   └── teabot.py       # LangGraph TeaBot: context builders, HITL, prompt caching, SSE
 │   ├── services/           # Business logic
 │   │   ├── normaliser.py   # 4-layer ingredient normalisation pipeline
-│   │   ├── bedrock.py      # AWS Bedrock client
+│   │   ├── bedrock.py      # AWS Bedrock client; _model_id(vision=) routes to correct model
 │   │   ├── ingestion.py    # LLM ingest pipeline + job management
 │   │   ├── pantry.py       # CRUD, decay (+ expiry override), availability, consumption
 │   │   ├── matcher.py      # Hangry score calculation + use-it-up mode
@@ -110,9 +115,11 @@ backend/
 │   │   └── voice.py        # Voice command intent parsing via LLM
 │   └── api/v1/             # Route handlers — all prefixed /api/v1/
 │       ├── auth.py         # Login, refresh, logout, /me
+│       ├── chat.py         # POST /chat (SSE stream), POST /chat/resume (HITL resume)
 │       ├── ingredients.py
 │       ├── recipes.py
-│       ├── pantry.py       # + GET /expiring
+│       ├── pantry.py       # + GET /expiring + POST /receipt
+│       ├── shopping.py     # Manual shopping list CRUD + bulk-done
 │       ├── matcher.py
 │       ├── planner.py
 │       ├── cooking.py      # + ?mine=true history filter
@@ -142,14 +149,16 @@ frontend/src/
 │   ├── login/              # Login page
 │   ├── recipes/            # Recipe library + collection filter chips
 │   ├── pantry/             # Pantry CRUD + expiry badges + barcode scan button
-│   ├── planner/            # Week planner + shopping list
-│   ├── ingest/             # Recipe ingest (photo upload + URL import + review)
+│   ├── planner/            # Weekly planner + auto-fill modal
+│   ├── shopping-list/      # Dedicated shopping list (manual items + meal plan needs)
+│   ├── ingest/             # Recipe ingest (photo upload + URL import + receipt + review)
 │   ├── collections/        # Collection management page
 │   └── profile/            # User profile + password change + household/invite
 ├── components/
-│   ├── nav.tsx             # Bottom nav with current user name + profile link
+│   ├── nav.tsx             # Bottom nav: Home, Recipes, Pantry, Planner, Shopping, Profile
 │   ├── providers.tsx       # React Query + ThemeContext providers
-│   └── BarcodeScanner.tsx  # Camera/BarcodeDetector modal with manual fallback
+│   ├── BarcodeScanner.tsx  # Camera/BarcodeDetector modal with manual fallback
+│   └── TeaBot/             # Chat panel, message renderer, HITL widgets, SSE stream handler
 └── lib/
     ├── types.ts            # All shared TypeScript interfaces
     ├── api.ts              # All API call functions
@@ -178,6 +187,17 @@ Layered pipeline:
 - Prompts are Jinja2 templates in `backend/agent_config/*.md` — **edit there, not in Python**
 - Model + rate limits in `backend/agent_config/agent_settings.yaml` — tunable without restart
 - Raw LLM responses stored in `llm_outputs` table (90-day retention, not in general logs)
+- **Model routing**: `_model_id(vision=True)` → `BEDROCK_MODEL_ID` (Sonnet); `_model_id(vision=False)` → `BEDROCK_TEXT_MODEL_ID` (Haiku)
+- Changing either model only requires editing `.env` + container restart — no code change needed
+
+### TeaBot chat system
+- LangGraph single-node graph compiled with a Postgres checkpointer (thread persistence across requests)
+- SSE stream: `text/event-stream` with `data: {JSON}\n\n` events — types: `token`, `done`, `hitl_waiting`, `error`
+- **Prompt caching**: removed — Bedrock does not accept the `anthropic_beta` flag required by the Anthropic API caching feature (`ValidationException`); context is sent as a single system string each turn
+- **Context scaling**: recipe library capped at 150 recipes (no ingredient detail); full ingredient detail only for top 8 pantry matches
+- **Message history**: trimmed to last 20 messages before each LLM call to prevent unbounded growth
+- HITL flow: `interrupt()` pauses graph; `/chat/resume` resumes with `Command(resume=...)`; pantry upsert executed server-side on confirm — never by the frontend
+- Thread ID stored in `localStorage` (`teabot_thread_id`); "New conversation" button clears thread to avoid stale history
 
 ### Pantry intelligence
 - `effective_quantity = quantity × confidence`
@@ -220,6 +240,26 @@ Layered pipeline:
 - Ingredient normaliser hits 55/55 (100%) of golden set
 - Integration tests use a real test PostgreSQL schema (no mocks for DB)
 - Mocked LLM responses for non-golden-set tests
+
+## Code Quality
+
+Run checks inside the running container (or the built image):
+
+```bash
+# Python linting (ruff) — must be clean before push
+docker compose exec api poetry run ruff check app/
+
+# Python security (bandit) — medium/high issues must be addressed
+docker compose exec api poetry run bandit -r app/ -ll
+
+# Frontend linting (ESLint 9 flat config)
+docker compose exec frontend sh -c "cd /app && npx eslint src/"
+
+# TypeScript type check (via Next.js build)
+docker compose exec frontend sh -c "cd /app && npm run build"
+```
+
+ESLint is configured to treat `@typescript-eslint/no-explicit-any` as a warning (not an error) because dynamic API responses and SSE stream handlers legitimately require `any`. All structural errors (unused vars, unescaped entities) are enforced as errors.
 
 ## Out of Scope
 Supermarket integrations, native mobile app.

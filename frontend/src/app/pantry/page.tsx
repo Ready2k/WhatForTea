@@ -210,7 +210,7 @@ export default function PantryPage() {
                 ))}
                 {noResults && (
                   <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="italic">No match for "{form.search.trim()}"</span>
+                    <span className="italic">No match for &ldquo;{form.search.trim()}&rdquo;</span>
                     <button
                       type="button"
                       onMouseDown={(e) => {
@@ -235,7 +235,7 @@ export default function PantryPage() {
           {newIngForm && (
             <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl space-y-2">
               <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                Creating "{form.search.trim()}" as a new ingredient
+                Creating &ldquo;{form.search.trim()}&rdquo; as a new ingredient
               </p>
               <div className="flex gap-2">
                 <div className="flex-1">

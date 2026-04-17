@@ -201,7 +201,7 @@ async def ingest_receipt(
         enriched = await run_receipt_ingestion(image_paths, resolved_text, db, redis_client)
     except RateLimitExceeded as exc:
         raise HTTPException(status_code=429, detail=str(exc))
-    except Exception as exc:
+    except Exception:
         logger.error("receipt ingestion failed", exc_info=True)
         raise HTTPException(status_code=500, detail="Receipt processing failed. Please try again.")
     finally:
@@ -212,7 +212,7 @@ async def ingest_receipt(
             try:
                 shutil.rmtree(image_paths[0].parent, ignore_errors=True)
             except Exception:
-                pass
+                logger.debug("Failed to clean up temp receipt images", exc_info=True)
 
     unresolved_count = sum(1 for e in enriched if not e["resolved"])
     return ReceiptIngestResponse(items=enriched, unresolved_count=unresolved_count)
