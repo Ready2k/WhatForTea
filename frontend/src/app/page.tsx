@@ -7,6 +7,10 @@ import { useMatches, useAvailable } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { getActiveCookingSession } from '@/lib/api';
 import type { RecipeMatchResult } from '@/lib/types';
+import {
+  UtensilsCrossed, ChefHat, AlertTriangle, Flame, CalendarDays,
+  ShoppingBasket, ScanLine, PackageSearch, Clock,
+} from 'lucide-react';
 
 type Mode = 'planning' | 'hangry';
 
@@ -29,7 +33,7 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-4xl">🍽️</span>
+          <UtensilsCrossed className="w-10 h-10 text-emerald-400/60" />
         )}
       </div>
       <div className="p-3 space-y-1.5">
@@ -76,7 +80,7 @@ export default function Dashboard() {
           href={`/recipes/${activeSession.recipe_id}/cook`}
           className="flex items-center gap-3 w-full px-4 py-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700/50 rounded-2xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
         >
-          <span className="text-2xl flex-shrink-0">👨‍🍳</span>
+          <ChefHat className="w-6 h-6 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 truncate">
               Resume cooking
@@ -97,7 +101,7 @@ export default function Dashboard() {
           href="/recipes?sort=use_it_up"
           className="flex items-center gap-3 w-full px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/40 rounded-2xl hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
         >
-          <span className="text-xl flex-shrink-0">⚠️</span>
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-500" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
               {atRiskCount} ingredient{atRiskCount > 1 ? 's are' : ' is'} going off
@@ -126,7 +130,7 @@ export default function Dashboard() {
               : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
         >
-          {mode === 'hangry' ? '🔥 Hangry' : '📅 Planning'}
+          {mode === 'hangry' ? <><Flame className="w-3.5 h-3.5 inline mr-1" />Hangry</> : <><CalendarDays className="w-3.5 h-3.5 inline mr-1" />Planning</>}
         </button>
       </div>
 
@@ -147,7 +151,7 @@ export default function Dashboard() {
           href="/pantry"
           className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
         >
-          <div className="text-3xl">🥦</div>
+          <ShoppingBasket className="w-8 h-8 text-emerald-500" />
           <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">My Pantry</div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage ingredients</div>
         </Link>
@@ -158,7 +162,7 @@ export default function Dashboard() {
               href="/planner"
               className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="text-3xl">📅</div>
+              <CalendarDays className="w-8 h-8 text-blue-500" />
               <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">This Week</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Meal plan & shopping</div>
             </Link>
@@ -167,7 +171,7 @@ export default function Dashboard() {
               href="/ingest"
               className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="text-3xl">📷</div>
+              <ScanLine className="w-8 h-8 text-purple-500" />
               <div className="text-sm font-semibold text-gray-900 dark:text-white mt-1">Scan Card</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Add new recipe</div>
             </Link>
@@ -179,7 +183,7 @@ export default function Dashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            {mode === 'hangry' ? '🔥 Quick Matches' : '📅 Top Matches'}
+            {mode === 'hangry' ? <span className="flex items-center gap-1.5"><Flame className="w-4 h-4 text-orange-500" />Quick Matches</span> : <span className="flex items-center gap-1.5"><CalendarDays className="w-4 h-4 text-emerald-500" />Top Matches</span>}
           </h2>
           <Link href="/recipes" className="text-sm text-emerald-600 font-medium hover:underline">
             See all
@@ -200,7 +204,7 @@ export default function Dashboard() {
           </div>
         ) : topMatches.length === 0 ? (
           <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-            <p className="text-4xl mb-3">🧊</p>
+            <PackageSearch className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
             <p className="text-sm text-gray-500 dark:text-gray-400 px-8">
               {mode === 'hangry' 
                 ? "No recipes ready to cook right now. Try updating your pantry!" 

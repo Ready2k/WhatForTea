@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useWeekPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
+import { Wand2, Users, ShoppingCart, Clock } from 'lucide-react';
 import { autoFillWeek, type AutoFillEntry, fetchShoppingItems, addShoppingItem, patchShoppingItem, deleteShoppingItem, clearDoneShoppingItems, type ShoppingItem } from '@/lib/api';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,7 +28,10 @@ function addDays(d: Date, n: number): Date {
 }
 
 function toDateStr(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatWeekRange(monday: Date): string {
@@ -279,7 +283,7 @@ export default function PlannerPage() {
               onClick={() => { setShowAutoFill(true); setAutoFillError(null); }}
               className="w-full py-2.5 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-sm font-medium rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-center gap-2"
             >
-              <span>✨</span> Auto-fill week
+              <Wand2 className="w-4 h-4" /> Auto-fill week
             </button>
           )}
 
@@ -324,14 +328,14 @@ export default function PlannerPage() {
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{recipeSummary.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {recipeSummary.cooking_time_mins && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500">{recipeSummary.cooking_time_mins} min</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3" />{recipeSummary.cooking_time_mins} min</p>
                           )}
                           <span className="text-gray-300 dark:text-gray-600">•</span>
                           <button
                             onClick={() => setShowServingPickerFor(showServingPickerFor === idx ? null : idx)}
                             className="text-xs font-medium text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-1"
                           >
-                            👥 {resolvedServings[idx] || 'Default'}
+                            <Users className="w-3 h-3 inline mr-0.5" />{resolvedServings[idx] || 'Default'}
                           </button>
                         </div>
                       </div>
@@ -587,7 +591,7 @@ export default function PlannerPage() {
 
                 {Object.keys(shoppingList.zones).length === 0 && (
                   <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-                    <p className="text-4xl mb-2">🛒</p>
+                    <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                     <p>No items — plan your week first!</p>
                   </div>
                 )}

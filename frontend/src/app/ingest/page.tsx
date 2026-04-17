@@ -6,6 +6,8 @@ import { useIngestRecipe } from '@/lib/hooks';
 import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, ingestReceipt } from '@/lib/api';
 import { ReceiptReview } from '@/components/ReceiptReview';
 import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
+import { ScanLine, FolderOpen, FileText, Upload, Bot, Loader2, Clock, Users, AlertTriangle, Wand2, Check, CheckCircle } from 'lucide-react';
+import React from 'react';
 
 const JPEG_QUALITY = 0.85;
 const FINGERPRINT_SIZE = 16; // px — tiny canvas used for duplicate detection
@@ -52,11 +54,17 @@ function pixelSimilarity(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
 type FlowState = 'upload' | 'processing' | 'review' | 'done';
 type ApiStatus = 'uploading' | 'queued' | 'processing' | 'review';
 
-const STAGES: { key: ApiStatus; label: string; icon: string }[] = [
-  { key: 'uploading', label: 'Uploading photo',      icon: '📤' },
-  { key: 'queued',    label: 'In the queue',          icon: '⏳' },
-  { key: 'processing', label: 'Reading the card',    icon: '🤖' },
-  { key: 'review',    label: 'Almost ready!',         icon: '✨' },
+const STAGE_ICONS: Record<string, React.ReactNode> = {
+  uploading: <Upload className="w-5 h-5" />,
+  queued:    <Clock className="w-5 h-5" />,
+  processing: <Bot className="w-5 h-5" />,
+  review:    <Wand2 className="w-5 h-5" />,
+};
+const STAGES: { key: ApiStatus; label: string }[] = [
+  { key: 'uploading', label: 'Uploading photo' },
+  { key: 'queued',    label: 'In the queue' },
+  { key: 'processing', label: 'Reading the card' },
+  { key: 'review',    label: 'Almost ready!' },
 ];
 
 const FUN_MESSAGES: Record<ApiStatus, string[]> = {
@@ -482,14 +490,14 @@ export default function IngestPage() {
                         onClick={() => receiptCameraRef.current?.click()}
                         className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
                       >
-                        <span className="text-3xl">📷</span>
+                        <ScanLine className="w-8 h-8" />
                         <span className="text-sm font-medium">Camera</span>
                       </button>
                       <button
                         onClick={() => receiptFileRef.current?.click()}
                         className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
                       >
-                        <span className="text-3xl">📁</span>
+                        <FolderOpen className="w-8 h-8" />
                         <span className="text-sm font-medium">Choose File</span>
                       </button>
                     </div>
@@ -528,7 +536,7 @@ export default function IngestPage() {
                       disabled={receiptFlowState === 'extracting'}
                       className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800 disabled:opacity-50"
                     >
-                      <span className="text-3xl">📄</span>
+                      <FileText className="w-8 h-8" />
                       <span className="text-sm font-medium">
                         {receiptFlowState === 'extracting' ? 'Processing…' : 'Choose PDF'}
                       </span>
@@ -581,7 +589,7 @@ export default function IngestPage() {
             onClick={() => cameraInputRef.current?.click()}
             className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
           >
-            <span className="text-3xl">📷</span>
+            <ScanLine className="w-8 h-8" />
             <span className="text-sm font-medium">
               {capturedPhotos.length === 0 ? 'Take Photo' : capturedPhotos.length === 1 ? 'Add 2nd Photo' : 'Retake Photo'}
             </span>
@@ -590,7 +598,7 @@ export default function IngestPage() {
             onClick={() => fileInputRef.current?.click()}
             className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
           >
-            <span className="text-3xl">📁</span>
+            <FolderOpen className="w-8 h-8" />
             <span className="text-sm font-medium">Choose File</span>
           </button>
 
@@ -696,9 +704,9 @@ export default function IngestPage() {
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${
                   active ? 'bg-emerald-100 dark:bg-emerald-900/40' : done ? 'bg-gray-100 dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'
                 }`}>
-                  {done ? '✅' : active ? (
-                    <span className="inline-block animate-spin">⚙️</span>
-                  ) : stage.icon}
+                  {done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : active ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                  ) : STAGE_ICONS[stage.key]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-semibold ${active ? 'text-emerald-800 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-400'}`}>
@@ -748,8 +756,8 @@ export default function IngestPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm space-y-2">
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-base">{pr?.title ?? 'Unknown title'}</h2>
           <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400">
-            {pr?.cooking_time_mins && <span>⏱ {pr.cooking_time_mins} min</span>}
-            {pr?.base_servings && <span>👥 Serves {pr.base_servings}</span>}
+            {pr?.cooking_time_mins && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {pr.cooking_time_mins} min</span>}
+            {pr?.base_servings && <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Serves {pr.base_servings}</span>}
           </div>
           {pr?.mood_tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -771,7 +779,7 @@ export default function IngestPage() {
                 const isUnresolved = reviewPayload.unresolved_ingredients.includes(ing.raw_name ?? ing.name ?? '');
                 return (
                   <li key={i} className="flex items-center gap-2 text-sm">
-                    <span>{isUnresolved ? '⚠️' : '✅'}</span>
+                    {isUnresolved ? <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" /> : <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />}
                     <span className={isUnresolved ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-800 dark:text-gray-200'}>
                       {ing.raw_name ?? ing.name}
                     </span>
@@ -786,7 +794,7 @@ export default function IngestPage() {
             </ul>
             {reviewPayload.unresolved_ingredients.length > 0 && (
               <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                ⚠️ {reviewPayload.unresolved_ingredients.length} ingredient(s) could not be automatically resolved
+                <span className="flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {reviewPayload.unresolved_ingredients.length} ingredient(s) could not be automatically resolved</span>
               </p>
             )}
           </div>
@@ -822,7 +830,7 @@ export default function IngestPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
               <div className="flex items-start gap-3">
-                <span className="text-2xl">⚠️</span>
+                <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
                   <h2 className="text-base font-semibold text-gray-900 dark:text-white">Possible duplicate</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -862,8 +870,8 @@ export default function IngestPage() {
   if (flowState === 'done') {
     return (
       <main className="max-w-lg mx-auto px-4 pt-16 pb-4 flex flex-col items-center gap-5 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-3xl">
-          ✅
+        <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+          <CheckCircle className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Recipe Saved!</h1>

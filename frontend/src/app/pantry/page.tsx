@@ -6,6 +6,7 @@ import { ConfidenceBar } from '@/components/ConfidenceBar';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import type { Ingredient } from '@/lib/types';
 import type { BarcodeLookupResponse } from '@/lib/api';
+import { AlertTriangle, ShoppingBasket } from 'lucide-react';
 
 interface AddItemForm {
   search: string;
@@ -444,7 +445,7 @@ export default function PantryPage() {
       {/* Expiring soon banner */}
       {!isLoading && !isError && expiringSoon.length > 0 && (
         <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/60 rounded-2xl flex items-start gap-2">
-          <span className="text-lg flex-shrink-0">⚠️</span>
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-500" />
           <div>
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
               {expiringSoon.length} item{expiringSoon.length > 1 ? 's' : ''} expiring soon
@@ -458,7 +459,7 @@ export default function PantryPage() {
 
       {!isLoading && !isError && sorted.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-5xl mb-3">🥦</p>
+          <ShoppingBasket className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
           <p className="font-medium text-gray-600 dark:text-gray-300">Your pantry is empty</p>
           <p className="text-sm mt-1">Add items to start tracking your ingredients</p>
         </div>

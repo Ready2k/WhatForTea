@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What's for Tea? — iPad Mockups</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0a0c14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    .ipad {
+      background: #13151f;
+      border-radius: 20px;
+      border: 2px solid #2a2d3a;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+      overflow: hidden;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .ipad-portrait  { width: 600px; height: 820px; }
+    .ipad-landscape { width: 960px; height: 680px; }
+
+    .recipe-img-sm {
+      width: 100%; height: 90px;
+      background: linear-gradient(135deg, #065f46, #0d9488);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .recipe-img-lg {
+      width: 100%; height: 240px;
+      background: linear-gradient(135deg, #065f46, #0d9488);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 72px;
+    }
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: #0f1117;
+      border-right: 1px solid #1f2130;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+    .badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
+    .badge-orange { background: rgba(249,115,22,0.15); color: #f97316; }
+
+    .step-card {
+      background: #1e2130;
+      border-radius: 20px;
+      border: 1px solid #2a2d3a;
+      padding: 24px;
+    }
+    .timer-ring {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(#10b981 0% 60%, #1e2130 60% 100%);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .timer-ring-inner {
+      width: 96px; height: 96px;
+      border-radius: 50%;
+      background: #13151f;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .phone-narrow {
+      width: 390px;
+      height: 820px;
+      background: #13151f;
+      border-radius: 20px;
+      border: 2px solid #2a2d3a;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="p-10">
+
+  <div class="mb-10 text-center">
+    <h1 class="text-2xl font-bold text-white mb-1">What's for Tea? — iPad Experience</h1>
+    <p class="text-gray-400 text-sm">Designing for the kitchen counter</p>
+  </div>
+
+  <!-- ═══════════════════════ ROW 1 — Current vs iPad Portrait ══════════════════════ -->
+  <div class="mb-6">
+    <div class="text-gray-500 text-xs uppercase tracking-widest font-bold mb-4">Today vs iPad-optimised Portrait</div>
+  </div>
+  <div class="flex gap-10 mb-16 items-start flex-wrap">
+
+    <!-- TODAY — narrow column on iPad -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-sm">Today on iPad (the problem)</div>
+      <div class="text-gray-500 text-xs text-center">512px column, ~40% of screen wasted</div>
+      <div class="ipad ipad-portrait flex items-start justify-center" style="background: #0d0f1a;">
+        <!-- Simulate the grey dead zones -->
+        <div style="position:absolute; top:0; left:0; bottom:0; width: 105px; background: repeating-linear-gradient(45deg, #0d0f1a, #0d0f1a 4px, #111320 4px, #111320 8px); opacity:0.6;"></div>
+        <div style="position:absolute; top:0; right:0; bottom:0; width: 105px; background: repeating-linear-gradient(45deg, #0d0f1a, #0d0f1a 4px, #111320 4px, #111320 8px); opacity:0.6;"></div>
+
+        <div style="width: 390px; height: 100%; background: #13151f; overflow-y: auto; padding: 24px 20px 80px; position: relative; z-index:1;">
+          <div style="font-size: 20px; font-weight: 800; color: #f9fafb; margin-bottom: 4px;">What's for Tea?</div>
+          <div style="font-size: 11px; color: #6b7280; margin-bottom: 18px;">Plan your week ahead</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+            <div style="background: #059669; border-radius: 18px; padding: 14px;">
+              <div style="font-size: 28px; font-weight: 800; color: white;">5</div>
+              <div style="font-size: 11px; color: #a7f3d0; margin-top: 2px;">Cook Now</div>
+              <div style="font-size: 9px; color: #6ee7b7;">Ready to make</div>
+            </div>
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 18px; padding: 14px;">
+              <div style="font-size: 26px;">🥦</div>
+              <div style="font-size: 11px; color: #f9fafb; margin-top: 4px; font-weight: 600;">My Pantry</div>
+              <div style="font-size: 9px; color: #6b7280;">Manage ingredients</div>
+            </div>
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 18px; padding: 14px;">
+              <div style="font-size: 26px;">📅</div>
+              <div style="font-size: 11px; color: #f9fafb; margin-top: 4px; font-weight: 600;">This Week</div>
+              <div style="font-size: 9px; color: #6b7280;">Meal plan & shopping</div>
+            </div>
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 18px; padding: 14px;">
+              <div style="font-size: 26px;">📷</div>
+              <div style="font-size: 11px; color: #f9fafb; margin-top: 4px; font-weight: 600;">Scan Card</div>
+              <div style="font-size: 9px; color: #6b7280;">Add new recipe</div>
+            </div>
+          </div>
+          <div style="font-size: 12px; font-weight: 700; color: #f9fafb; margin-bottom: 10px;">📅 Top Matches</div>
+          <div style="display: flex; gap: 8px; overflow-x: auto; margin: 0 -20px; padding: 0 20px;">
+            <div style="flex-shrink:0; width:160px; background:#1e2130; border-radius:14px; overflow:hidden; border:1px solid #2a2d3a;">
+              <div style="height:80px; background: linear-gradient(135deg,#065f46,#0d9488); display:flex; align-items:center; justify-content:center; font-size:24px;">🍛</div>
+              <div style="padding:8px;">
+                <div style="font-size:11px; font-weight:600; color:#f9fafb; line-height:1.3;">Coconut Halloumi Curry</div>
+                <div style="font-size:9px; color:#6b7280; margin-top:3px;">25 min</div>
+              </div>
+            </div>
+            <div style="flex-shrink:0; width:160px; background:#1e2130; border-radius:14px; overflow:hidden; border:1px solid #2a2d3a;">
+              <div style="height:80px; background: linear-gradient(135deg,#1e3a5f,#1d4ed8); display:flex; align-items:center; justify-content:center; font-size:24px;">🥧</div>
+              <div style="padding:8px;">
+                <div style="font-size:11px; font-weight:600; color:#f9fafb; line-height:1.3;">Creamy Chicken Pie</div>
+                <div style="font-size:9px; color:#6b7280; margin-top:3px;">45 min</div>
+              </div>
+            </div>
+          </div>
+          <!-- Wasted space indicator -->
+          <div style="margin-top: 30px; background: rgba(239,68,68,0.08); border: 1px dashed rgba(239,68,68,0.3); border-radius: 12px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: rgba(239,68,68,0.7);">↑ lots of scrolling, small touch targets</div>
+          </div>
+        </div>
+
+        <!-- Wasted space labels -->
+        <div style="position:absolute; left: 12px; top: 50%; transform: translateY(-50%) rotate(-90deg); font-size: 10px; color: rgba(239,68,68,0.5); font-weight: 700; white-space: nowrap; z-index: 2;">WASTED</div>
+        <div style="position:absolute; right: 12px; top: 50%; transform: translateY(-50%) rotate(90deg); font-size: 10px; color: rgba(239,68,68,0.5); font-weight: 700; white-space: nowrap; z-index: 2;">WASTED</div>
+      </div>
+    </div>
+
+    <!-- IPAD PORTRAIT — two-column -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-sm">iPad Portrait — Two Column</div>
+      <div class="text-gray-500 text-xs text-center">Sidebar nav + main content. Full use of screen.</div>
+      <div class="ipad ipad-portrait flex" style="overflow: hidden;">
+
+        <!-- Sidebar -->
+        <div class="sidebar" style="padding: 24px 0 20px;">
+          <div style="padding: 0 16px; margin-bottom: 20px;">
+            <img src="../frontend/public/teabot-chef.png" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid #4f46e5; margin-bottom: 10px;" />
+            <div style="font-size: 16px; font-weight: 800; color: #f9fafb; line-height: 1.1;">What's for Tea?</div>
+            <div style="font-size: 10px; color: #4b5563; margin-top: 2px;">Fri 17 Apr</div>
+          </div>
+
+          <!-- Nav items -->
+          <div style="padding: 0 8px; flex: 1;">
+            <div style="background: rgba(16,185,129,0.12); border-radius: 12px; padding: 10px 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <span style="font-size: 18px;">🏠</span>
+              <span style="font-size: 13px; font-weight: 600; color: #10b981;">Home</span>
+            </div>
+            <div style="padding: 10px 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 12px;">
+              <span style="font-size: 18px;">📚</span>
+              <span style="font-size: 13px; color: #9ca3af;">Recipes</span>
+            </div>
+            <div style="padding: 10px 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 12px;">
+              <span style="font-size: 18px;">🥦</span>
+              <span style="font-size: 13px; color: #9ca3af;">Pantry</span>
+            </div>
+            <div style="padding: 10px 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 12px;">
+              <span style="font-size: 18px;">📅</span>
+              <span style="font-size: 13px; color: #9ca3af;">Planner</span>
+            </div>
+            <div style="padding: 10px 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 12px;">
+              <span style="font-size: 18px;">🛒</span>
+              <span style="font-size: 13px; color: #9ca3af;">Shopping</span>
+            </div>
+            <div style="padding: 10px 12px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 12px;">
+              <span style="font-size: 18px;">📷</span>
+              <span style="font-size: 13px; color: #9ca3af;">Scan Card</span>
+            </div>
+          </div>
+
+          <!-- TeaBot in sidebar -->
+          <div style="padding: 12px 16px; margin: 8px; background: rgba(79,70,229,0.12); border: 1px solid rgba(79,70,229,0.3); border-radius: 14px; cursor: pointer;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <img src="../frontend/public/teabot-chef.png" style="width: 28px; height: 28px; border-radius: 50%;" />
+              <div>
+                <div style="font-size: 11px; font-weight: 700; color: #a5b4fc;">Ask TeaBot</div>
+                <div style="font-size: 9px; color: #6b7280;">Your kitchen assistant</div>
+              </div>
+              <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-left: auto;"></div>
+            </div>
+          </div>
+
+          <!-- User -->
+          <div style="padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #1f2130; margin-top: 4px;">
+            <div style="width: 28px; height: 28px; background: #065f46; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white;">J</div>
+            <div style="font-size: 12px; color: #9ca3af;">James</div>
+            <div style="font-size: 10px; color: #374151; margin-left: auto;">🌙</div>
+          </div>
+        </div>
+
+        <!-- Main content -->
+        <div style="flex:1; overflow-y: auto; padding: 24px 20px;">
+          <!-- Cook Now hero -->
+          <div style="background: linear-gradient(135deg, #059669, #0d9488); border-radius: 20px; padding: 20px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 10px; color: #a7f3d0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">Ready to Cook</div>
+              <div style="font-size: 44px; font-weight: 900; color: white; line-height: 1;">5</div>
+              <div style="font-size: 13px; color: #a7f3d0; margin-top: 2px;">recipes available tonight</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 6px;">Top picks</div>
+              <div style="font-size: 12px; color: white; font-weight: 600; margin-bottom: 3px;">🍛 Halloumi Curry</div>
+              <div style="font-size: 12px; color: white; font-weight: 600; margin-bottom: 3px;">🐓 Crispy Chicken</div>
+              <div style="font-size: 12px; color: rgba(255,255,255,0.5);">+3 more →</div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 16px; padding: 14px;">
+              <div style="font-size: 10px; font-weight: 700; color: #10b981; margin-bottom: 2px;">13–19 APR</div>
+              <div style="font-size: 12px; font-weight: 700; color: #f9fafb;">This Week</div>
+              <div style="display: flex; gap: 4px; margin-top: 8px;">
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #10b981; font-size: 7px; display:flex; align-items:center; justify-content:center; color:white;">M</div>
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #374151; font-size: 7px; display:flex; align-items:center; justify-content:center; color:#6b7280;">T</div>
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #374151; font-size: 7px; display:flex; align-items:center; justify-content:center; color:#6b7280;">W</div>
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #10b981; font-size: 7px; display:flex; align-items:center; justify-content:center; color:white;">T</div>
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #2563eb; border: 2px solid #3b82f6; font-size: 7px; display:flex; align-items:center; justify-content:center; color:white;">F</div>
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #374151; font-size: 7px; display:flex; align-items:center; justify-content:center; color:#6b7280;">S</div>
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #374151; font-size: 7px; display:flex; align-items:center; justify-content:center; color:#6b7280;">S</div>
+              </div>
+            </div>
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 16px; padding: 14px;">
+              <div style="font-size: 12px; font-weight: 700; color: #f9fafb; margin-bottom: 4px;">🥦 Pantry</div>
+              <div style="font-size: 10px; color: #6b7280; margin-bottom: 8px;">24 ingredients</div>
+              <div style="height: 4px; background: #374151; border-radius: 99px; overflow: hidden;">
+                <div style="width: 82%; height: 100%; background: #10b981; border-radius: 99px;"></div>
+              </div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 3px;">82% stocked</div>
+            </div>
+            <div style="background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.25); border-radius: 16px; padding: 14px;">
+              <div style="font-size: 12px; font-weight: 700; color: #fb923c; margin-bottom: 4px;">⚠️ At Risk</div>
+              <div style="font-size: 22px; font-weight: 800; color: #f97316;">2</div>
+              <div style="font-size: 9px; color: #9a3412; margin-top: 2px;">Use them up →</div>
+            </div>
+          </div>
+
+          <!-- Recipe grid -->
+          <div style="font-size: 13px; font-weight: 700; color: #f9fafb; margin-bottom: 10px;">Top Matches</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div style="background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+              <div style="height:80px; background: linear-gradient(135deg,#065f46,#0d9488); display:flex; align-items:center; justify-content:center; font-size:28px;">🍛</div>
+              <div style="padding:10px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size:12px; font-weight:600; color:#f9fafb;">Coconut Halloumi Curry</div>
+                  <div style="font-size:10px; color:#6b7280; margin-top:2px;">25 min · 2 servings</div>
+                </div>
+                <span class="tag badge-green">100%</span>
+              </div>
+            </div>
+            <div style="background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+              <div style="height:80px; background: linear-gradient(135deg,#1e3a5f,#1d4ed8); display:flex; align-items:center; justify-content:center; font-size:28px;">🐓</div>
+              <div style="padding:10px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size:12px; font-weight:600; color:#f9fafb;">Honey-Soy Crispy Chicken</div>
+                  <div style="font-size:10px; color:#6b7280; margin-top:2px;">45 min · 2 servings</div>
+                </div>
+                <span class="tag badge-green">99%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ROW 2 — Landscape Cooking Mode ══════════════════════ -->
+  <div class="mb-6">
+    <div class="text-gray-500 text-xs uppercase tracking-widest font-bold mb-4">The Kitchen Killer Feature — Landscape Cooking Mode</div>
+    <div class="text-gray-400 text-sm mb-6">iPad propped on the counter, landscape orientation. Step text you can read from across the kitchen. Big timer. No need to touch the screen mid-cook.</div>
+  </div>
+
+  <div class="flex gap-10 mb-16 flex-wrap">
+
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-sm">Cooking Mode — Landscape Split Pane</div>
+      <div class="ipad ipad-landscape flex" style="overflow: hidden;">
+
+        <!-- Left — Step content -->
+        <div style="flex: 1.4; padding: 32px 32px 32px; display: flex; flex-direction: column; border-right: 1px solid #1f2130; overflow-y: auto;">
+          <!-- Header -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+            <div>
+              <div style="font-size: 11px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">NOW COOKING</div>
+              <div style="font-size: 18px; font-weight: 800; color: #f9fafb; line-height: 1.1;">Honey-Soy Crispy Chicken</div>
+            </div>
+            <button style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 8px 16px; font-size: 12px; color: #f87171; cursor: pointer;">✕ End</button>
+          </div>
+
+          <!-- Step progress -->
+          <div style="display: flex; gap: 6px; margin-bottom: 28px;">
+            <div style="flex:1; height: 4px; background: #10b981; border-radius: 99px;"></div>
+            <div style="flex:1; height: 4px; background: #10b981; border-radius: 99px;"></div>
+            <div style="flex:1; height: 4px; background: #2563eb; border-radius: 99px;"></div>
+            <div style="flex:1; height: 4px; background: #374151; border-radius: 99px;"></div>
+            <div style="flex:1; height: 4px; background: #374151; border-radius: 99px;"></div>
+            <div style="flex:1; height: 4px; background: #374151; border-radius: 99px;"></div>
+          </div>
+
+          <!-- Step number -->
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 44px; height: 44px; background: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: white; flex-shrink: 0;">3</div>
+            <div style="font-size: 11px; color: #6b7280; font-weight: 600;">STEP 3 OF 6</div>
+          </div>
+
+          <!-- BIG step text — readable from the counter -->
+          <div style="font-size: 22px; font-weight: 600; color: #f9fafb; line-height: 1.55; flex: 1; margin-bottom: 28px;">
+            Meanwhile, sandwich each chicken breast between two pieces of baking paper or cling film. <span style="color: #10b981;">Bash with a rolling pin</span> until about 1.5cm thick. Season all over with salt and pepper.
+          </div>
+
+          <!-- Nav buttons — large touch targets -->
+          <div style="display: flex; gap: 12px;">
+            <button style="flex:1; padding: 18px; background: #1e2130; border: 1px solid #2a2d3a; border-radius: 16px; font-size: 16px; font-weight: 700; color: #9ca3af; cursor: pointer;">← Previous</button>
+            <button style="flex:2; padding: 18px; background: #059669; border-radius: 16px; font-size: 16px; font-weight: 700; color: white; cursor: pointer;">Next Step →</button>
+          </div>
+        </div>
+
+        <!-- Right — Timer + Ingredients -->
+        <div style="width: 320px; min-width: 320px; padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+
+          <!-- Timer -->
+          <div style="background: #1e2130; border-radius: 20px; padding: 20px; text-align: center; border: 1px solid #2a2d3a;">
+            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;">Timer</div>
+            <div class="timer-ring" style="margin: 0 auto 12px;">
+              <div class="timer-ring-inner">
+                <div style="font-size: 26px; font-weight: 900; color: #f9fafb; line-height: 1;">24:07</div>
+                <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">remaining</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+              <button style="padding: 10px 20px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; font-size: 13px; font-weight: 700; color: #10b981; cursor: pointer;">⏸ Pause</button>
+              <button style="padding: 10px 20px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; font-size: 13px; font-weight: 700; color: #f87171; cursor: pointer;">↺ Reset</button>
+            </div>
+          </div>
+
+          <!-- Ingredients for this step -->
+          <div style="background: #1e2130; border-radius: 20px; padding: 16px; border: 1px solid #2a2d3a;">
+            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px;">You'll need</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #2a2d3a;">
+                <span style="font-size: 13px; color: #f9fafb;">Chicken Breasts</span>
+                <span style="font-size: 12px; color: #10b981; font-weight: 600;">2</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #2a2d3a;">
+                <span style="font-size: 13px; color: #f9fafb;">Baking paper</span>
+                <span style="font-size: 12px; color: #10b981; font-weight: 600;">2 sheets</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; color: #f9fafb;">Salt & Pepper</span>
+                <span style="font-size: 12px; color: #10b981; font-weight: 600;">to taste</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TeaBot mini -->
+          <div style="background: rgba(79,70,229,0.1); border: 1px solid rgba(79,70,229,0.25); border-radius: 16px; padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <img src="../frontend/public/teabot-chef.png" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid #4f46e5; flex-shrink:0;" />
+            <div>
+              <div style="font-size: 11px; font-weight: 700; color: #a5b4fc;">Ask TeaBot</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 1px;">"How thick should I bash it?"</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ ROW 3 — Recipe Browse Split View ══════════════════════ -->
+  <div class="mb-6">
+    <div class="text-gray-500 text-xs uppercase tracking-widest font-bold mb-4">Recipe Browse — Landscape Split View</div>
+  </div>
+
+  <div class="flex mb-16">
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-sm">Recipe List + Detail — Side by Side</div>
+      <div class="ipad ipad-landscape flex" style="overflow: hidden;">
+
+        <!-- Left list -->
+        <div style="width: 280px; min-width: 280px; border-right: 1px solid #1f2130; overflow-y: auto; padding: 20px 0;">
+          <div style="padding: 0 16px 12px; font-size: 14px; font-weight: 800; color: #f9fafb;">Recipes</div>
+          <div style="padding: 0 8px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); border-radius: 14px; padding: 10px 12px; cursor: pointer;">
+              <div style="font-size: 12px; font-weight: 700; color: #f9fafb; margin-bottom: 3px;">Honey-Soy Crispy Chicken</div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 10px; color: #6b7280;">45 min</span>
+                <span class="tag badge-green">99%</span>
+              </div>
+            </div>
+            <div style="border-radius: 14px; padding: 10px 12px; cursor: pointer;">
+              <div style="font-size: 12px; font-weight: 600; color: #d1d5db; margin-bottom: 3px;">Coconut Halloumi Curry</div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 10px; color: #6b7280;">25 min</span>
+                <span class="tag badge-green">100%</span>
+              </div>
+            </div>
+            <div style="border-radius: 14px; padding: 10px 12px; cursor: pointer;">
+              <div style="font-size: 12px; font-weight: 600; color: #d1d5db; margin-bottom: 3px;">Creamy Chicken Pie</div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 10px; color: #6b7280;">45 min</span>
+                <span class="tag badge-green">98%</span>
+              </div>
+            </div>
+            <div style="border-radius: 14px; padding: 10px 12px; cursor: pointer;">
+              <div style="font-size: 12px; font-weight: 600; color: #d1d5db; margin-bottom: 3px;">Sweet Potato Curry</div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 10px; color: #6b7280;">35 min</span>
+                <span class="tag badge-green">94%</span>
+              </div>
+            </div>
+            <div style="border-radius: 14px; padding: 10px 12px; cursor: pointer;">
+              <div style="font-size: 12px; font-weight: 600; color: #d1d5db; margin-bottom: 3px;">Garlic Butter Salmon</div>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 10px; color: #6b7280;">20 min</span>
+                <span class="tag badge-orange">78%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right detail -->
+        <div style="flex:1; overflow-y: auto;">
+          <div style="height: 200px; background: linear-gradient(135deg, #1e3a5f, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 72px; position: relative;">
+            🐓
+            <div style="position: absolute; bottom: 12px; right: 12px; display: flex; gap: 8px;">
+              <button style="background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 6px 14px; font-size: 11px; font-weight: 600; color: white; cursor: pointer;">↺ Rotate</button>
+            </div>
+          </div>
+          <div style="padding: 20px;">
+            <div style="font-size: 18px; font-weight: 800; color: #f9fafb; margin-bottom: 6px;">Honey-Soy Crispy Chicken</div>
+            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+              <span style="font-size: 12px; color: #6b7280;">⏱ 45 min</span>
+              <span style="font-size: 12px; color: #6b7280;">👥 Serves 2</span>
+              <span class="tag badge-green">99% match</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+              <div style="font-size: 11px; color: #f9fafb; background: #1e2130; border-radius: 10px; padding: 8px 10px; display: flex; justify-content: space-between;"><span>Chicken Breasts</span><span style="color:#10b981;">2 ✓</span></div>
+              <div style="font-size: 11px; color: #f9fafb; background: #1e2130; border-radius: 10px; padding: 8px 10px; display: flex; justify-content: space-between;"><span>Soy Sauce</span><span style="color:#10b981;">10ml ✓</span></div>
+              <div style="font-size: 11px; color: #f9fafb; background: #1e2130; border-radius: 10px; padding: 8px 10px; display: flex; justify-content: space-between;"><span>Honey</span><span style="color:#10b981;">15g ✓</span></div>
+              <div style="font-size: 11px; color: #f9fafb; background: #1e2130; border-radius: 10px; padding: 8px 10px; display: flex; justify-content: space-between;"><span>Potatoes</span><span style="color:#10b981;">450g ✓</span></div>
+            </div>
+            <button style="width: 100%; padding: 16px; background: #059669; border-radius: 16px; font-size: 15px; font-weight: 700; color: white; cursor: pointer; border: none;">Start Cooking →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="max-w-4xl mx-auto mt-4 grid grid-cols-3 gap-4 pb-16">
+    <div class="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+      <div class="text-white font-bold text-sm mb-2">📱 → 📱 Mobile (now)</div>
+      <div class="text-gray-400 text-xs leading-relaxed">Works fine on phones. On iPad it's just a narrow centered column — functional but wastes ~40% of screen. No layout changes needed for mobile.</div>
+    </div>
+    <div class="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+      <div class="text-emerald-400 font-bold text-sm mb-2">📟 iPad Portrait</div>
+      <div class="text-gray-400 text-xs leading-relaxed">Sidebar nav replaces bottom bar. Main content gets more breathing room. TeaBot lives in the sidebar. 2-column recipe grid. Minimal extra code — just a breakpoint switch.</div>
+    </div>
+    <div class="bg-gray-900 rounded-2xl p-5 border border-gray-800">
+      <div class="text-blue-400 font-bold text-sm mb-2">🍳 Landscape Cooking Mode</div>
+      <div class="text-gray-400 text-xs leading-relaxed">The big win. Step text fills the left half — readable from across the kitchen. Timer + ingredients on the right. TeaBot always one tap away. Large touch targets for floury hands.</div>
+    </div>
+  </div>
+
+</body>
+</html>

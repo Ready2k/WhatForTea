@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What's for Tea? — Homepage Mockups</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0f1117; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .phone {
+      width: 390px;
+      min-height: 720px;
+      background: #13151f;
+      border-radius: 40px;
+      overflow: hidden;
+      border: 2px solid #2a2d3a;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .nav-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1a1d2a;
+      border-top: 1px solid #2a2d3a;
+      display: flex;
+      padding: 10px 0 16px;
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+    }
+    .nav-icon { font-size: 20px; }
+    .nav-label { font-size: 10px; color: #6b7280; }
+    .nav-label.active { color: #10b981; }
+    .recipe-img {
+      width: 100%;
+      height: 112px;
+      background: linear-gradient(135deg, #065f46 0%, #0d9488 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+    .badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
+    .badge-orange { background: rgba(249,115,22,0.15); color: #f97316; }
+    .badge-yellow { background: rgba(234,179,8,0.15); color: #eab308; }
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .teabot-btn {
+      position: absolute;
+      bottom: 72px;
+      right: 16px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #312e81;
+      border: 3px solid #4f46e5;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.5);
+      overflow: hidden;
+      cursor: pointer;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .teabot-btn img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .teabot-btn .dot {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 10px;
+      height: 10px;
+      background: #10b981;
+      border-radius: 50%;
+      border: 2px solid #13151f;
+    }
+  </style>
+</head>
+<body class="p-8">
+
+  <div class="mb-10 text-center">
+    <h1 class="text-2xl font-bold text-white mb-1">What's for Tea? — Homepage Redesigns</h1>
+    <p class="text-gray-400 text-sm">Friday 17 April · All four options at a glance</p>
+  </div>
+
+  <div class="flex gap-8 flex-wrap justify-center pb-16">
+
+    <!-- ═══════════════════════════════════════════════
+         OPTION A — Contextual Header
+    ════════════════════════════════════════════════ -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-base">A — Contextual Header</div>
+      <div class="text-gray-400 text-xs text-center max-w-xs">Greeting + today's date in header.<br>This Week tile shows actual date range.</div>
+      <div class="phone">
+        <div style="padding: 24px 20px 100px; overflow-y: auto; height: 720px; box-sizing: border-box;">
+
+          <!-- Resume banner -->
+          <div style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+            <span style="font-size: 20px;">👨‍🍳</span>
+            <div style="flex:1">
+              <div style="font-size: 12px; font-weight: 700; color: #6ee7b7;">Resume cooking</div>
+              <div style="font-size: 11px; color: #34d399;">Crispy Chicken — step 2</div>
+            </div>
+            <span style="color: #6ee7b7; font-size: 16px;">›</span>
+          </div>
+
+          <!-- Header with greeting -->
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 11px; color: #6b7280; font-weight: 500; margin-bottom: 2px;">Good evening, James</div>
+            <div style="font-size: 22px; font-weight: 800; color: #f9fafb; line-height: 1.1;">What's for Tea?</div>
+            <div style="font-size: 12px; color: #4b5563; margin-top: 3px;">Friday 17 April · 5 recipes ready to cook</div>
+          </div>
+
+          <!-- Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+
+            <!-- Cook Now -->
+            <a style="background: #059669; border-radius: 20px; padding: 16px; text-decoration: none; display: block;">
+              <div style="font-size: 30px; font-weight: 800; color: white;">5</div>
+              <div style="font-size: 12px; font-weight: 600; color: #a7f3d0; margin-top: 2px;">Cook Now</div>
+              <div style="font-size: 10px; color: #6ee7b7;">Ready to make</div>
+            </a>
+
+            <!-- Pantry -->
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 20px; padding: 16px; text-decoration: none; display: block;">
+              <div style="font-size: 28px;">🥦</div>
+              <div style="font-size: 12px; font-weight: 600; color: #f9fafb; margin-top: 4px;">My Pantry</div>
+              <div style="font-size: 10px; color: #6b7280;">24 ingredients</div>
+            </a>
+
+            <!-- This Week — with actual dates -->
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 20px; padding: 16px; text-decoration: none; display: block;">
+              <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 2px;">MON 13 – SUN 19 APR</div>
+              <div style="font-size: 12px; font-weight: 600; color: #f9fafb;">This Week</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">3 meals planned</div>
+            </a>
+
+            <!-- Scan Card -->
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 20px; padding: 16px; text-decoration: none; display: block;">
+              <div style="font-size: 28px;">📷</div>
+              <div style="font-size: 12px; font-weight: 600; color: #f9fafb; margin-top: 4px;">Scan Card</div>
+              <div style="font-size: 10px; color: #6b7280;">Add new recipe</div>
+            </a>
+          </div>
+
+          <!-- Top Matches -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="font-size: 13px; font-weight: 700; color: #f9fafb;">Top Matches</div>
+              <div style="font-size: 12px; color: #10b981;">See all</div>
+            </div>
+            <div style="display: flex; gap: 10px; overflow-x: auto; margin: 0 -20px; padding: 0 20px;">
+              <div style="flex-shrink:0; width: 180px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img">🍛</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Coconut Halloumi Curry</div>
+                  <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">25 min</div>
+                  <span class="tag badge-green" style="margin-top: 4px;">✓ Cook Now</span>
+                </div>
+              </div>
+              <div style="flex-shrink:0; width: 180px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img" style="background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);">🥧</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Creamy Chicken Pie</div>
+                  <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">45 min</div>
+                  <span class="tag badge-green" style="margin-top: 4px;">✓ Cook Now</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="teabot-btn">
+          <img src="../frontend/public/teabot-chef.png" alt="TeaBot" />
+          <div class="dot"></div>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label active">Home</div></div>
+          <div class="nav-item"><div class="nav-icon">📚</div><div class="nav-label">Collection</div></div>
+          <div class="nav-item"><div class="nav-icon">🛒</div><div class="nav-label">Shopping</div></div>
+          <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">James</div></div>
+          <div class="nav-item"><div class="nav-icon">🌙</div><div class="nav-label"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         OPTION B — Today First
+    ════════════════════════════════════════════════ -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-base">B — Today First</div>
+      <div class="text-gray-400 text-xs text-center max-w-xs">Hero card = tonight's planned meal.<br>Grid sits below. Most actionable thing is biggest.</div>
+      <div class="phone">
+        <div style="padding: 24px 20px 100px; overflow-y: auto; height: 720px; box-sizing: border-box;">
+
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+              <div style="font-size: 20px; font-weight: 800; color: #f9fafb;">What's for Tea?</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">Friday 17 April</div>
+            </div>
+            <button style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 999px; padding: 6px 12px; font-size: 11px; color: #9ca3af; cursor: pointer;">📅 Planning</button>
+          </div>
+
+          <!-- TONIGHT hero card -->
+          <div style="background: linear-gradient(135deg, #064e3b 0%, #065f46 60%, #0d9488 100%); border-radius: 24px; padding: 20px; margin-bottom: 14px; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; right: 0; width: 140px; height: 100%; background: url('data:image/svg+xml,...') no-repeat; opacity: 0.15;"></div>
+            <div style="font-size: 10px; font-weight: 700; color: #6ee7b7; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px;">Tonight's Plan</div>
+            <div style="font-size: 17px; font-weight: 800; color: white; line-height: 1.2; margin-bottom: 6px;">Honey-Soy Crispy Chicken</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="font-size: 11px; color: #a7f3d0;">⏱ 45 min</span>
+              <span style="font-size: 11px; color: #a7f3d0;">·</span>
+              <span style="font-size: 11px; color: #a7f3d0;">👥 2 servings</span>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              <button style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; padding: 7px 16px; font-size: 12px; font-weight: 700; color: white; cursor: pointer;">Start Cooking</button>
+              <button style="background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 7px 12px; font-size: 12px; color: rgba(255,255,255,0.7); cursor: pointer;">Change</button>
+            </div>
+          </div>
+
+          <!-- Stats strip -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 14px; padding: 10px; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #10b981;">5</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">Ready</div>
+            </div>
+            <div style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 14px; padding: 10px; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #f9fafb;">3</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">Planned</div>
+            </div>
+            <div style="background: #1e2130; border: 1px solid rgba(249,115,22,0.3); border-radius: 14px; padding: 10px; text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: #f97316;">2</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">At risk</div>
+            </div>
+          </div>
+
+          <!-- Quick actions row -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px;">
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 16px; padding: 12px 14px; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 22px;">🥦</span>
+              <div>
+                <div style="font-size: 12px; font-weight: 600; color: #f9fafb;">Pantry</div>
+                <div style="font-size: 10px; color: #6b7280;">24 items</div>
+              </div>
+            </a>
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 16px; padding: 12px 14px; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 22px;">📷</span>
+              <div>
+                <div style="font-size: 12px; font-weight: 600; color: #f9fafb;">Scan Card</div>
+                <div style="font-size: 10px; color: #6b7280;">Add recipe</div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Top Matches -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="font-size: 13px; font-weight: 700; color: #f9fafb;">Top Matches</div>
+              <div style="font-size: 12px; color: #10b981;">See all</div>
+            </div>
+            <div style="display: flex; gap: 10px; overflow-x: auto; margin: 0 -20px; padding: 0 20px;">
+              <div style="flex-shrink:0; width: 165px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img">🍛</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Coconut Halloumi Curry</div>
+                  <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">25 min</div>
+                </div>
+              </div>
+              <div style="flex-shrink:0; width: 165px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img" style="background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);">🥧</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Creamy Chicken Pie</div>
+                  <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">45 min</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="teabot-btn">
+          <img src="../frontend/public/teabot-chef.png" alt="TeaBot" />
+          <div class="dot"></div>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label active">Home</div></div>
+          <div class="nav-item"><div class="nav-icon">📚</div><div class="nav-label">Collection</div></div>
+          <div class="nav-item"><div class="nav-icon">🛒</div><div class="nav-label">Shopping</div></div>
+          <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">James</div></div>
+          <div class="nav-item"><div class="nav-icon">🌙</div><div class="nav-label"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         OPTION C — Full Width Hero
+    ════════════════════════════════════════════════ -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-base">C — Full Width Hero</div>
+      <div class="text-gray-400 text-xs text-center max-w-xs">Cook Now spans full width as hero.<br>Secondary tiles in a row below.</div>
+      <div class="phone">
+        <div style="padding: 24px 20px 100px; overflow-y: auto; height: 720px; box-sizing: border-box;">
+
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+              <div style="font-size: 21px; font-weight: 800; color: #f9fafb;">What's for Tea?</div>
+              <div style="font-size: 11px; color: #6b7280;">Fri 17 Apr · Plan your week</div>
+            </div>
+            <button style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 999px; padding: 6px 12px; font-size: 11px; color: #9ca3af;">📅 Planning</button>
+          </div>
+
+          <!-- Cook Now HERO — full width -->
+          <a style="display: block; background: linear-gradient(135deg, #059669 0%, #0d9488 100%); border-radius: 24px; padding: 22px 22px 20px; text-decoration: none; margin-bottom: 10px; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 64px; opacity: 0.2;">🍽️</div>
+            <div style="font-size: 11px; font-weight: 600; color: #a7f3d0; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;">Ready to Cook</div>
+            <div style="font-size: 48px; font-weight: 900; color: white; line-height: 1;">5</div>
+            <div style="font-size: 16px; font-weight: 700; color: #a7f3d0; margin-top: 2px;">Recipes Available</div>
+            <div style="margin-top: 14px; display: inline-block; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 7px 18px; font-size: 13px; font-weight: 700; color: white;">Browse Matches →</div>
+          </a>
+
+          <!-- Secondary row — 3 tiles -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px;">
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 18px; padding: 14px 10px; text-decoration: none; text-align: center;">
+              <div style="font-size: 22px; margin-bottom: 4px;">🥦</div>
+              <div style="font-size: 11px; font-weight: 600; color: #f9fafb;">Pantry</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 1px;">24 items</div>
+            </a>
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 18px; padding: 14px 10px; text-decoration: none; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-bottom: 2px; font-size: 9px;">13–19 APR</div>
+              <div style="font-size: 22px; margin-bottom: 2px;">📅</div>
+              <div style="font-size: 11px; font-weight: 600; color: #f9fafb;">This Week</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 1px;">3 planned</div>
+            </a>
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 18px; padding: 14px 10px; text-decoration: none; text-align: center;">
+              <div style="font-size: 22px; margin-bottom: 4px;">📷</div>
+              <div style="font-size: 11px; font-weight: 600; color: #f9fafb;">Scan</div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 1px;">Add recipe</div>
+            </a>
+          </div>
+
+          <!-- Top Matches -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="font-size: 13px; font-weight: 700; color: #f9fafb;">Top Matches</div>
+              <div style="font-size: 12px; color: #10b981;">See all</div>
+            </div>
+            <div style="display: flex; gap: 10px; overflow-x: auto; margin: 0 -20px; padding: 0 20px;">
+              <div style="flex-shrink:0; width: 170px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img">🍛</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Coconut Halloumi Curry</div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <span style="font-size: 10px; color: #6b7280;">25 min</span>
+                    <span class="tag badge-green">100%</span>
+                  </div>
+                </div>
+              </div>
+              <div style="flex-shrink:0; width: 170px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img" style="background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);">🥧</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Creamy Chicken Pie</div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <span style="font-size: 10px; color: #6b7280;">45 min</span>
+                    <span class="tag badge-green">98%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="teabot-btn">
+          <img src="../frontend/public/teabot-chef.png" alt="TeaBot" />
+          <div class="dot"></div>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label active">Home</div></div>
+          <div class="nav-item"><div class="nav-icon">📚</div><div class="nav-label">Collection</div></div>
+          <div class="nav-item"><div class="nav-icon">🛒</div><div class="nav-label">Shopping</div></div>
+          <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">James</div></div>
+          <div class="nav-item"><div class="nav-icon">🌙</div><div class="nav-label"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         OPTION D — Glanceable Dashboard
+    ════════════════════════════════════════════════ -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="text-white font-bold text-base">D — Glanceable Dashboard</div>
+      <div class="text-gray-400 text-xs text-center max-w-xs">Same 2×2 grid but tiles show live data.<br>Rich, info-dense, no wasted space.</div>
+      <div class="phone">
+        <div style="padding: 24px 20px 100px; overflow-y: auto; height: 720px; box-sizing: border-box;">
+
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div>
+              <div style="font-size: 21px; font-weight: 800; color: #f9fafb;">What's for Tea?</div>
+            </div>
+            <button style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 999px; padding: 6px 12px; font-size: 11px; color: #9ca3af;">📅 Planning</button>
+          </div>
+          <div style="font-size: 12px; color: #4b5563; margin-bottom: 18px;">Friday 17 April</div>
+
+          <!-- 2x2 Data tiles -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+
+            <!-- Cook Now with list preview -->
+            <a style="background: linear-gradient(145deg, #059669, #0d9488); border-radius: 20px; padding: 14px; text-decoration: none; grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 11px; color: #a7f3d0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;">Cook Now</div>
+                <div style="font-size: 40px; font-weight: 900; color: white; line-height: 1; margin: 2px 0;">5</div>
+                <div style="font-size: 11px; color: #6ee7b7;">recipes ready to make</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-bottom: 4px;">Top picks tonight</div>
+                <div style="font-size: 11px; color: white; font-weight: 600; margin-bottom: 2px;">🍛 Halloumi Curry</div>
+                <div style="font-size: 11px; color: white; font-weight: 600; margin-bottom: 2px;">🥧 Chicken Pie</div>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.5);">+3 more →</div>
+              </div>
+            </a>
+
+            <!-- Pantry with health bar -->
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 20px; padding: 14px; text-decoration: none;">
+              <div style="font-size: 22px; margin-bottom: 6px;">🥦</div>
+              <div style="font-size: 12px; font-weight: 700; color: #f9fafb;">My Pantry</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">24 ingredients</div>
+              <div style="margin-top: 8px; height: 4px; background: #374151; border-radius: 99px; overflow: hidden;">
+                <div style="width: 82%; height: 100%; background: #10b981; border-radius: 99px;"></div>
+              </div>
+              <div style="font-size: 9px; color: #6b7280; margin-top: 3px;">82% stocked</div>
+            </a>
+
+            <!-- This Week with day dots -->
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 20px; padding: 14px; text-decoration: none;">
+              <div style="font-size: 9px; font-weight: 700; color: #10b981; margin-bottom: 4px;">13–19 APR</div>
+              <div style="font-size: 12px; font-weight: 700; color: #f9fafb;">This Week</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">3 of 7 planned</div>
+              <!-- Day dots -->
+              <div style="display: flex; gap: 4px; margin-top: 8px;">
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; font-size: 8px;">M</div>
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #374151; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #6b7280;">T</div>
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #374151; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #6b7280;">W</div>
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; font-size: 8px;">T</div>
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #2563eb; border: 2px solid #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 8px;">F</div>
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #374151; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #6b7280;">S</div>
+                <div style="width: 16px; height: 16px; border-radius: 50%; background: #374151; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #6b7280;">S</div>
+              </div>
+            </a>
+
+          </div>
+
+          <!-- Scan + at-risk strip -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
+            <a style="background: #1e2130; border: 1px solid #2a2d3a; border-radius: 16px; padding: 12px; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">📷</span>
+              <div>
+                <div style="font-size: 11px; font-weight: 600; color: #f9fafb;">Scan Card</div>
+                <div style="font-size: 9px; color: #6b7280;">Add recipe</div>
+              </div>
+            </a>
+            <a style="background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.25); border-radius: 16px; padding: 12px; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 20px;">⚠️</span>
+              <div>
+                <div style="font-size: 11px; font-weight: 600; color: #fb923c;">2 going off</div>
+                <div style="font-size: 9px; color: #9a3412;">Use them up</div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Top Matches -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="font-size: 13px; font-weight: 700; color: #f9fafb;">Top Matches</div>
+              <div style="font-size: 12px; color: #10b981;">See all</div>
+            </div>
+            <div style="display: flex; gap: 10px; overflow-x: auto; margin: 0 -20px; padding: 0 20px;">
+              <div style="flex-shrink:0; width: 165px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img">🍛</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Coconut Halloumi Curry</div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <span style="font-size: 10px; color: #6b7280;">25 min</span>
+                    <span class="tag badge-green">100%</span>
+                  </div>
+                </div>
+              </div>
+              <div style="flex-shrink:0; width: 165px; background:#1e2130; border-radius:16px; overflow:hidden; border:1px solid #2a2d3a;">
+                <div class="recipe-img" style="background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);">🥧</div>
+                <div style="padding: 10px;">
+                  <div style="font-size: 12px; font-weight: 600; color: #f9fafb; line-height: 1.3;">Creamy Chicken Pie</div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                    <span style="font-size: 10px; color: #6b7280;">45 min</span>
+                    <span class="tag badge-green">98%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="teabot-btn">
+          <img src="../frontend/public/teabot-chef.png" alt="TeaBot" />
+          <div class="dot"></div>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label active">Home</div></div>
+          <div class="nav-item"><div class="nav-icon">📚</div><div class="nav-label">Collection</div></div>
+          <div class="nav-item"><div class="nav-icon">🛒</div><div class="nav-label">Shopping</div></div>
+          <div class="nav-item"><div class="nav-icon">👤</div><div class="nav-label">James</div></div>
+          <div class="nav-item"><div class="nav-icon">🌙</div><div class="nav-label"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="max-w-4xl mx-auto mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 pb-16">
+    <div class="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+      <div class="text-white font-bold text-sm mb-1">A — Contextual Header</div>
+      <div class="text-gray-400 text-xs">Smallest change. Adds greeting + date. This Week tile shows real date range. Everything else stays put.</div>
+    </div>
+    <div class="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+      <div class="text-white font-bold text-sm mb-1">B — Today First</div>
+      <div class="text-gray-400 text-xs">Tonight's planned meal is the hero. Best for daily use once plans are set. Requires tonight's meal to be in the planner.</div>
+    </div>
+    <div class="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+      <div class="text-white font-bold text-sm mb-1">C — Full Width Hero</div>
+      <div class="text-gray-400 text-xs">Cook Now dominates as a wide hero. Secondary tiles shrink to 3-col. Clean visual hierarchy, bold and modern.</div>
+    </div>
+    <div class="bg-gray-900 rounded-2xl p-4 border border-gray-800">
+      <div class="text-white font-bold text-sm mb-1">D — Glanceable Dashboard</div>
+      <div class="text-gray-400 text-xs">Same grid, much richer data. Cook Now spans full width with top recipes listed inline. Week dots show planned days. Pantry health bar.</div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -3,6 +3,7 @@
 // StepTimer is now a fully-controlled/stateless component.
 // All timer state is managed by the parent so it persists when the user
 // navigates between cooking steps.
+import { CheckCircle } from 'lucide-react';
 
 function formatTime(s: number): string {
   const m = Math.floor(s / 60);
@@ -27,7 +28,7 @@ export function StepTimer({ remaining, total, running, done, onStart, onPause, o
   return (
     <div className="flex flex-col items-center gap-3">
       {done ? (
-        <p className="text-3xl font-bold text-emerald-500">✅ Done!</p>
+        <p className="flex items-center gap-2 text-2xl font-bold text-emerald-500"><CheckCircle className="w-7 h-7" /> Done!</p>
       ) : (
         <p className={`text-4xl font-mono font-bold tabular-nums transition-colors ${
           isLow ? 'text-orange-500 dark:text-orange-400' : 'text-gray-900 dark:text-white'

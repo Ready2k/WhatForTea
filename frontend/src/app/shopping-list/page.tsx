@@ -12,6 +12,7 @@ import {
   type ShoppingItem,
 } from '@/lib/api';
 import type { Ingredient, ShoppingListItem } from '@/lib/types';
+import { ShoppingCart } from 'lucide-react';
 
 export default function ShoppingListPage() {
   const qc = useQueryClient();
@@ -320,7 +321,7 @@ export default function ShoppingListPage() {
           <>
             {Object.keys(shoppingList.zones).length === 0 ? (
               <div className="text-center py-10 text-gray-400 dark:text-gray-500">
-                <p className="text-3xl mb-2">🛒</p>
+                <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm">Nothing needed — pantry covers everything, or no meals planned.</p>
               </div>
             ) : (

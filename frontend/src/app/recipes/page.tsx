@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useMatches, useCollections, useCollectionRecipeIds } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import type { RecipeMatchResult } from '@/lib/types';
+import { UtensilsCrossed, Clock, Search } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const FILTER_TABS = [
@@ -35,7 +36,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <span className="text-5xl">🍽️</span>
+          <UtensilsCrossed className="w-12 h-12 text-emerald-400/50" />
         )}
       </div>
       <div className="p-3 space-y-1.5">
@@ -55,7 +56,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
         <div className="flex items-center gap-2 flex-wrap">
           {match.recipe.cooking_time_mins && (
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              ⏱ {match.recipe.cooking_time_mins} min
+              <Clock className="w-3 h-3 inline mr-0.5" />{match.recipe.cooking_time_mins} min
             </span>
           )}
           {match.recipe.last_cooked_at && (() => {
@@ -313,7 +314,7 @@ function RecipesContent() {
       {/* ── Empty state ──────────────────────────────────────────────────────── */}
       {!isLoading && !isError && filtered.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-5xl mb-3">{hasActiveFilters ? '🔍' : '🍽️'}</p>
+          {hasActiveFilters ? <Search className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" /> : <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />}
           <p className="font-medium text-gray-600 dark:text-gray-300">
             {hasActiveFilters ? 'No recipes match your search' : 'No recipes found'}
           </p>

@@ -14,6 +14,7 @@ import {
 import { fetchRecipes } from '@/lib/api';
 import { useQuery } from '@tanstack/react-query';
 import type { Collection } from '@/lib/types';
+import { FolderOpen } from 'lucide-react';
 
 const PRESET_COLOURS = [
   '#10b981', // emerald
@@ -266,7 +267,7 @@ export default function CollectionsPage() {
 
       {!isLoading && collections.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <p className="text-5xl mb-3">📁</p>
+          <FolderOpen className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
           <p className="font-medium text-gray-600 dark:text-gray-300">No collections yet</p>
           <p className="text-sm mt-1">Create a collection to organise your recipes</p>
         </div>

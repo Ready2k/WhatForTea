@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { useIngredients, useResolveRecipeIngredient } from '@/lib/hooks';
 import { createIngredient } from '@/lib/api';
 import type { RecipeIngredient, Ingredient } from '@/lib/types';
@@ -248,7 +249,7 @@ export function FixIngredients({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left"
       >
-        <span className="text-orange-500 text-lg">⚠️</span>
+        <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">
             {remaining} ingredient{remaining !== 1 ? 's' : ''} not matched to library

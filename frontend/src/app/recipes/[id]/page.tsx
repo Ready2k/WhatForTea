@@ -8,6 +8,7 @@ import { useRecipe, useMatches, useDeleteRecipe } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import { FixIngredients } from '@/components/FixIngredients';
 import { rotateRecipePhoto, rotateStepImage, uploadRecipePhoto } from '@/lib/api';
+import { UtensilsCrossed, Clock, Users, Timer } from 'lucide-react';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import type { IngredientMatchDetail, RecipeIngredient } from '@/lib/types';
 import { updateRecipe, getCookingHistory } from '@/lib/api';
@@ -244,7 +245,7 @@ export default function RecipeDetailPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
-            <span className="text-7xl">🍽️</span>
+            <UtensilsCrossed className="w-16 h-16 text-emerald-400/40" />
             <label className="px-4 py-2 bg-white/20 backdrop-blur-md border border-white/30 rounded-xl text-white text-sm font-medium hover:bg-white/30 transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-emerald-500">
               <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={isUploading} />
               {isUploading ? 'Uploading...' : 'Add Photo'}
@@ -304,8 +305,8 @@ export default function RecipeDetailPage() {
             {matchData && <MatchBadge score={matchData.score} category={matchData.category} />}
           </div>
           <div className="flex items-center gap-3 mt-2 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-            {recipe.cooking_time_mins && <span>⏱ {recipe.cooking_time_mins} min</span>}
-            <span>👥 Serves {recipe.base_servings}</span>
+            {recipe.cooking_time_mins && <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{recipe.cooking_time_mins} min</span>}
+            <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />Serves {recipe.base_servings}</span>
             {recipe.total_cooks > 0 && (
               <span className="flex items-center gap-1">
                 {recipe.average_rating != null ? (
@@ -556,7 +557,7 @@ export default function RecipeDetailPage() {
                     />
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                        <span>⏱</span>
+                        <Timer className="w-3.5 h-3.5" />
                         <input
                           type="number"
                           min="0"
@@ -660,7 +661,7 @@ export default function RecipeDetailPage() {
                     )}
                     {step.timer_seconds && (
                       <span className="inline-block mt-1 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
-                        ⏱ {Math.round(step.timer_seconds / 60)} min timer
+                        <Timer className="w-3 h-3 inline mr-1" />{Math.round(step.timer_seconds / 60)} min timer
                       </span>
                     )}
                   </div>

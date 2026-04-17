@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, ShoppingBasket } from 'lucide-react';
 import { bulkConfirmPantry } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReceiptItem } from '@/lib/types';
@@ -73,7 +73,7 @@ export function ReceiptReview({ items, onDone }: Props) {
   if (done) {
     return (
       <div className="text-center py-10 space-y-3">
-        <div className="text-5xl">🛒</div>
+        <ShoppingBasket className="w-12 h-12 mx-auto text-emerald-500" />
         <p className="text-base font-semibold text-gray-900 dark:text-white">
           {resolvedSelected.length} item{resolvedSelected.length !== 1 ? 's' : ''} added to your pantry
         </p>
