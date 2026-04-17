@@ -430,11 +430,13 @@ export default function CookingModePage() {
   const currentTimerState = currentStep ? timerStates[currentStep.id] : undefined;
 
   return (
-    <div
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col select-none transition-colors duration-200"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white select-none transition-colors duration-200">
+      {/* Left Pane: Main Cooking Flow */}
+      <div 
+        className="flex-1 flex flex-col w-full min-w-0"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
       {/* CSS for bell ring animation */}
       <style>{`
         @keyframes bellRing {
@@ -555,7 +557,7 @@ export default function CookingModePage() {
       </div>
 
       {/* Step content */}
-      <div className="flex-1 flex flex-col px-4 pb-2 max-w-lg mx-auto w-full overflow-y-auto">
+      <div className="flex-1 flex flex-col px-4 md:px-12 pb-2 max-w-2xl md:max-w-4xl mx-auto w-full overflow-y-auto pt-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-500/30">
             <span className="text-white font-bold text-sm">{currentIndex + 1}</span>
@@ -623,7 +625,7 @@ export default function CookingModePage() {
                     {sub.label.replace(')', '')}
                   </span>
                 )}
-                <p className={`text-base font-medium leading-relaxed ${
+                <p className={`text-base md:text-[22px] md:leading-normal font-medium leading-relaxed ${
                   isImportant ? 'text-red-800 dark:text-red-200'
                     : isTip   ? 'text-amber-800 dark:text-amber-200'
                     : 'text-gray-800 dark:text-gray-100'
@@ -638,7 +640,7 @@ export default function CookingModePage() {
         </div>
 
         {currentTimerState && (
-          <div className="mt-5 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div className="mt-6 p-4 md:hidden rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <StepTimer
               remaining={currentTimerState.remaining}
               total={currentTimerState.total}
@@ -653,7 +655,7 @@ export default function CookingModePage() {
       </div>
 
       {/* Navigation footer */}
-      <footer className="px-4 pb-8 pt-3 max-w-lg mx-auto w-full space-y-3">
+      <footer className="px-4 md:px-12 pb-8 pt-3 max-w-2xl md:max-w-4xl mx-auto w-full space-y-3">
         {isLast && (
           <button
             onClick={() => setShowRating(true)}
@@ -685,6 +687,68 @@ export default function CookingModePage() {
           )}
         </div>
       </footer>
+      </div> {/* End Left Pane */}
+
+      {/* Right Pane: iPad Utilities Sidebar */}
+      <aside className="hidden md:flex flex-col w-[340px] flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0f1117] h-screen overflow-y-auto pt-8 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
+        {currentTimerState ? (
+          <div className="px-6 mb-8">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><BellIcon className="w-4 h-4 text-orange-500" /> Active Timer</h3>
+            <div className="p-4 rounded-3xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 shadow-sm">
+              <StepTimer
+                remaining={currentTimerState.remaining}
+                total={currentTimerState.total}
+                running={currentTimerState.running}
+                done={currentTimerState.done}
+                onStart={() => handleTimerStart(currentStep.id)}
+                onPause={() => handleTimerPause(currentStep.id)}
+                onReset={() => handleTimerReset(currentStep.id)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 mb-8">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2 tracking-wide"><BellIcon className="w-4 h-4 text-gray-400" /> Timer</h3>
+            <div className="text-center py-10 rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700/50">
+               <BellIcon className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2 opacity-50" />
+               <p className="text-[11px] text-gray-500 font-medium">No timer required<br/>for this step</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 px-6 overflow-y-auto">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 tracking-wide">You&apos;ll Need</h3>
+          <ul className="space-y-2">
+            {recipe.ingredients.map((ing, i) => (
+              <li key={i} className="text-[13px] flex justify-between border-b border-gray-100 dark:border-gray-800/60 pb-2.5 last:border-0 pointer-events-none">
+                <span className="text-gray-700 dark:text-gray-300 font-medium truncate pr-3">{ing.raw_name}</span>
+                <span className="text-gray-500 dark:text-gray-500 text-right whitespace-nowrap font-medium">{ing.quantity}{ing.unit ? ` ${ing.unit}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        
+        {/* TeaBot Shortcut */}
+        <div className="p-6 mt-auto">
+           <button 
+             onClick={startTeabotCommand}
+             disabled={teabotActive}
+             className={`w-full p-4 rounded-3xl flex items-center gap-4 transition-all hover:scale-[1.02] active:scale-95 shadow-sm ${teabotActive ? 'bg-indigo-600 text-white animate-pulse' : 'bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 border border-indigo-100 dark:border-indigo-800/50 text-indigo-900 dark:text-indigo-300'}`}
+           >
+             <div className="relative">
+               {teabotActive && <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-600"></span>}
+               <img src="/teabot-chef.png" alt="TeaBot" className="w-12 h-12 rounded-full border-[2px] border-white dark:border-indigo-700/50 bg-indigo-200" />
+             </div>
+             <div className="text-left leading-tight py-1 flex-1">
+               <div className="text-sm font-extrabold tracking-tight">Ask TeaBot</div>
+               <div className={`text-[10px] font-medium mt-0.5 ${teabotActive ? 'text-white/80' : 'text-indigo-700/80 dark:text-indigo-400/80'}`}>{teabotActive ? 'Listening...' : 'Voice commands'}</div>
+             </div>
+             <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/50 dark:bg-indigo-900/50 ${teabotActive ? 'bg-white/20 text-white' : 'text-indigo-500'}`}>
+               <MicIcon className="w-4 h-4" />
+             </div>
+           </button>
+        </div>
+      </aside>
 
       {/* Post-cook rating overlay */}
       {showRating && (

@@ -36,12 +36,12 @@ export default function RootLayout({
       </head>
       <body className="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white antialiased font-sans">
         <Providers>
-          <div className="min-h-screen pb-16">
+          <div className="min-h-screen pb-16 md:pb-0 md:pl-[220px]">
             {children}
           </div>
           <ShellUI />
           {/* Release version info */}
-          <div className="fixed bottom-16 left-2 z-40 p-1">
+          <div className="fixed bottom-16 md:bottom-2 left-2 z-40 p-1 pointer-events-none">
             <span className="text-[10px] font-mono text-gray-300 dark:text-gray-600 select-none opacity-50 hover:opacity-100 transition-opacity">
               {process.env.NEXT_PUBLIC_RELEASE_ID || 'dev'}
             </span>

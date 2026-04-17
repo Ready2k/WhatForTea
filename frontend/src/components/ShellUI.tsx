@@ -7,6 +7,7 @@
  */
 import { usePathname } from 'next/navigation';
 import { Nav } from '@/components/nav';
+import { Sidebar } from '@/components/Sidebar';
 import { TeaBotPanel } from '@/components/TeaBot/TeaBotPanel';
 
 export function ShellUI() {
@@ -14,6 +15,7 @@ export function ShellUI() {
   if (pathname === '/login') return null;
   return (
     <>
+      <Sidebar />
       <Nav />
       <TeaBotPanel />
     </>
