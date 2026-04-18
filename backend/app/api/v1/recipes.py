@@ -116,6 +116,14 @@ async def get_ingest_status(
     )
 
 
+@router.get("/ingest/pending", response_model=list[IngestStatusResponse])
+async def get_pending_ingest_jobs(db: AsyncSession = Depends(get_db)):
+    """Return all ingest jobs currently waiting for user review."""
+    stmt = select(IngestJob).where(IngestJob.status == IngestStatus.REVIEW).order_by(IngestJob.created_at.desc())
+    jobs = (await db.execute(stmt)).scalars().all()
+    return [IngestStatusResponse(job_id=j.id, status=j.status, error_message=j.error_message) for j in jobs]
+
+
 @router.get("/ingest/{job_id}/review", response_model=IngestReviewPayload)
 async def get_ingest_review(
     job_id: uuid.UUID,

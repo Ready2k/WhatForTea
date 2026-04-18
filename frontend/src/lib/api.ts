@@ -17,22 +17,35 @@ import type {
 
 const BASE = '';
 
-// 401 → attempt one silent token refresh, then retry original request
+// Singleton refresh promise — ensures only one token refresh fires at a time.
+// All concurrent 401s share the same promise rather than each calling /refresh.
+let _refreshPromise: Promise<boolean> | null = null;
+
+function refreshToken(): Promise<boolean> {
+  if (!_refreshPromise) {
+    _refreshPromise = fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+      .then((r) => r.ok)
+      .finally(() => { _refreshPromise = null; });
+  }
+  return _refreshPromise;
+}
+
+function redirectToLogin() {
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
+// 401 → one silent token refresh (mutex), then retry original request once
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, { credentials: 'include', ...options });
 
   if (res.status === 401) {
-    // Try to refresh the access token
-    const refreshRes = await fetch('/api/auth/refresh', {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (refreshRes.ok) {
-      // Retry the original request with the new cookie
+    const refreshed = await refreshToken();
+    if (refreshed) {
       const retryRes = await fetch(`${BASE}${url}`, { credentials: 'include', ...options });
       if (retryRes.status === 401) {
-        // Still unauthorized after refresh — redirect to login
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') window.location.href = '/login';
+        redirectToLogin();
         throw new Error('Authentication required');
       }
       if (!retryRes.ok) {
@@ -47,10 +60,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
       if (retryRes.status === 204) return undefined as unknown as T;
       return retryRes.json() as Promise<T>;
     }
-    // Refresh failed — redirect to login
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    redirectToLogin();
     throw new Error('Authentication required');
   }
 
@@ -242,6 +252,10 @@ export function ingestReceipt(formData: FormData): Promise<ReceiptIngestResponse
 
 export function getIngestStatus(jobId: string): Promise<IngestStatusResponse> {
   return request<IngestStatusResponse>(`/api/v1/recipes/ingest/${jobId}/status`);
+}
+
+export function getPendingIngestJobs(): Promise<IngestStatusResponse[]> {
+  return request<IngestStatusResponse[]>('/api/v1/recipes/ingest/pending');
 }
 
 export function importRecipeFromUrl(url: string): Promise<{ job_id: string }> {

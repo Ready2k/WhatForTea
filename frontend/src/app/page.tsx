@@ -9,7 +9,7 @@ import { getActiveCookingSession } from '@/lib/api';
 import type { RecipeMatchResult } from '@/lib/types';
 import {
   UtensilsCrossed, ChefHat, AlertTriangle, Flame, CalendarDays,
-  ShoppingBasket, ScanLine, PackageSearch, Clock,
+  ShoppingBasket, ScanLine, PackageSearch, Clock, Users, Sparkles,
 } from 'lucide-react';
 
 type Mode = 'planning' | 'hangry';
@@ -127,9 +127,9 @@ export default function Dashboard() {
           <div className="text-[10px] font-bold text-emerald-300 tracking-[0.1em] uppercase mb-1.5 z-10 relative">Tonight&apos;s Plan</div>
           <div className="text-xl md:text-2xl font-extrabold text-white leading-tight mb-2 z-10 relative">{tonightPlan.recipe.title}</div>
           <div className="flex gap-2 items-center text-emerald-100/90 text-xs font-medium z-10 relative">
-            <span>⏱ {tonightPlan.recipe.cooking_time_mins || '?'} min</span>
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{tonightPlan.recipe.cooking_time_mins || '?'} min</span>
             <span className="opacity-50">·</span>
-            <span>👥 {tonightPlan.servings || 2} servings</span>
+            <span className="flex items-center gap-1"><Users className="w-3 h-3" />{tonightPlan.servings || 2} servings</span>
           </div>
           <div className="mt-5 flex gap-2 z-10 relative">
             <Link href={`/recipes/${tonightPlan.recipe_id}/cook`} className="bg-white/20 border border-white/30 rounded-xl px-5 py-2 text-xs font-bold text-white hover:bg-white/30 transition-colors shadow-sm text-center">Start Cooking</Link>
@@ -159,7 +159,7 @@ export default function Dashboard() {
         )}
 
         <Link href="/pantry" className="bg-white dark:bg-gray-800 border-transparent dark:border-gray-700/60 border hover:border-gray-300 dark:hover:border-gray-500 rounded-[20px] p-4 transition-colors">
-          <div className="text-2xl mb-1.5">🥦</div>
+          <ShoppingBasket className="w-6 h-6 mb-1.5 text-emerald-500" />
           <div className="text-xs font-bold text-gray-900 dark:text-white">My Pantry</div>
           <div className="text-[10px] text-gray-500 mt-0.5 font-medium">{available?.length ?? 0} ingredients</div>
           <div className="mt-2.5 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -188,7 +188,7 @@ export default function Dashboard() {
         {/* Scan / At Risk subgrid */}
         <div className="col-span-2 lg:col-span-2 grid gap-3 grid-cols-2">
           <Link href="/ingest" className="bg-white dark:bg-gray-800 border-transparent dark:border-gray-700/60 border hover:border-gray-300 dark:hover:border-gray-500 rounded-[16px] p-3 pl-4 flex items-center gap-3 transition-colors col-span-2 lg:col-span-1">
-            <div className="text-xl">📷</div>
+            <ScanLine className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <div>
               <div className="text-[11px] font-bold text-gray-900 dark:text-white">Scan Card</div>
               <div className="text-[9px] text-gray-500 font-medium mt-0.5">Add recipe</div>
@@ -197,7 +197,7 @@ export default function Dashboard() {
           
           {atRiskCount > 0 ? (
             <Link href="/recipes?sort=use_it_up" className="bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20 border hover:bg-orange-100 dark:hover:bg-orange-500/30 rounded-[16px] p-3 pl-4 flex items-center gap-3 transition-colors col-span-2 lg:col-span-1">
-              <div className="text-xl leading-none">⚠️</div>
+              <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
               <div>
                 <div className="text-[11px] font-bold text-orange-600 dark:text-orange-400">{atRiskCount} going off</div>
                 <div className="text-[9px] text-orange-800 dark:text-orange-600/70 font-medium mt-0.5">Use them up</div>
@@ -205,7 +205,7 @@ export default function Dashboard() {
             </Link>
           ) : (
             <div className="bg-white/50 dark:bg-gray-800/30 border border-transparent dark:border-gray-700/30 rounded-[16px] p-3 pl-4 flex items-center gap-3 col-span-2 lg:col-span-1 border-dashed">
-              <div className="text-xl leading-none opacity-50 grayscale">✨</div>
+              <Sparkles className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
               <div>
                 <div className="text-[11px] font-bold text-gray-400 dark:text-gray-500">Pantry clear</div>
                 <div className="text-[9px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">Nothing going off</div>

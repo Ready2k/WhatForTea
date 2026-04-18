@@ -31,6 +31,7 @@ import {
   getHousehold,
   rotateInviteCode,
   getHouseholdMembers,
+  getPendingIngestJobs,
 } from './api';
 
 export function useIngredients(q?: string) {
@@ -180,6 +181,14 @@ export function useSetWeekPlan() {
 export function useIngestRecipe() {
   return useMutation({
     mutationFn: ingestRecipe,
+  });
+}
+
+export function usePendingIngestJobs() {
+  return useQuery({
+    queryKey: ['ingest', 'pending'],
+    queryFn: getPendingIngestJobs,
+    staleTime: 30_000,
   });
 }
 

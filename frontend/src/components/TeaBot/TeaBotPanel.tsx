@@ -439,18 +439,20 @@ export function TeaBotPanel() {
   };
 
   return (
+    <>
+      {/* Backdrop — CSS-controlled so pointer-events: none when closed.
+          Kept outside AnimatePresence to prevent iOS Safari getting it stuck
+          in the DOM at opacity:0 but still eating all touch events. */}
+      <div
+        onClick={() => setIsOpen(false)}
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-200 ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsOpen(false)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity"
-          />
-
           {/* Side Panel / Bottom Sheet */}
           <motion.div
             initial={isMobile ? { y: '100%' } : { x: '100%' }}
@@ -668,5 +670,6 @@ export function TeaBotPanel() {
         </>
       )}
     </AnimatePresence>
+    </>
   );
 }

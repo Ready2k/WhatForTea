@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useIngestRecipe } from '@/lib/hooks';
+import { useIngestRecipe, usePendingIngestJobs } from '@/lib/hooks';
 import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, ingestReceipt } from '@/lib/api';
 import { ReceiptReview } from '@/components/ReceiptReview';
 import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
@@ -94,6 +94,7 @@ const FUN_MESSAGES: Record<ApiStatus, string[]> = {
 };
 
 export default function IngestPage() {
+  const { data: pendingJobs } = usePendingIngestJobs();
   const [flowState, setFlowState] = useState<FlowState>('upload');
   const [capturedPhotos, setCapturedPhotos] = useState<{ file: File; url: string }[]>([]);
   const [photoRotations, setPhotoRotations] = useState<number[]>([0, 0]);
@@ -375,6 +376,25 @@ export default function IngestPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Add Recipe</h1>
         </div>
+
+        {/* Pending review banner — resume abandoned ingest */}
+        {pendingJobs && pendingJobs.length > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-2xl p-3 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                {pendingJobs.length} recipe{pendingJobs.length > 1 ? 's' : ''} waiting to be confirmed
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Tap to resume — your scan results are still saved</p>
+            </div>
+            <button
+              onClick={() => { setJobId(pendingJobs[0].job_id); setFlowState('processing'); }}
+              className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/40 px-3 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors whitespace-nowrap"
+            >
+              Resume →
+            </button>
+          </div>
+        )}
 
         {/* Tab switcher */}
         <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
