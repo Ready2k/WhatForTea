@@ -100,6 +100,30 @@ export async function logout(): Promise<void> {
   window.location.href = '/login';
 }
 
+export async function forgotPassword(email: string): Promise<void> {
+  const res = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message ?? 'Request failed');
+  }
+}
+
+export async function resetPassword(token: string, new_password: string): Promise<void> {
+  const res = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message ?? 'Reset failed');
+  }
+}
+
 export async function submitChatFeedback(traceId: string, value: 1 | -1, comment?: string): Promise<void> {
   await request<void>('/api/v1/chat/feedback', {
     method: 'POST',
@@ -485,7 +509,7 @@ export async function getCurrentUser(): Promise<UserProfile | null> {
   }
 }
 
-export function updateUserProfile(data: { display_name?: string }): Promise<UserProfile> {
+export function updateUserProfile(data: { display_name?: string; email?: string }): Promise<UserProfile> {
   return request<UserProfile>('/api/v1/users/me', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -513,11 +537,18 @@ export function getHouseholdMembers(): Promise<UserProfile[]> {
   return request<UserProfile[]>('/api/v1/household/members');
 }
 
+export function adminResetPassword(userId: string): Promise<{ temp_password: string }> {
+  return request<{ temp_password: string }>(`/api/v1/admin/users/${userId}/reset-password`, {
+    method: 'POST',
+  });
+}
+
 export function joinHousehold(data: {
   invite_code: string;
   username: string;
   display_name: string;
   password: string;
+  email?: string;
 }): Promise<UserProfile> {
   return request<UserProfile>('/api/v1/household/join', {
     method: 'POST',

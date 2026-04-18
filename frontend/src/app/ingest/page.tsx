@@ -388,7 +388,17 @@ export default function IngestPage() {
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Tap to resume — your scan results are still saved</p>
             </div>
             <button
-              onClick={() => { setJobId(pendingJobs[0].job_id); setFlowState('processing'); }}
+              onClick={async () => {
+                const job = pendingJobs[0];
+                setJobId(job.job_id);
+                try {
+                  const payload = await getIngestReview(job.job_id);
+                  setReviewPayload(payload);
+                  setFlowState('review');
+                } catch {
+                  setProcessingError('Failed to load saved recipe — it may have expired.');
+                }
+              }}
               className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/40 px-3 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors whitespace-nowrap"
             >
               Resume →

@@ -39,6 +39,20 @@ class DuplicateRecipeError(Exception):
         super().__init__(f"Duplicate of '{recipe_title}'")
 
 
+def _normalise_tags(tags: list[str] | None) -> list[str]:
+    """Lowercase, strip, and deduplicate mood tags (case-insensitive)."""
+    if not tags:
+        return []
+    seen: set[str] = set()
+    result: list[str] = []
+    for tag in tags:
+        normalised = tag.strip().lower()
+        if normalised and normalised not in seen:
+            seen.add(normalised)
+            result.append(normalised)
+    return result
+
+
 def _compute_dhash(image_path: Path, hash_size: int = 8) -> str:
     """
     Compute a dHash (difference hash) for an image.
@@ -651,7 +665,7 @@ async def confirm_recipe(
         source_type=recipe_data.source_type,
         source_reference=recipe_data.source_reference,
         source_url=source_url,
-        mood_tags=recipe_data.mood_tags,
+        mood_tags=_normalise_tags(recipe_data.mood_tags),
         hero_image_path=hero_image_path,
         image_fingerprint=fingerprint,
         nutrition_estimate=nutrition_dict,

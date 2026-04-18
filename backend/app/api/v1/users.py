@@ -1,12 +1,13 @@
 """
 User and household management endpoints.
 
-PATCH  /api/v1/users/me           — update display name
-POST   /api/v1/users/me/password  — change password
-GET    /api/v1/household          — household info + invite code (admin only)
-POST   /api/v1/household/invite   — rotate invite code (admin only)
-GET    /api/v1/household/members  — list all household members
-POST   /api/v1/household/join     — join a household with invite code (creates new user)
+PATCH  /api/v1/users/me                          — update display name / email
+POST   /api/v1/users/me/password                 — change password (clears force_password_change)
+GET    /api/v1/household                         — household info + invite code (admin only)
+POST   /api/v1/household/invite                  — rotate invite code (admin only)
+GET    /api/v1/household/members                 — list all household members
+POST   /api/v1/household/join                    — join a household with invite code (creates new user)
+POST   /api/v1/admin/users/{user_id}/reset-password — admin: set temp password, force change on next login
 """
 import secrets
 import uuid as _uuid
@@ -60,6 +61,16 @@ async def update_me(body: UserUpdate, request: Request, db: AsyncSession = Depen
     if body.display_name is not None:
         user.display_name = body.display_name.strip()
 
+    if body.email is not None:
+        email = body.email.strip().lower() or None
+        if email:
+            existing = await db.execute(
+                select(User).where(User.email == email, User.id != uid)
+            )
+            if existing.scalar_one_or_none() is not None:
+                raise AppError(ErrorCode.VALIDATION_ERROR, "Email already in use", status_code=409)
+        user.email = email
+
     await db.commit()
     await db.refresh(user)
     return UserProfile.model_validate(user)
@@ -80,6 +91,7 @@ async def change_password(body: PasswordChange, request: Request, db: AsyncSessi
         raise AppError(ErrorCode.UNAUTHORIZED, "Current password is incorrect", status_code=401)
 
     user.password_hash = _ph.hash(body.new_password)
+    user.force_password_change = False
     await db.commit()
 
 
@@ -173,10 +185,17 @@ async def join_household(body: JoinRequest, db: AsyncSession = Depends(get_db)):
     if existing.scalar_one_or_none() is not None:
         raise AppError(ErrorCode.VALIDATION_ERROR, "Username already taken", status_code=409)
 
+    email = body.email.strip().lower() if body.email else None
+    if email:
+        taken = await db.execute(select(User).where(User.email == email))
+        if taken.scalar_one_or_none() is not None:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Email already in use", status_code=409)
+
     new_user = User(
         household_id=household.id,
         username=body.username.strip(),
         display_name=body.display_name.strip(),
+        email=email,
         password_hash=_ph.hash(body.password),
         is_admin=False,
     )
@@ -184,3 +203,31 @@ async def join_household(body: JoinRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_user)
     return UserProfile.model_validate(new_user)
+
+
+# ── Admin endpoints ───────────────────────────────────────────────────────────
+
+@router.post("/admin/users/{user_id}/reset-password")
+async def admin_reset_password(user_id: _uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    from app.models.user import User
+
+    caller_id = _require_user_id(request)
+    caller_hid = _require_household_id(request)
+
+    caller = await db.get(User, caller_id)
+    if caller is None or not caller.is_admin:
+        raise AppError(ErrorCode.UNAUTHORIZED, "Admin access required", status_code=403)
+
+    target = await db.get(User, user_id)
+    if target is None or target.household_id != caller_hid:
+        raise AppError(ErrorCode.NOT_FOUND, "User not found", status_code=404)
+
+    if target.id == caller_id:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Cannot reset your own password via admin endpoint", status_code=400)
+
+    temp_password = secrets.token_urlsafe(12)
+    target.password_hash = _ph.hash(temp_password)
+    target.force_password_change = True
+    await db.commit()
+
+    return {"temp_password": temp_password}

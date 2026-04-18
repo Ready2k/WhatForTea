@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { logout, adminResetPassword } from '@/lib/api';
 import {
   useCurrentUser,
   useUpdateUserProfile,
@@ -37,6 +38,13 @@ export default function ProfilePage() {
 
   const [displayName, setDisplayName] = useState('');
   const [nameEditing, setNameEditing] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailEditing, setEmailEditing] = useState(false);
+  const [resetTargetId, setResetTargetId] = useState<string | null>(null);
+  const [resetTargetName, setResetTargetName] = useState('');
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -72,6 +80,16 @@ export default function ProfilePage() {
     setNameEditing(false);
   }
 
+  function startEditEmail() {
+    setEmail(user!.email ?? '');
+    setEmailEditing(true);
+  }
+
+  async function saveEmail() {
+    await updateProfile.mutateAsync({ email: email.trim() || '' });
+    setEmailEditing(false);
+  }
+
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
     setPwError('');
@@ -96,12 +114,32 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleAdminReset() {
+    if (!resetTargetId) return;
+    setResetLoading(true);
+    setResetError(null);
+    try {
+      const result = await adminResetPassword(resetTargetId);
+      setTempPassword(result.temp_password);
+    } catch (err: any) {
+      setResetError(err.message ?? 'Reset failed');
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-900 text-white">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-4">
           <Link href="/" className="text-zinc-400 hover:text-white text-sm">← Home</Link>
           <h1 className="text-2xl font-bold">Profile</h1>
+          <button
+            onClick={() => logout()}
+            className="ml-auto px-3 py-1.5 text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded"
+          >
+            Sign out
+          </button>
         </div>
 
         {/* Profile section */}
@@ -139,6 +177,39 @@ export default function ProfilePage() {
                 <p className="text-zinc-200">{user.display_name}</p>
                 <button onClick={startEditName} className="text-xs text-emerald-400 hover:underline">
                   Edit
+                </button>
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Email</p>
+            {emailEditing ? (
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  onClick={saveEmail}
+                  disabled={updateProfile.isPending}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded text-sm font-medium"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEmailEditing(false)}
+                  className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="text-zinc-200">{user.email ?? <span className="text-zinc-500 italic">not set</span>}</p>
+                <button onClick={startEditEmail} className="text-xs text-emerald-400 hover:underline">
+                  {user.email ? 'Edit' : 'Add'}
                 </button>
               </div>
             )}
@@ -233,13 +304,21 @@ export default function ProfilePage() {
             {members && members.length > 0 && (
               <div>
                 <p className="text-xs text-zinc-400 uppercase tracking-wide mb-2">Members</p>
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {members.map((m) => (
                     <li key={m.id} className="flex items-center gap-2 text-sm">
                       <span className="text-zinc-200">{m.display_name}</span>
                       <span className="text-zinc-500">@{m.username}</span>
                       {m.is_admin && <span className="text-xs text-emerald-400">admin</span>}
                       {m.id === user.id && <span className="text-xs text-zinc-500">(you)</span>}
+                      {user.is_admin && m.id !== user.id && (
+                        <button
+                          onClick={() => { setResetTargetId(m.id); setResetTargetName(m.display_name); setTempPassword(null); setResetError(null); }}
+                          className="ml-auto text-xs px-2 py-0.5 bg-zinc-700 hover:bg-zinc-600 rounded text-zinc-300"
+                        >
+                          Reset password
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -248,6 +327,55 @@ export default function ProfilePage() {
           </section>
         )}
       </div>
+
+      {/* Admin reset password modal */}
+      {resetTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-zinc-800 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            {!tempPassword ? (
+              <>
+                <h3 className="text-lg font-semibold">Reset password</h3>
+                <p className="text-sm text-zinc-400">
+                  This will generate a temporary password for <span className="text-zinc-200 font-medium">{resetTargetName}</span>. They will be required to set a new password on next login.
+                </p>
+                {resetError && <p className="text-sm text-red-400">{resetError}</p>}
+                <div className="flex gap-3 pt-1">
+                  <button
+                    onClick={handleAdminReset}
+                    disabled={resetLoading}
+                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-xl text-sm font-medium"
+                  >
+                    {resetLoading ? 'Resetting…' : 'Confirm reset'}
+                  </button>
+                  <button
+                    onClick={() => setResetTargetId(null)}
+                    className="flex-1 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold">Temporary password</h3>
+                <p className="text-sm text-zinc-400">
+                  Share this with <span className="text-zinc-200 font-medium">{resetTargetName}</span>. It will not be shown again.
+                </p>
+                <div className="flex items-center gap-2 bg-zinc-700 rounded-xl px-3 py-2">
+                  <code className="flex-1 text-emerald-300 font-mono text-sm break-all">{tempPassword}</code>
+                  <CopyButton text={tempPassword} />
+                </div>
+                <button
+                  onClick={() => { setResetTargetId(null); setTempPassword(null); }}
+                  className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl text-sm"
+                >
+                  Done
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

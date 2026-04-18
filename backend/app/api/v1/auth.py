@@ -1,16 +1,20 @@
 """
 Authentication endpoints.
 
-POST /api/auth/login   — verify credentials against users table, set httpOnly cookies
-POST /api/auth/refresh — rotate access token using refresh cookie
-POST /api/auth/logout  — clear cookies
-GET  /api/auth/me      — current user profile (requires valid access token)
+POST /api/auth/login            — verify credentials against users table, set httpOnly cookies
+POST /api/auth/refresh          — rotate access token using refresh cookie
+POST /api/auth/logout           — clear cookies
+GET  /api/auth/me               — current user profile (requires valid access token)
+POST /api/auth/forgot-password  — send one-time reset link to user's email
+POST /api/auth/reset-password   — consume reset token and set new password
 """
+import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -19,7 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.errors import AppError, ErrorCode
-from app.schemas.user import UserProfile
+from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserProfile
+from app.services.email import send_password_reset
 
 _ph = PasswordHasher()
 
@@ -151,6 +156,74 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
 async def logout(response: Response):
     response.delete_cookie(ACCESS_COOKIE, path="/")
     response.delete_cookie(REFRESH_COOKIE, path="/api/auth/refresh")
+    return {"ok": True}
+
+
+@router.post("/forgot-password", status_code=200)
+async def forgot_password(
+    body: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.user import PasswordResetToken, User
+
+    result = await db.execute(select(User).where(User.email == body.email))
+    user = result.scalar_one_or_none()
+
+    # Always return 200 to avoid leaking whether the email is registered
+    if user is None:
+        return {"ok": True}
+
+    # Invalidate any existing unused tokens for this user
+    existing = await db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used.is_(False),
+        )
+    )
+    for token in existing.scalars().all():
+        token.used = True
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+    db.add(reset_token)
+    await db.commit()
+
+    background_tasks.add_task(send_password_reset, user.email, raw_token)
+    return {"ok": True}
+
+
+@router.post("/reset-password", status_code=200)
+async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    from app.models.user import PasswordResetToken, User
+
+    if len(body.new_password) < 8:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Password must be at least 8 characters", status_code=422)
+
+    token_hash = hashlib.sha256(body.token.encode()).hexdigest()
+    result = await db.execute(
+        select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+    )
+    reset_token = result.scalar_one_or_none()
+
+    if reset_token is None or reset_token.used:
+        raise AppError(ErrorCode.NOT_FOUND, "Invalid or already used reset token", status_code=404)
+
+    if reset_token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Reset token has expired", status_code=422)
+
+    user = await db.get(User, reset_token.user_id)
+    if user is None:
+        raise AppError(ErrorCode.NOT_FOUND, "User not found", status_code=404)
+
+    user.password_hash = _ph.hash(body.new_password)
+    reset_token.used = True
+    await db.commit()
     return {"ok": True}
 
 

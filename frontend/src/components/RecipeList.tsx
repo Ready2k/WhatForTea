@@ -117,6 +117,8 @@ function RecipesContent() {
   const [selectedMoodTag, setSelectedMoodTag] = useState<string | null>(null);
   const [useItUp, setUseItUp] = useState(initialSort === 'use_it_up');
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const TAG_VISIBLE_COUNT = 8;
 
   const { data: matches, isLoading, isError, refetch } = useMatches(
     selectedCategory,
@@ -128,12 +130,12 @@ function RecipesContent() {
     ? new Set(collectionRecipes.recipe_ids)
     : null;
 
-  // Collect unique mood tags from current category results
+  // Collect unique mood tags — normalise to lowercase to deduplicate existing dirty data
   const allMoodTags = useMemo(() => {
     if (!matches) return [];
-    const tags = new Set<string>();
-    matches.forEach((m) => m.recipe.mood_tags?.forEach((t) => tags.add(t)));
-    return [...tags].sort();
+    const seen = new Set<string>();
+    matches.forEach((m) => m.recipe.mood_tags?.forEach((t) => seen.add(t.trim().toLowerCase())));
+    return [...seen].sort();
   }, [matches]);
 
   // Apply client-side filters
@@ -142,7 +144,7 @@ function RecipesContent() {
     const q = query.trim().toLowerCase();
     return matches
       .filter((m) => !q || m.recipe.title.toLowerCase().includes(q))
-      .filter((m) => !selectedMoodTag || m.recipe.mood_tags?.includes(selectedMoodTag))
+      .filter((m) => !selectedMoodTag || m.recipe.mood_tags?.some((t) => t.trim().toLowerCase() === selectedMoodTag))
       .filter((m) => !collectionRecipeSet || collectionRecipeSet.has(m.recipe.id));
   }, [matches, query, selectedMoodTag, collectionRecipeSet]);
 
@@ -227,20 +229,30 @@ function RecipesContent() {
 
       {/* ── Mood tag pills ───────────────────────────────────────────────────── */}
       {allMoodTags.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap mb-4">
-          {allMoodTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => setSelectedMoodTag(selectedMoodTag === tag ? null : tag)}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                selectedMoodTag === tag
-                  ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400 dark:ring-emerald-600'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
+        <div className="mb-4">
+          <div className="flex gap-1.5 flex-wrap">
+            {(tagsExpanded ? allMoodTags : allMoodTags.slice(0, TAG_VISIBLE_COUNT)).map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setSelectedMoodTag(selectedMoodTag === tag ? null : tag)}
+                className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  selectedMoodTag === tag
+                    ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400 dark:ring-emerald-600'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+            {allMoodTags.length > TAG_VISIBLE_COUNT && (
+              <button
+                onClick={() => setTagsExpanded((v) => !v)}
+                className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              >
+                {tagsExpanded ? 'Show less' : `+${allMoodTags.length - TAG_VISIBLE_COUNT} more`}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

@@ -183,8 +183,10 @@ export interface UserProfile {
   id: string;
   username: string;
   display_name: string;
+  email?: string | null;
   household_id: string;
   is_admin: boolean;
+  force_password_change: boolean;
   created_at: string;
 }
 
