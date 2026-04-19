@@ -124,6 +124,24 @@ async def get_pending_ingest_jobs(db: AsyncSession = Depends(get_db)):
     return [IngestStatusResponse(job_id=j.id, status=j.status, error_message=j.error_message) for j in jobs]
 
 
+@router.delete("/ingest/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def dismiss_ingest_job(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Discard a pending ingest job without saving the recipe."""
+    job = await db.get(IngestJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Ingest job not found")
+    if job.status not in (IngestStatus.REVIEW, IngestStatus.FAILED):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot dismiss a job with status {job.status.value!r}",
+        )
+    await db.delete(job)
+    await db.commit()
+
+
 @router.get("/ingest/{job_id}/review", response_model=IngestReviewPayload)
 async def get_ingest_review(
     job_id: uuid.UUID,

@@ -32,6 +32,7 @@ import {
   rotateInviteCode,
   getHouseholdMembers,
   getPendingIngestJobs,
+  dismissIngestJob,
 } from './api';
 
 export function useIngredients(q?: string) {
@@ -189,6 +190,14 @@ export function usePendingIngestJobs() {
     queryKey: ['ingest', 'pending'],
     queryFn: getPendingIngestJobs,
     staleTime: 30_000,
+  });
+}
+
+export function useDismissIngestJob() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: dismissIngestJob,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ingest', 'pending'] }),
   });
 }
 

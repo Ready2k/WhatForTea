@@ -2,11 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useIngestRecipe, usePendingIngestJobs, useCurrentUser } from '@/lib/hooks';
+import { useIngestRecipe, usePendingIngestJobs, useCurrentUser, useDismissIngestJob } from '@/lib/hooks';
 import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, ingestReceipt } from '@/lib/api';
 import { ReceiptReview } from '@/components/ReceiptReview';
 import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
-import { ScanLine, FolderOpen, FileText, Upload, Bot, Loader2, Clock, Users, AlertTriangle, Wand2, Check, CheckCircle } from 'lucide-react';
+import { ScanLine, FolderOpen, FileText, Upload, Bot, Loader2, Clock, Users, AlertTriangle, Wand2, Check, CheckCircle, X } from 'lucide-react';
 import React from 'react';
 
 const JPEG_QUALITY = 0.85;
@@ -95,6 +95,7 @@ const FUN_MESSAGES: Record<ApiStatus, string[]> = {
 
 export default function IngestPage() {
   const { data: pendingJobs } = usePendingIngestJobs();
+  const dismissMutation = useDismissIngestJob();
   const [flowState, setFlowState] = useState<FlowState>('upload');
   const [capturedPhotos, setCapturedPhotos] = useState<{ file: File; url: string }[]>([]);
   const [photoRotations, setPhotoRotations] = useState<number[]>([0, 0]);
@@ -380,32 +381,48 @@ export default function IngestPage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Add Recipe</h1>
         </div>
 
-        {/* Pending review banner — resume abandoned ingest */}
+        {/* Pending review banner — resume or dismiss abandoned ingest jobs */}
         {pendingJobs && pendingJobs.length > 0 && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-2xl p-3 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                 {pendingJobs.length} recipe{pendingJobs.length > 1 ? 's' : ''} waiting to be confirmed
               </p>
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Tap to resume — your scan results are still saved</p>
             </div>
-            <button
-              onClick={async () => {
-                const job = pendingJobs[0];
-                setJobId(job.job_id);
-                try {
-                  const payload = await getIngestReview(job.job_id);
-                  setReviewPayload(payload);
-                  setFlowState('review');
-                } catch {
-                  setProcessingError('Failed to load saved recipe — it may have expired.');
-                }
-              }}
-              className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/40 px-3 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors whitespace-nowrap"
-            >
-              Resume →
-            </button>
+            <div className="divide-y divide-amber-100 dark:divide-amber-800/30">
+              {pendingJobs.map((job, i) => (
+                <div key={job.job_id} className="flex items-center gap-2 px-3 py-2">
+                  <span className="flex-1 text-xs text-amber-700 dark:text-amber-400 truncate">
+                    Scan {i + 1}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      setJobId(job.job_id);
+                      setProcessingError(null);
+                      try {
+                        const payload = await getIngestReview(job.job_id);
+                        setReviewPayload(payload);
+                        setFlowState('review');
+                      } catch {
+                        setProcessingError('Failed to load saved recipe — it may have expired.');
+                      }
+                    }}
+                    className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/40 px-2.5 py-1 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors whitespace-nowrap"
+                  >
+                    Resume →
+                  </button>
+                  <button
+                    onClick={() => dismissMutation.mutate(job.job_id)}
+                    disabled={dismissMutation.isPending}
+                    className="w-6 h-6 flex items-center justify-center rounded-md text-amber-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
+                    aria-label="Dismiss"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

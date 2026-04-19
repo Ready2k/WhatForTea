@@ -282,6 +282,10 @@ export function getPendingIngestJobs(): Promise<IngestStatusResponse[]> {
   return request<IngestStatusResponse[]>('/api/v1/recipes/ingest/pending');
 }
 
+export function dismissIngestJob(jobId: string): Promise<void> {
+  return request<void>(`/api/v1/recipes/ingest/${jobId}`, { method: 'DELETE' });
+}
+
 export function importRecipeFromUrl(url: string): Promise<{ job_id: string }> {
   return request<{ job_id: string }>('/api/v1/recipes/import-url', {
     method: 'POST',
