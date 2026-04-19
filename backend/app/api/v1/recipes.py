@@ -14,7 +14,7 @@ from pathlib import Path
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,6 +127,7 @@ async def get_pending_ingest_jobs(db: AsyncSession = Depends(get_db)):
 @router.get("/ingest/{job_id}/review", response_model=IngestReviewPayload)
 async def get_ingest_review(
     job_id: uuid.UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -187,11 +188,20 @@ async def get_ingest_review(
         ],
     )
 
+    raw_llm_response = None
+    user_id = getattr(request.state, "user_id", None)
+    if user_id and llm_out is not None:
+        from app.models.user import User
+        caller = await db.get(User, user_id)
+        if caller and caller.is_admin:
+            raw_llm_response = llm_out.raw_llm_response
+
     return IngestReviewPayload(
         job_id=job_id,
         parsed_recipe=recipe_create,
         unresolved_ingredients=unresolved,
         source_url=parsed.get("source_url"),
+        raw_llm_response=raw_llm_response,
     )
 
 

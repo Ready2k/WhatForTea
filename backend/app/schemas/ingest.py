@@ -42,6 +42,8 @@ class IngestReviewPayload(BaseModel):
     unresolved_ingredients: list[str] = []
     # Set for URL imports; null for image-scanned cards
     source_url: Optional[str] = None
+    # Raw LLM response — only populated for household admins, null otherwise
+    raw_llm_response: Optional[str] = None
 
 
 class IngestConfirmRequest(BaseModel):

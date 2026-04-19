@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useIngestRecipe, usePendingIngestJobs } from '@/lib/hooks';
+import { useIngestRecipe, usePendingIngestJobs, useCurrentUser } from '@/lib/hooks';
 import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, ingestReceipt } from '@/lib/api';
 import { ReceiptReview } from '@/components/ReceiptReview';
 import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
@@ -118,6 +118,9 @@ export default function IngestPage() {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('uploading');
   const [funMessageIdx, setFunMessageIdx] = useState(0);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [showRawLlm, setShowRawLlm] = useState(false);
+  const { data: currentUser } = useCurrentUser();
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -844,6 +847,24 @@ export default function IngestPage() {
                 </li>
               ))}
             </ol>
+          </div>
+        )}
+
+        {/* Admin: raw LLM response viewer */}
+        {currentUser?.is_admin && reviewPayload.raw_llm_response && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setShowRawLlm((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+            >
+              <span>Raw LLM Response</span>
+              <span className="text-xs font-normal text-gray-400">{showRawLlm ? 'Hide ▲' : 'Show ▼'}</span>
+            </button>
+            {showRawLlm && (
+              <pre className="px-4 pb-4 text-xs text-gray-600 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto border-t border-gray-100 dark:border-gray-700">
+                {reviewPayload.raw_llm_response}
+              </pre>
+            )}
           </div>
         )}
 

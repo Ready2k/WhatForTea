@@ -177,6 +177,7 @@ export interface IngestReviewPayload {
   parsed_recipe: any;
   unresolved_ingredients: string[];
   source_url?: string | null;
+  raw_llm_response?: string | null;
 }
 
 export interface UserProfile {
