@@ -158,15 +158,21 @@ export default function Dashboard() {
           </Link>
         )}
 
-        <Link href="/pantry" className="bg-white dark:bg-gray-800 border-transparent dark:border-gray-700/60 border hover:border-gray-300 dark:hover:border-gray-500 rounded-[20px] p-4 transition-colors">
-          <ShoppingBasket className="w-6 h-6 mb-1.5 text-emerald-500" />
-          <div className="text-xs font-bold text-gray-900 dark:text-white">My Pantry</div>
-          <div className="text-[10px] text-gray-500 mt-0.5 font-medium">{available?.length ?? 0} ingredients</div>
-          <div className="mt-2.5 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-             <div className="h-full bg-emerald-500 rounded-full w-4/5"></div>
-          </div>
-          <div className="text-[9px] text-gray-400 mt-1.5 font-medium border-t border-transparent">82% stocked</div>
-        </Link>
+        {(() => {
+          const count = available?.length ?? 0;
+          const stockedPct = count === 0 ? 0 : Math.round(available!.reduce((sum, a) => sum + a.confidence, 0) / count * 100);
+          return (
+            <Link href="/pantry" className="bg-white dark:bg-gray-800 border-transparent dark:border-gray-700/60 border hover:border-gray-300 dark:hover:border-gray-500 rounded-[20px] p-4 transition-colors">
+              <ShoppingBasket className="w-6 h-6 mb-1.5 text-emerald-500" />
+              <div className="text-xs font-bold text-gray-900 dark:text-white">My Pantry</div>
+              <div className="text-[10px] text-gray-500 mt-0.5 font-medium">{count} ingredients</div>
+              <div className="mt-2.5 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${stockedPct}%` }}></div>
+              </div>
+              <div className="text-[9px] text-gray-400 mt-1.5 font-medium border-t border-transparent">{stockedPct}% stocked</div>
+            </Link>
+          );
+        })()}
         
         <Link href="/planner" className="bg-white dark:bg-gray-800 border-transparent dark:border-gray-700/60 border hover:border-gray-300 dark:hover:border-gray-500 rounded-[20px] p-4 transition-colors">
           <div className="text-[9px] font-bold text-emerald-500 mb-1 leading-none tracking-wider uppercase border-b border-transparent">This week</div>

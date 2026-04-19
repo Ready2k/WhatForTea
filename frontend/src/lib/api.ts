@@ -601,10 +601,11 @@ export function clearDoneShoppingItems(): Promise<void> {
 }
 
 export interface VoiceCommandResponse {
-  intent: 'add_to_list' | 'session_note' | 'navigation' | 'unknown';
+  intent: 'add_to_list' | 'session_note' | 'navigation' | 'cooking_question' | 'repeat' | 'stop' | 'unknown';
   item?: string | null;
   note?: string | null;
   direction?: string | null;
+  answer?: string | null;
   raw_transcript: string;
 }
 

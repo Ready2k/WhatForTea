@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { logout, adminResetPassword } from '@/lib/api';
 import {
@@ -11,6 +11,79 @@ import {
   useRotateInviteCode,
   useHouseholdMembers,
 } from '@/lib/hooks';
+
+const VOICE_KEY = 'wft_tts_voice';
+
+function VoiceSettings() {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selected, setSelected] = useState<string>('');
+  const [previewing, setPreviewing] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    setSelected(localStorage.getItem(VOICE_KEY) ?? '');
+    function load() {
+      const all = window.speechSynthesis.getVoices();
+      const en = all.filter(v => v.lang.startsWith('en'));
+      if (en.length) setVoices(en);
+    }
+    load();
+    window.speechSynthesis.onvoiceschanged = load;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
+  if (typeof window === 'undefined' || !('speechSynthesis' in window) || voices.length === 0) return null;
+
+  function handleChange(name: string) {
+    setSelected(name);
+    localStorage.setItem(VOICE_KEY, name);
+  }
+
+  function handlePreview() {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance('Fry the onion in a little oil until soft, about five minutes.');
+    const v = voices.find(v => v.name === selected) ?? null;
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.onend = () => setPreviewing(false);
+    u.onerror = () => setPreviewing(false);
+    setPreviewing(true);
+    window.speechSynthesis.speak(u);
+  }
+
+  function stopPreview() {
+    window.speechSynthesis.cancel();
+    setPreviewing(false);
+  }
+
+  const gb = voices.filter(v => v.lang.startsWith('en-GB'));
+  const us = voices.filter(v => v.lang.startsWith('en-US'));
+  const other = voices.filter(v => !v.lang.startsWith('en-GB') && !v.lang.startsWith('en-US'));
+
+  return (
+    <section className="bg-zinc-800 rounded-xl p-6 space-y-4">
+      <h2 className="text-lg font-semibold">Cooking Voice</h2>
+      <p className="text-xs text-zinc-400">Choose the voice used to read recipe steps aloud during cooking.</p>
+      <div className="flex gap-2 items-center">
+        <select
+          value={selected}
+          onChange={e => handleChange(e.target.value)}
+          className="flex-1 px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-zinc-200"
+        >
+          <option value="">Auto (best available)</option>
+          {gb.length > 0 && <optgroup label="English (UK)">{gb.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}</optgroup>}
+          {us.length > 0 && <optgroup label="English (US)">{us.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}</optgroup>}
+          {other.length > 0 && <optgroup label="Other English">{other.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}</optgroup>}
+        </select>
+        <button
+          onClick={previewing ? stopPreview : handlePreview}
+          className={`px-3 py-2 rounded text-sm font-medium transition-colors ${previewing ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+        >
+          {previewing ? 'Stop' : 'Preview'}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -265,6 +338,8 @@ export default function ProfilePage() {
             </button>
           </form>
         </section>
+
+        <VoiceSettings />
 
         {/* Household section — visible to all members */}
         {household && (

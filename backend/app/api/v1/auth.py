@@ -20,9 +20,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import logging
+
 from app.config import settings
 from app.database import get_db
 from app.errors import AppError, ErrorCode
+
+logger = logging.getLogger("whatsfortea.audit")
 from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserProfile
 from app.services.email import send_password_reset
 
@@ -106,16 +110,17 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
                 valid = False
 
     if not valid:
+        logger.warning("auth.login_failed", extra={"username": body.username})
         raise AppError(ErrorCode.UNAUTHORIZED, "Invalid credentials", status_code=401)
 
     if user:
         user_id = str(user.id)
         household_id = str(user.household_id)
     else:
-        # Fallback: synthetic IDs for env-only mode
         user_id = "household"
         household_id = "household"
 
+    logger.info("auth.login_success", extra={"user_id": user_id, "username": body.username})
     access = _make_token(user_id, household_id, timedelta(minutes=ACCESS_TTL_MINUTES))
     refresh = _make_token(user_id, household_id, timedelta(days=REFRESH_TTL_DAYS))
     _set_access_cookie(response, access)
@@ -153,7 +158,9 @@ async def refresh(request: Request, response: Response, db: AsyncSession = Depen
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
+    user_id = getattr(request.state, "user_id", None)
+    logger.info("auth.logout", extra={"user_id": str(user_id) if user_id else "unknown"})
     response.delete_cookie(ACCESS_COOKIE, path="/")
     response.delete_cookie(REFRESH_COOKIE, path="/api/auth/refresh")
     return {"ok": True}
@@ -224,6 +231,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     user.password_hash = _ph.hash(body.new_password)
     reset_token.used = True
     await db.commit()
+    logger.info("auth.password_reset", extra={"user_id": str(user.id), "username": user.username})
     return {"ok": True}
 
 

@@ -23,13 +23,15 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         duration_ms = round((time.monotonic() - start) * 1000)
 
         if request.url.path not in _SILENT_PATHS:
-            logger.info(
-                "request",
-                extra={
-                    "route": f"{request.method} {request.url.path}",
-                    "status": response.status_code,
-                    "duration_ms": duration_ms,
-                },
-            )
+            user_id = getattr(request.state, "user_id", None)
+            extra: dict = {
+                "route": f"{request.method} {request.url.path}",
+                "status": response.status_code,
+                "duration_ms": duration_ms,
+            }
+            if user_id:
+                extra["user_id"] = str(user_id)
+            level = logging.WARNING if response.status_code >= 400 else logging.INFO
+            logger.log(level, "request", extra=extra)
 
         return response

@@ -13,8 +13,12 @@ from fastapi.responses import JSONResponse
 from jose import jwt, JWTError
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import logging
+
 from app.config import settings
 from app.api.v1.auth import ACCESS_COOKIE, ALGORITHM
+
+logger = logging.getLogger("whatsfortea.audit")
 
 _SKIP_PATHS = {
     "/health",
@@ -37,6 +41,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         token = request.cookies.get(ACCESS_COOKIE)
         if not token:
+            logger.warning("auth.no_token", extra={"path": request.url.path})
             return JSONResponse(
                 status_code=401,
                 content={"error": {"code": "UNAUTHORIZED", "message": "Authentication required", "details": {}}},
@@ -47,6 +52,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             request.state.user_id = payload.get("sub")
             request.state.household_id = payload.get("household_id", "household")
         except JWTError:
+            logger.warning("auth.invalid_token", extra={"path": request.url.path})
             return JSONResponse(
                 status_code=401,
                 content={"error": {"code": "TOKEN_EXPIRED", "message": "Token expired or invalid", "details": {}}},

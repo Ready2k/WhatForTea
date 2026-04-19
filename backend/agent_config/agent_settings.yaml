@@ -16,9 +16,13 @@ temperature: 0.1
 max_tokens: 4096
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
-# Maximum LLM calls allowed per hour across all users.
+# Maximum LLM calls allowed per hour across all users (ingestion pipeline).
 # Returns HTTP 429 with Retry-After header when exceeded.
 llm_rate_limit_per_hour: 20
+
+# Maximum TeaBot chat requests per user per minute.
+# Prevents a single user from flooding the LLM with rapid-fire messages.
+chat_rate_limit_per_minute: 20
 
 # ── Retry policy ──────────────────────────────────────────────────────────────
 retry_attempts: 2

@@ -44,7 +44,8 @@ export default function RecipeDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [imageVersions, setImageVersions] = useState<Record<number, number>>({ 0: 0, 1: 0 });
+  const [imageSeed] = useState(() => Date.now());
+  const [imageVersions, setImageVersions] = useState<Record<number, number>>({});
   const [isRotating, setIsRotating] = useState(false);
   const [stepImageVersions, setStepImageVersions] = useState<Record<number, number>>({});
   const [rotatingStep, setRotatingStep] = useState<number | null>(null);
@@ -219,7 +220,7 @@ export default function RecipeDetailPage() {
               aria-label="View full-size image"
             >
               <img
-                src={`/api/v1/recipes/${recipe.id}/image?index=0&v=${imageVersions[0]}`}
+                src={`/api/v1/recipes/${recipe.id}/image?index=0&v=${imageVersions[0] ?? imageSeed}`}
                 alt={recipe.title}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
@@ -639,7 +640,7 @@ export default function RecipeDetailPage() {
                     {step.image_crop_path && (
                       <div className="relative group mb-2">
                         <img
-                          src={`/api/v1/recipes/${recipe.id}/steps/${step.order}/image?v=${stepImageVersions[step.order] ?? 0}`}
+                          src={`/api/v1/recipes/${recipe.id}/steps/${step.order}/image?v=${stepImageVersions[step.order] ?? imageSeed}`}
                           alt={step.image_description ?? `Step ${idx + 1}`}
                           className="w-full max-h-32 object-contain rounded-xl bg-gray-100 dark:bg-gray-700"
                         />
@@ -773,8 +774,8 @@ export default function RecipeDetailPage() {
           onClick={(e) => e.stopPropagation()}
         >
           <img
-            key={`${lightboxIndex}-${imageVersions[lightboxIndex]}`}
-            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}&v=${imageVersions[lightboxIndex] ?? 0}`}
+            key={`${lightboxIndex}-${imageVersions[lightboxIndex] ?? imageSeed}`}
+            src={`/api/v1/recipes/${recipe.id}/image?index=${lightboxIndex}&v=${imageVersions[lightboxIndex] ?? imageSeed}`}
             alt={`${recipe.title} — ${lightboxIndex === 0 ? 'front' : 'back'}`}
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             style={{
@@ -852,7 +853,7 @@ export default function RecipeDetailPage() {
       <ImageCropModal
         recipeId={id}
         imageIndex={lightboxIndex}
-        imageVersion={imageVersions[lightboxIndex] ?? 0}
+        imageVersion={imageVersions[lightboxIndex] ?? imageSeed}
         onClose={() => setCropModalOpen(false)}
         onSaved={() => setImageVersions(v => ({ ...v, [lightboxIndex]: (v[lightboxIndex] ?? 0) + 1 }))}
       />

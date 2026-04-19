@@ -106,6 +106,8 @@ export default function CookingModePage() {
   const recognitionRef = useRef<any>(null);
   const commandRecognitionRef = useRef<any>(null);
   const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const hasSpeechRecognition = typeof window !== 'undefined' && !!(
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   );
@@ -281,20 +283,65 @@ export default function CookingModePage() {
   }, []);
 
   // ── Text-to-speech ────────────────────────────────────────────────────────
-  function speakStep() {
-    if (!hasSpeechSynth || !currentStep) return;
+  useEffect(() => {
+    if (!hasSpeechSynth) return;
+    const isNatural = (v: SpeechSynthesisVoice) => /neural|natural|enhanced|premium/i.test(v.name);
+    function pickVoice() {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+      const saved = localStorage.getItem('wft_tts_voice');
+      if (saved) {
+        const match = voices.find(v => v.name === saved);
+        if (match) { preferredVoiceRef.current = match; return; }
+      }
+      const enGB = voices.filter(v => v.lang.startsWith('en-GB'));
+      const enUS = voices.filter(v => v.lang.startsWith('en-US'));
+      const enAny = voices.filter(v => v.lang.startsWith('en'));
+      preferredVoiceRef.current =
+        enGB.find(isNatural) ?? enGB[0] ?? enUS.find(isNatural) ?? enUS[0] ?? enAny[0] ?? null;
+    }
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, [hasSpeechSynth]);
+
+  function speakText(text: string) {
+    if (!hasSpeechSynth) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(currentStep.text);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    const utterance = new SpeechSynthesisUtterance(text);
+    if (preferredVoiceRef.current) {
+      utterance.voice = preferredVoiceRef.current;
+      utterance.lang = preferredVoiceRef.current.lang;
+    }
+    utterance.onend = () => { setIsSpeaking(false); setIsPaused(false); };
+    utterance.onerror = () => { setIsSpeaking(false); setIsPaused(false); };
     setIsSpeaking(true);
+    setIsPaused(false);
     window.speechSynthesis.speak(utterance);
+  }
+
+  function speakStep() {
+    if (!currentStep) return;
+    speakText(currentStep.text);
   }
 
   function stopSpeaking() {
     if (!hasSpeechSynth) return;
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
+    setIsPaused(false);
+  }
+
+  function pauseSpeaking() {
+    if (!hasSpeechSynth) return;
+    window.speechSynthesis.pause();
+    setIsPaused(true);
+  }
+
+  function resumeSpeaking() {
+    if (!hasSpeechSynth) return;
+    window.speechSynthesis.resume();
+    setIsPaused(false);
   }
 
   // Cancel speech when the user moves to a different step
@@ -302,6 +349,7 @@ export default function CookingModePage() {
     if (hasSpeechSynth) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      setIsPaused(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex]);
@@ -340,6 +388,13 @@ export default function CookingModePage() {
           setPendingNotes((prev) => (prev ? `${prev}\n${result.note}` : result.note!));
         } else if (result.intent === 'navigation') {
           if (result.direction === 'next') { goNext(); } else { goPrev(); }
+        } else if (result.intent === 'repeat') {
+          speakStep();
+        } else if (result.intent === 'stop') {
+          stopSpeaking();
+        } else if (result.intent === 'cooking_question' && result.answer) {
+          addToast(result.answer, 'teabot');
+          speakText(result.answer);
         } else {
           addToast('Sorry, I didn\'t catch that', 'error');
         }
@@ -391,8 +446,10 @@ export default function CookingModePage() {
     r.continuous = true; r.lang = 'en-US';
     r.onresult = (e: any) => {
       const t = e.results[e.results.length - 1][0].transcript.toLowerCase();
-      if (t.includes('next')) goNext();
-      else if (t.includes('back') || t.includes('previous')) goPrev();
+      if (t.includes('next step') || (t.includes('next') && !t.includes('next time'))) goNext();
+      else if (t.includes('go back') || t.includes('previous') || t.includes('back')) goPrev();
+      else if (t.includes('repeat') || t.includes('read that again') || t.includes('say that again') || t.includes('read it again') || t.includes('what was that')) speakStep();
+      else if (t.includes('stop reading') || (t.includes('stop') && !t.includes('stop the'))) stopSpeaking();
       else if (t.includes('teabot') || t.includes('hey tea') || t.includes('add to list') || t.includes('i need') || t.includes('we need')) {
         startTeabotCommand();
       }
@@ -565,18 +622,50 @@ export default function CookingModePage() {
           <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide flex-1">
             Step {currentIndex + 1} of {total}
           </p>
-          {hasSpeechSynth && (
+          {hasSpeechSynth && !isSpeaking && (
             <button
-              onClick={isSpeaking ? stopSpeaking : speakStep}
-              aria-label={isSpeaking ? 'Stop reading' : 'Read step aloud'}
-              className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
-                isSpeaking
-                  ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              onClick={speakStep}
+              aria-label="Read step aloud"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
             >
-              <SpeakerIcon muted={!isSpeaking} className="w-5 h-5" />
+              <SpeakerIcon muted={true} className="w-5 h-5" />
             </button>
+          )}
+          {hasSpeechSynth && isSpeaking && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Repeat */}
+              <button
+                onClick={speakStep}
+                aria-label="Repeat step"
+                title="Repeat"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+              {/* Pause / Resume */}
+              <button
+                onClick={isPaused ? resumeSpeaking : pauseSpeaking}
+                aria-label={isPaused ? 'Resume reading' : 'Pause reading'}
+                title={isPaused ? 'Resume' : 'Pause'}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors"
+              >
+                {isPaused
+                  ? <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  : <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                }
+              </button>
+              {/* Stop */}
+              <button
+                onClick={stopSpeaking}
+                aria-label="Stop reading"
+                title="Stop"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-500 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+              </button>
+            </div>
           )}
           {hasSpeechRecognition && (
             <button

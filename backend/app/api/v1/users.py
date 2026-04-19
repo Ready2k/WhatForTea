@@ -9,6 +9,7 @@ GET    /api/v1/household/members                 — list all household members
 POST   /api/v1/household/join                    — join a household with invite code (creates new user)
 POST   /api/v1/admin/users/{user_id}/reset-password — admin: set temp password, force change on next login
 """
+import logging
 import secrets
 import uuid as _uuid
 
@@ -19,6 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+
+logger = logging.getLogger("whatsfortea.audit")
 from app.errors import AppError, ErrorCode
 from app.schemas.user import HouseholdInfo, JoinRequest, PasswordChange, UserProfile, UserUpdate
 
@@ -93,6 +96,7 @@ async def change_password(body: PasswordChange, request: Request, db: AsyncSessi
     user.password_hash = _ph.hash(body.new_password)
     user.force_password_change = False
     await db.commit()
+    logger.info("auth.password_changed", extra={"user_id": str(uid), "username": user.username})
 
 
 # ── Household endpoints ───────────────────────────────────────────────────────
@@ -229,5 +233,8 @@ async def admin_reset_password(user_id: _uuid.UUID, request: Request, db: AsyncS
     target.password_hash = _ph.hash(temp_password)
     target.force_password_change = True
     await db.commit()
-
+    logger.warning(
+        "auth.admin_password_reset",
+        extra={"admin_id": str(caller_id), "target_user_id": str(user_id), "target_username": target.username},
+    )
     return {"temp_password": temp_password}
