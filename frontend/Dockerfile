@@ -6,15 +6,14 @@
 #   development  — hot-reload via `next dev`; source mounted as volume
 #   production   — `next build` with output:standalone; built as linux/amd64 for NAS
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 FROM base AS deps
 
-COPY package.json package-lock.json* ./
-# Use `npm install` until a package-lock.json is committed; switch to `npm ci` after
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # ── Development ───────────────────────────────────────────────────────────────
 FROM deps AS development
