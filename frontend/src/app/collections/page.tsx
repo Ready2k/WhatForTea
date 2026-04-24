@@ -112,7 +112,7 @@ function ManageRecipesModal({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search recipes..."
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div className="overflow-y-auto flex-1 px-5 py-3 space-y-1">
@@ -212,7 +212,7 @@ export default function CollectionsPage() {
         </div>
         <button
           onClick={() => { setShowCreate((v) => !v); setCreateError(''); }}
-          className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+          className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
         >
           {showCreate ? 'Cancel' : '+ New'}
         </button>
@@ -230,7 +230,7 @@ export default function CollectionsPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Collection name"
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
           />
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Colour</p>
@@ -250,7 +250,7 @@ export default function CollectionsPage() {
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="w-full py-2.5 bg-emerald-600 text-white font-medium text-sm rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="w-full py-2.5 bg-indigo-600 text-white font-medium text-sm rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
             {createMutation.isPending ? 'Creating...' : 'Create Collection'}
           </button>
@@ -300,7 +300,7 @@ export default function CollectionsPage() {
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
             />
             <div className="flex gap-2 flex-wrap">
               {PRESET_COLOURS.map((c) => (
@@ -317,7 +317,7 @@ export default function CollectionsPage() {
               <button
                 onClick={handleSaveEdit}
                 disabled={updateMutation.isPending}
-                className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
+                className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50"
               >
                 Save
               </button>

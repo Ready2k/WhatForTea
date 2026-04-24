@@ -1,0 +1,10 @@
+{
+  "fixtures": [
+    {
+      "match": { "userMessage": { "$regex": "Red Leicester" } },
+      "response": {
+        "content": "{\"match\": true, \"confidence\": 1.0, \"reasoning\": \"Red Leicester is a variety of cheese similar enough to the candidate for this test case.\"}"
+      }
+    }
+  ]
+}

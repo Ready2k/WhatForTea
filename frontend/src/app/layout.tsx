@@ -5,10 +5,17 @@ import { ShellUI } from "@/components/ShellUI";
 
 export const metadata: Metadata = {
   title: "What's for Tea?",
-  description: "Locally-hosted recipe manager and kitchen assistant",
+  description: "AI-powered recipe manager and kitchen assistant",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "WhatsForTea",
+  },
   icons: [
-    { rel: "icon", url: "/teabot-chef.png", type: "image/png" },
-    { rel: "icon", url: "/favicon.ico", sizes: "32x32" },
+    { rel: "icon", url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+    { rel: "icon", url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    { rel: "apple-touch-icon", url: "/icons/apple-touch-icon.png" },
   ],
 };
 
@@ -17,6 +24,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Prevent zoom on input focus (important for cooking mode UX)
   maximumScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111827" },
+  ],
 };
 
 export default function RootLayout({

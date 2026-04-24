@@ -157,7 +157,7 @@ export function ImageCropModal({
         <button
           onClick={handleApply}
           disabled={busy || !completedCrop}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors shadow-lg"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors shadow-lg"
         >
           {isSaving ? (
             <>

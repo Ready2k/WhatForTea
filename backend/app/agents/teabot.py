@@ -174,8 +174,8 @@ async def _build_dynamic_context() -> str:
             available = await get_available(db)
             if available:
                 items = [
-                    f"{_sanitise(a.ingredient.canonical_name)} [iid:{a.ingredient.id}] ({a.total_quantity:.0f} {a.unit or ''})"
-                    for a in available[:20]
+                    f"{_sanitise(a.ingredient.canonical_name)} ({a.total_quantity:.0f} {a.unit or ''})"
+                    for a in available[:15]
                     if a.ingredient
                 ]
                 lines.append("Pantry (available): " + ", ".join(items))
@@ -243,35 +243,45 @@ async def _build_dynamic_context() -> str:
             except Exception:
                 logger.debug("Could not load meal plan shopping list for TeaBot context", exc_info=True)
 
-            # Top pantry matches with full ingredient detail (dynamic — depends on pantry stock)
+            # Top pantry matches — full ingredient detail only for recipes with score > 0.
+            # Zero-score recipes (empty pantry) get name + missing only; ingredient lists
+            # add ~120 tokens each and are worthless when nothing is in stock.
             matches = await score_all_recipes(db)
             if matches:
+                top_matches = matches[:5]
+                has_scored = any(m.score > 0 for m in top_matches)
                 match_lines = []
-                top_ids = [str(m.recipe.id) for m in matches[:8]]
-                top_stmt = (
-                    sa_select(RecipeModel)
-                    .where(RecipeModel.id.in_([uuid.UUID(rid) for rid in top_ids]))
-                    .options(selectinload(RecipeModel.ingredients))
-                )
-                top_recipes = {str(r.id): r for r in (await db.execute(top_stmt)).scalars().all()}
-                for m in matches[:8]:
+
+                if has_scored:
+                    # Fetch ingredient detail only for recipes that actually have a score
+                    scored_ids = [str(m.recipe.id) for m in top_matches if m.score > 0]
+                    top_stmt = (
+                        sa_select(RecipeModel)
+                        .where(RecipeModel.id.in_([uuid.UUID(rid) for rid in scored_ids]))
+                        .options(selectinload(RecipeModel.ingredients))
+                    )
+                    top_recipes = {str(r.id): r for r in (await db.execute(top_stmt)).scalars().all()}
+                else:
+                    top_recipes = {}
+
+                for m in top_matches:
                     rid = str(m.recipe.id)
-                    r = top_recipes.get(rid)
-                    if not r:
-                        continue
                     missing_names = [_sanitise(d.raw_name) for d in (m.hard_missing or [])][:3]
                     score_str = f"{m.score:.0f}% match"
                     if missing_names:
                         score_str += f", missing: {', '.join(missing_names)}"
-                    ing_parts = []
-                    for ing in r.ingredients:
-                        qty = f"{ing.quantity:.0f}" if ing.quantity == int(ing.quantity) else f"{ing.quantity}"
-                        unit = f" {ing.unit}" if ing.unit else ""
-                        ing_parts.append(f"{qty}{unit} {_sanitise(ing.raw_name)}")
-                    line = f"- {_sanitise(r.title)} [id:{rid}] ← {score_str}"
-                    if ing_parts:
-                        line += f"\n  Ingredients: {', '.join(ing_parts)}"
+                    line = f"- {_sanitise(m.recipe.title)} [id:{rid}] ← {score_str}"
+                    r = top_recipes.get(rid)
+                    if r and m.score > 0:
+                        ing_parts = []
+                        for ing in r.ingredients:
+                            qty = f"{ing.quantity:.0f}" if ing.quantity == int(ing.quantity) else f"{ing.quantity}"
+                            unit = f" {ing.unit}" if ing.unit else ""
+                            ing_parts.append(f"{qty}{unit} {_sanitise(ing.raw_name)}")
+                        if ing_parts:
+                            line += f"\n  Ingredients: {', '.join(ing_parts)}"
                     match_lines.append(line)
+
                 if match_lines:
                     lines.append("Top pantry matches (cook these now):\n" + "\n".join(match_lines))
 
@@ -336,19 +346,26 @@ async def _do_pantry_upsert(widget: dict, quantity: float) -> None:
 
 # ── LLM factory ───────────────────────────────────────────────────────────────
 
+_llm_instance: Optional[ChatBedrock] = None
+
 def _build_llm() -> ChatBedrock:
+    global _llm_instance
+    if _llm_instance is not None:
+        return _llm_instance
     from app.services.bedrock import _model_id
     client = boto3.client(
         service_name="bedrock-runtime",
         aws_access_key_id=settings.aws_access_key_id or None,
         aws_secret_access_key=settings.aws_secret_access_key or None,
         region_name=settings.aws_region,
+        endpoint_url=settings.aws_endpoint_url or None,
     )
-    return ChatBedrock(
+    _llm_instance = ChatBedrock(
         client=client,
         model_id=_model_id(vision=False),
         streaming=True,
     )
+    return _llm_instance
 
 
 # ── Node ──────────────────────────────────────────────────────────────────────

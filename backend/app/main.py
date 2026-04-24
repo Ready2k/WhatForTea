@@ -21,6 +21,7 @@ from app.api.v1.collections import router as collections_router
 from app.api.v1.users import router as users_router
 from app.api.v1.voice import router as voice_router
 from app.api.v1.shopping import router as shopping_router
+from app.api.v1.push import router as push_router
 from app.middleware.auth import AuthMiddleware
 from app.middleware.logging import RequestLoggingMiddleware
 from app.services.scheduler import create_scheduler
@@ -109,11 +110,18 @@ async def lifespan(app: FastAPI):
         from langgraph.checkpoint.memory import MemorySaver
         app.state.teabot_graph = teabot_workflow.compile(checkpointer=MemorySaver())
 
+    # Shared Redis client pool — used by chat rate limiting, auth brute-force, etc.
+    from redis.asyncio import Redis as AsyncRedis
+    app.state.redis = AsyncRedis.from_url(settings.redis_url, decode_responses=False)
+
     yield
 
     scheduler.shutdown(wait=False)
     if _checkpointer_cm is not None:
         await _checkpointer_cm.__aexit__(None, None, None)
+    await app.state.redis.aclose()
+    from app.database import engine
+    await engine.dispose()
     logger.info("WhatsForTea API shutting down")
 
 
@@ -148,3 +156,4 @@ app.include_router(collections_router)
 app.include_router(users_router)
 app.include_router(voice_router)
 app.include_router(shopping_router)
+app.include_router(push_router)

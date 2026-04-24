@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { logout, adminResetPassword } from '@/lib/api';
+import { PushNotifications } from '@/components/PushNotifications';
 import {
   useCurrentUser,
   useUpdateUserProfile,
@@ -14,10 +15,17 @@ import {
 
 const VOICE_KEY = 'wft_tts_voice';
 
+function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function VoiceSettings() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selected, setSelected] = useState<string>('');
   const [previewing, setPreviewing] = useState(false);
+  const onIOS = isIOS();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -60,14 +68,19 @@ function VoiceSettings() {
   const other = voices.filter(v => !v.lang.startsWith('en-GB') && !v.lang.startsWith('en-US'));
 
   return (
-    <section className="bg-zinc-800 rounded-xl p-6 space-y-4">
-      <h2 className="text-lg font-semibold">Cooking Voice</h2>
-      <p className="text-xs text-zinc-400">Choose the voice used to read recipe steps aloud during cooking.</p>
+    <section className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-6 space-y-4">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Cooking Voice</h2>
+      <p className="text-xs text-gray-500 dark:text-zinc-400">Choose the voice used to read recipe steps aloud during cooking.</p>
+      {onIOS && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg px-3 py-2">
+          On iOS, only built-in system voices are available — Google voices require Chrome on desktop or Android.
+        </p>
+      )}
       <div className="flex gap-2 items-center">
         <select
           value={selected}
           onChange={e => handleChange(e.target.value)}
-          className="flex-1 px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-zinc-200"
+          className="flex-1 px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-gray-900 dark:text-zinc-200"
         >
           <option value="">Auto (best available)</option>
           {gb.length > 0 && <optgroup label="English (UK)">{gb.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}</optgroup>}
@@ -76,7 +89,7 @@ function VoiceSettings() {
         </select>
         <button
           onClick={previewing ? stopPreview : handlePreview}
-          className={`px-3 py-2 rounded text-sm font-medium transition-colors ${previewing ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'}`}
+          className={`px-3 py-2 rounded text-sm font-medium transition-colors ${previewing ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
         >
           {previewing ? 'Stop' : 'Preview'}
         </button>
@@ -94,7 +107,7 @@ function CopyButton({ text }: { text: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }}
-      className="ml-2 px-2 py-0.5 text-xs bg-zinc-700 hover:bg-zinc-600 rounded"
+      className="ml-2 px-2 py-0.5 text-xs bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded"
     >
       {copied ? 'Copied!' : 'Copy'}
     </button>
@@ -126,18 +139,18 @@ export default function ProfilePage() {
 
   if (userLoading) {
     return (
-      <div className="min-h-screen bg-zinc-900 text-white flex items-center justify-center">
-        <p className="text-zinc-400">Loading…</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-white flex items-center justify-center">
+        <p className="text-gray-500 dark:text-zinc-400">Loading…</p>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-zinc-400 mb-4">Profile not available in legacy auth mode.</p>
-          <Link href="/" className="text-emerald-400 hover:underline">← Back home</Link>
+          <p className="text-gray-500 dark:text-zinc-400 mb-4">Profile not available in legacy auth mode.</p>
+          <Link href="/" className="text-emerald-600 dark:text-emerald-400 hover:underline">← Back home</Link>
         </div>
       </div>
     );
@@ -202,137 +215,137 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-white">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-zinc-400 hover:text-white text-sm">← Home</Link>
+          <Link href="/" className="text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white text-sm">← Home</Link>
           <h1 className="text-2xl font-bold">Profile</h1>
           <button
             onClick={() => logout()}
-            className="ml-auto px-3 py-1.5 text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded"
+            className="ml-auto px-3 py-1.5 text-sm bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-zinc-300 rounded"
           >
             Sign out
           </button>
         </div>
 
         {/* Profile section */}
-        <section className="bg-zinc-800 rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Your Account</h2>
+        <section className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your Account</h2>
           <div>
-            <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Username</p>
-            <p className="text-zinc-200">{user.username}</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Username</p>
+            <p className="text-gray-800 dark:text-zinc-200">{user.username}</p>
           </div>
           <div>
-            <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Display Name</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Display Name</p>
             {nameEditing ? (
               <div className="flex gap-2">
                 <input
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  className="flex-1 px-3 py-1.5 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-gray-900 dark:text-white"
                 />
                 <button
                   onClick={saveName}
                   disabled={updateProfile.isPending}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded text-sm font-medium"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded text-sm font-medium text-white"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setNameEditing(false)}
-                  className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm"
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded text-sm"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <p className="text-zinc-200">{user.display_name}</p>
-                <button onClick={startEditName} className="text-xs text-emerald-400 hover:underline">
+                <p className="text-gray-800 dark:text-zinc-200">{user.display_name}</p>
+                <button onClick={startEditName} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">
                   Edit
                 </button>
               </div>
             )}
           </div>
           <div>
-            <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Email</p>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Email</p>
             {emailEditing ? (
               <div className="flex gap-2">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500"
+                  className="flex-1 px-3 py-1.5 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-gray-900 dark:text-white"
                 />
                 <button
                   onClick={saveEmail}
                   disabled={updateProfile.isPending}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded text-sm font-medium"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded text-sm font-medium text-white"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setEmailEditing(false)}
-                  className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded text-sm"
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded text-sm"
                 >
                   Cancel
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <p className="text-zinc-200">{user.email ?? <span className="text-zinc-500 italic">not set</span>}</p>
-                <button onClick={startEditEmail} className="text-xs text-emerald-400 hover:underline">
+                <p className="text-gray-800 dark:text-zinc-200">{user.email ?? <span className="text-gray-400 dark:text-zinc-500 italic">not set</span>}</p>
+                <button onClick={startEditEmail} className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline">
                   {user.email ? 'Edit' : 'Add'}
                 </button>
               </div>
             )}
           </div>
           {user.is_admin && (
-            <p className="text-xs text-emerald-400 font-medium">Admin</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Admin</p>
           )}
         </section>
 
         {/* Change password */}
-        <section className="bg-zinc-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Change Password</h2>
+        <section className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Change Password</h2>
           <form onSubmit={handlePasswordChange} className="space-y-3">
             <div>
-              <label className="text-xs text-zinc-400 uppercase tracking-wide block mb-1">Current Password</label>
+              <label className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide block mb-1">Current Password</label>
               <input
                 type="password"
                 value={currentPw}
                 onChange={(e) => setCurrentPw(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-gray-900 dark:text-white"
               />
             </div>
             <div>
-              <label className="text-xs text-zinc-400 uppercase tracking-wide block mb-1">New Password</label>
+              <label className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide block mb-1">New Password</label>
               <input
                 type="password"
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
                 required
                 minLength={8}
-                className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-gray-900 dark:text-white"
               />
             </div>
             <div>
-              <label className="text-xs text-zinc-400 uppercase tracking-wide block mb-1">Confirm New Password</label>
+              <label className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide block mb-1">Confirm New Password</label>
               <input
                 type="password"
                 value={confirmPw}
                 onChange={(e) => setConfirmPw(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded text-sm focus:outline-none focus:border-emerald-500 text-gray-900 dark:text-white"
               />
             </div>
-            {pwError && <p className="text-red-400 text-sm">{pwError}</p>}
-            {pwSuccess && <p className="text-emerald-400 text-sm">Password changed successfully.</p>}
+            {pwError && <p className="text-red-500 dark:text-red-400 text-sm">{pwError}</p>}
+            {pwSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-sm">Password changed successfully.</p>}
             <button
               type="submit"
               disabled={changePw.isPending}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded text-sm font-medium"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded text-sm font-medium text-white"
             >
               {changePw.isPending ? 'Saving…' : 'Update Password'}
             </button>
@@ -341,55 +354,59 @@ export default function ProfilePage() {
 
         <VoiceSettings />
 
-        {/* Household section — visible to all members */}
+        {/* Notifications */}
+        <section className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-6 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h2>
+          <PushNotifications />
+        </section>
+
+        {/* Household section */}
         {household && (
-          <section className="bg-zinc-800 rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Household</h2>
+          <section className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Household</h2>
             <div>
-              <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Name</p>
-              <p className="text-zinc-200">{household.name}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Name</p>
+              <p className="text-gray-800 dark:text-zinc-200">{household.name}</p>
             </div>
             <div>
-              <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Members</p>
-              <p className="text-zinc-200">{household.member_count}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Members</p>
+              <p className="text-gray-800 dark:text-zinc-200">{household.member_count}</p>
             </div>
 
-            {/* Invite code — admin only */}
             {user.is_admin && (
               <div>
-                <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Invite Code</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Invite Code</p>
                 <div className="flex items-center gap-2">
-                  <code className="bg-zinc-700 px-3 py-1.5 rounded text-sm font-mono text-emerald-300">
+                  <code className="bg-gray-100 dark:bg-zinc-700 px-3 py-1.5 rounded text-sm font-mono text-emerald-600 dark:text-emerald-300">
                     {household.invite_code}
                   </code>
                   <CopyButton text={household.invite_code} />
                   <button
                     onClick={() => rotateInvite.mutate()}
                     disabled={rotateInvite.isPending}
-                    className="px-2 py-1.5 text-xs bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded"
+                    className="px-2 py-1.5 text-xs bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 disabled:opacity-50 text-gray-700 dark:text-white rounded"
                   >
                     Rotate
                   </button>
                 </div>
-                <p className="text-xs text-zinc-500 mt-1">Share this code with household members to let them create an account.</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">Share this code with household members to let them create an account.</p>
               </div>
             )}
 
-            {/* Member list */}
             {members && members.length > 0 && (
               <div>
-                <p className="text-xs text-zinc-400 uppercase tracking-wide mb-2">Members</p>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Members</p>
                 <ul className="space-y-2">
                   {members.map((m) => (
                     <li key={m.id} className="flex items-center gap-2 text-sm">
-                      <span className="text-zinc-200">{m.display_name}</span>
-                      <span className="text-zinc-500">@{m.username}</span>
-                      {m.is_admin && <span className="text-xs text-emerald-400">admin</span>}
-                      {m.id === user.id && <span className="text-xs text-zinc-500">(you)</span>}
+                      <span className="text-gray-800 dark:text-zinc-200">{m.display_name}</span>
+                      <span className="text-gray-400 dark:text-zinc-500">@{m.username}</span>
+                      {m.is_admin && <span className="text-xs text-emerald-600 dark:text-emerald-400">admin</span>}
+                      {m.id === user.id && <span className="text-xs text-gray-400 dark:text-zinc-500">(you)</span>}
                       {user.is_admin && m.id !== user.id && (
                         <button
                           onClick={() => { setResetTargetId(m.id); setResetTargetName(m.display_name); setTempPassword(null); setResetError(null); }}
-                          className="ml-auto text-xs px-2 py-0.5 bg-zinc-700 hover:bg-zinc-600 rounded text-zinc-300"
+                          className="ml-auto text-xs px-2 py-0.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-zinc-300 rounded"
                         >
                           Reset password
                         </button>
@@ -406,25 +423,25 @@ export default function ProfilePage() {
       {/* Admin reset password modal */}
       {resetTargetId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-zinc-800 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+          <div className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
             {!tempPassword ? (
               <>
-                <h3 className="text-lg font-semibold">Reset password</h3>
-                <p className="text-sm text-zinc-400">
-                  This will generate a temporary password for <span className="text-zinc-200 font-medium">{resetTargetName}</span>. They will be required to set a new password on next login.
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Reset password</h3>
+                <p className="text-sm text-gray-500 dark:text-zinc-400">
+                  This will generate a temporary password for <span className="text-gray-800 dark:text-zinc-200 font-medium">{resetTargetName}</span>. They will be required to set a new password on next login.
                 </p>
-                {resetError && <p className="text-sm text-red-400">{resetError}</p>}
+                {resetError && <p className="text-sm text-red-500 dark:text-red-400">{resetError}</p>}
                 <div className="flex gap-3 pt-1">
                   <button
                     onClick={handleAdminReset}
                     disabled={resetLoading}
-                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-xl text-sm font-medium"
+                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 rounded-xl text-sm font-medium text-white"
                   >
                     {resetLoading ? 'Resetting…' : 'Confirm reset'}
                   </button>
                   <button
                     onClick={() => setResetTargetId(null)}
-                    className="flex-1 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl text-sm"
+                    className="flex-1 py-2 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-xl text-sm"
                   >
                     Cancel
                   </button>
@@ -432,17 +449,17 @@ export default function ProfilePage() {
               </>
             ) : (
               <>
-                <h3 className="text-lg font-semibold">Temporary password</h3>
-                <p className="text-sm text-zinc-400">
-                  Share this with <span className="text-zinc-200 font-medium">{resetTargetName}</span>. It will not be shown again.
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Temporary password</h3>
+                <p className="text-sm text-gray-500 dark:text-zinc-400">
+                  Share this with <span className="text-gray-800 dark:text-zinc-200 font-medium">{resetTargetName}</span>. It will not be shown again.
                 </p>
-                <div className="flex items-center gap-2 bg-zinc-700 rounded-xl px-3 py-2">
-                  <code className="flex-1 text-emerald-300 font-mono text-sm break-all">{tempPassword}</code>
+                <div className="flex items-center gap-2 bg-gray-100 dark:bg-zinc-700 rounded-xl px-3 py-2">
+                  <code className="flex-1 text-emerald-600 dark:text-emerald-300 font-mono text-sm break-all">{tempPassword}</code>
                   <CopyButton text={tempPassword} />
                 </div>
                 <button
                   onClick={() => { setResetTargetId(null); setTempPassword(null); }}
-                  className="w-full py-2 bg-zinc-700 hover:bg-zinc-600 rounded-xl text-sm"
+                  className="w-full py-2 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-xl text-sm"
                 >
                   Done
                 </button>

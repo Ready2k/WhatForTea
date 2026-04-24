@@ -1,8 +1,20 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { useWeekPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
-import { Wand2, Users, ShoppingCart, Clock } from 'lucide-react';
+import { Wand2, Users, ShoppingCart, Clock, GripVertical } from 'lucide-react';
 import { autoFillWeek, type AutoFillEntry, fetchShoppingItems, addShoppingItem, patchShoppingItem, deleteShoppingItem, clearDoneShoppingItems, type ShoppingItem } from '@/lib/api';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,6 +60,209 @@ function formatDayLabel(date: Date): string {
   return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
 }
 
+// Extracted so useDraggable / useDroppable hooks can be called at the top level of a component
+function DaySlot({
+  dayIdx,
+  dayDate,
+  isToday,
+  isPast,
+  recipeId,
+  recipeSummary,
+  servings,
+  anyDragActive,
+  showPickerFor,
+  showServingPickerFor,
+  recipes,
+  onSetDay,
+  onSetServings,
+  onShowPicker,
+  onShowServingPicker,
+}: {
+  dayIdx: number;
+  dayDate: Date;
+  isToday: boolean;
+  isPast: boolean;
+  recipeId: string | null;
+  recipeSummary: RecipeSummary | undefined;
+  servings: number | null;
+  anyDragActive: boolean;
+  showPickerFor: number | null;
+  showServingPickerFor: number | null;
+  recipes: RecipeSummary[] | undefined;
+  onSetDay: (recipeId: string | null) => void;
+  onSetServings: (servings: number | null) => void;
+  onShowPicker: (idx: number | null) => void;
+  onShowServingPicker: (idx: number | null) => void;
+}) {
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: dayIdx,
+    disabled: !recipeId,
+  });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: dayIdx });
+
+  const setRef = useCallback(
+    (node: HTMLElement | null) => {
+      setDragRef(node);
+      setDropRef(node);
+    },
+    [setDragRef, setDropRef],
+  );
+
+  const highlightDrop = isOver && anyDragActive && !isDragging;
+
+  return (
+    <div
+      ref={setRef}
+      className={`rounded-2xl border p-3 shadow-sm transition-all ${
+        isDragging
+          ? 'opacity-30'
+          : highlightDrop
+          ? 'ring-2 ring-indigo-400 ring-offset-1 border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+          : isToday
+          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
+          : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        {/* Drag handle — only when a recipe is assigned */}
+        {recipeId ? (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-gray-400 dark:hover:text-gray-500 p-0.5"
+            aria-label="Drag to reschedule"
+          >
+            <GripVertical className="w-4 h-4" />
+          </div>
+        ) : (
+          <div className="w-5 flex-shrink-0" />
+        )}
+
+        {/* Day label */}
+        <div className="flex flex-col w-16 flex-shrink-0">
+          <span
+            className={`text-sm font-medium ${
+              isToday
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : isPast
+                ? 'text-gray-400 dark:text-gray-500'
+                : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            {formatDayLabel(dayDate)}
+          </span>
+          {isToday && (
+            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">
+              Today
+            </span>
+          )}
+        </div>
+
+        {/* Recipe content or add button */}
+        {recipeSummary ? (
+          <div className="flex-1 flex items-center justify-between min-w-0">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{recipeSummary.title}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {recipeSummary.cooking_time_mins && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
+                    <Clock className="w-3 h-3" />
+                    {recipeSummary.cooking_time_mins} min
+                  </p>
+                )}
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <button
+                  onClick={() => onShowServingPicker(showServingPickerFor === dayIdx ? null : dayIdx)}
+                  className="text-xs font-medium text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-1"
+                >
+                  <Users className="w-3 h-3 inline mr-0.5" />
+                  {servings || 'Default'}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-3 ml-2">
+              <button
+                onClick={() => onShowPicker(dayIdx)}
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 transition-colors"
+              >
+                Change
+              </button>
+              <button
+                onClick={() => { onSetDay(null); onSetServings(null); }}
+                className="text-xs text-red-300 hover:text-red-500 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => onShowPicker(dayIdx)}
+            className="flex-1 py-2 border-2 border-dashed border-gray-200 dark:border-gray-600 text-sm text-gray-400 dark:text-gray-500 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 transition-colors text-center"
+          >
+            + Add recipe
+          </button>
+        )}
+      </div>
+
+      {/* Serving picker */}
+      {showServingPickerFor === dayIdx && (
+        <div className="mt-3 flex items-center gap-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
+          <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Servings:</span>
+          {[1, 2, 3, 4, 6, 8].map((n) => (
+            <button
+              key={n}
+              onClick={() => { onSetServings(n); onShowServingPicker(null); }}
+              className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
+                servings === n
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            onClick={() => { onSetServings(null); onShowServingPicker(null); }}
+            className="ml-auto text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          >
+            Default
+          </button>
+        </div>
+      )}
+
+      {/* Recipe picker */}
+      {showPickerFor === dayIdx && (
+        <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+          <div className="max-h-40 overflow-y-auto space-y-1">
+            {recipes?.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => { onSetDay(r.id); onSetServings(2); onShowPicker(null); }}
+                className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+              >
+                {r.title}
+                {r.cooking_time_mins && (
+                  <span className="text-gray-400 dark:text-gray-500 ml-2">({r.cooking_time_mins} min)</span>
+                )}
+              </button>
+            ))}
+            {(!recipes || recipes.length === 0) && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 px-2">No recipes available</p>
+            )}
+          </div>
+          <button
+            onClick={() => onShowPicker(null)}
+            className="mt-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PlannerPage() {
   const today = useMemo(() => {
     const d = new Date();
@@ -75,6 +290,12 @@ export default function PlannerPage() {
   const [maxCookTime, setMaxCookTime] = useState<number | ''>('');
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   const [autoFillError, setAutoFillError] = useState<string | null>(null);
+  const [activeDragDay, setActiveDragDay] = useState<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   const { data: plan, isLoading: planLoading } = useWeekPlan(weekStart);
   const { data: recipes } = useRecipes();
@@ -116,7 +337,6 @@ export default function PlannerPage() {
   const pendingManual = manualItems.filter(i => !i.done);
   const doneManual = manualItems.filter(i => i.done);
 
-  // Local overrides are keyed by weekStart so switching weeks doesn't bleed state
   const localDayPlan = dayPlan[weekStart] ?? {};
   const localServingsPlan = servingsPlan[weekStart] ?? {};
 
@@ -143,6 +363,27 @@ export default function PlannerPage() {
   function getRecipeSummary(recipeId: string | null): RecipeSummary | undefined {
     if (!recipeId) return undefined;
     return recipes?.find((r) => r.id === recipeId);
+  }
+
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveDragDay(Number(active.id));
+    setShowPickerFor(null);
+    setShowServingPickerFor(null);
+  }
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    setActiveDragDay(null);
+    if (!over || active.id === over.id) return;
+    const from = Number(active.id);
+    const to = Number(over.id);
+    const fromRecipe = resolvedPlan[from] ?? null;
+    const toRecipe = resolvedPlan[to] ?? null;
+    const fromServings = resolvedServings[from] ?? null;
+    const toServings = resolvedServings[to] ?? null;
+    setLocalDay(from, toRecipe);
+    setLocalDay(to, fromRecipe);
+    setLocalServings(from, toServings);
+    setLocalServings(to, fromServings);
   }
 
   async function handleAutoFill() {
@@ -247,11 +488,11 @@ export default function PlannerPage() {
               onClick={() => { setWeekOffset(i); setShowPickerFor(null); setShowServingPickerFor(null); }}
               className={`flex-1 py-2.5 px-3 rounded-xl border text-left transition-colors ${
                 active
-                  ? 'bg-emerald-600 border-emerald-600 text-white'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-emerald-300 dark:hover:border-emerald-700'
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700'
               }`}
             >
-              <div className={`text-xs font-semibold ${active ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}>{label}</div>
+              <div className={`text-xs font-semibold ${active ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>{label}</div>
               <div className={`text-sm font-medium leading-tight ${active ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{range}</div>
             </button>
           );
@@ -281,7 +522,7 @@ export default function PlannerPage() {
           {!planLoading && (
             <button
               onClick={() => { setShowAutoFill(true); setAutoFillError(null); }}
-              className="w-full py-2.5 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 text-sm font-medium rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 text-sm font-medium rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center justify-center gap-2"
             >
               <Wand2 className="w-4 h-4" /> Auto-fill week
             </button>
@@ -295,139 +536,62 @@ export default function PlannerPage() {
             </div>
           )}
 
-          {!planLoading && DAYS.map((dayName, idx) => {
-            const dayDate = addDays(selectedMonday, idx);
-            const dayDateStr = toDateStr(dayDate);
-            const isToday = dayDateStr === todayStr;
-            const isPast = dayDate < today;
-            const recipeId = resolvedPlan[idx];
-            const recipeSummary = getRecipeSummary(recipeId);
+          {!planLoading && (
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+              {DAYS.map((_, idx) => {
+                const dayDate = addDays(selectedMonday, idx);
+                const dayDateStr = toDateStr(dayDate);
+                const isToday = dayDateStr === todayStr;
+                const isPast = dayDate < today;
+                const recipeId = resolvedPlan[idx];
+                const recipeSummary = getRecipeSummary(recipeId ?? null);
 
-            return (
-              <div
-                key={idx}
-                className={`rounded-2xl border p-3 shadow-sm transition-colors ${
-                  isToday
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
-                    : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-col w-20 flex-shrink-0">
-                    <span className={`text-sm font-medium ${isToday ? 'text-emerald-700 dark:text-emerald-400' : isPast ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {formatDayLabel(dayDate)}
-                    </span>
-                    {isToday && (
-                      <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">Today</span>
-                    )}
-                  </div>
+                return (
+                  <DaySlot
+                    key={idx}
+                    dayIdx={idx}
+                    dayDate={dayDate}
+                    isToday={isToday}
+                    isPast={isPast}
+                    recipeId={recipeId ?? null}
+                    recipeSummary={recipeSummary}
+                    servings={resolvedServings[idx] ?? null}
+                    anyDragActive={activeDragDay !== null}
+                    showPickerFor={showPickerFor}
+                    showServingPickerFor={showServingPickerFor}
+                    recipes={recipes}
+                    onSetDay={(id) => setLocalDay(idx, id)}
+                    onSetServings={(s) => setLocalServings(idx, s)}
+                    onShowPicker={setShowPickerFor}
+                    onShowServingPicker={setShowServingPickerFor}
+                  />
+                );
+              })}
 
-                  {recipeSummary ? (
-                    <div className="flex-1 flex items-center justify-between min-w-0">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{recipeSummary.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {recipeSummary.cooking_time_mins && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5"><Clock className="w-3 h-3" />{recipeSummary.cooking_time_mins} min</p>
-                          )}
-                          <span className="text-gray-300 dark:text-gray-600">•</span>
-                          <button
-                            onClick={() => setShowServingPickerFor(showServingPickerFor === idx ? null : idx)}
-                            className="text-xs font-medium text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-1"
-                          >
-                            <Users className="w-3 h-3 inline mr-0.5" />{resolvedServings[idx] || 'Default'}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex gap-3 ml-2">
-                        <button
-                          onClick={() => setShowPickerFor(idx)}
-                          className="text-xs text-gray-400 dark:text-gray-500 hover:text-emerald-600 transition-colors"
-                        >
-                          Change
-                        </button>
-                        <button
-                          onClick={() => { setLocalDay(idx, null); setLocalServings(idx, null); }}
-                          className="text-xs text-red-300 hover:text-red-500 transition-colors"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setShowPickerFor(idx)}
-                      className="flex-1 py-2 border-2 border-dashed border-gray-200 dark:border-gray-600 text-sm text-gray-400 dark:text-gray-500 rounded-xl hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-600 transition-colors text-center"
-                    >
-                      + Add recipe
-                    </button>
-                  )}
-                </div>
-
-                {/* Serving picker */}
-                {showServingPickerFor === idx && (
-                  <div className="mt-3 flex items-center gap-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Servings:</span>
-                    {[1, 2, 3, 4, 6, 8].map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => { setLocalServings(idx, n); setShowServingPickerFor(null); }}
-                        className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
-                          resolvedServings[idx] === n
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => { setLocalServings(idx, null); setShowServingPickerFor(null); }}
-                      className="ml-auto text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    >
-                      Default
-                    </button>
-                  </div>
-                )}
-
-                {/* Recipe picker */}
-                {showPickerFor === idx && (
-                  <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
-                    <div className="max-h-40 overflow-y-auto space-y-1">
-                      {recipes?.map((r) => (
-                        <button
-                          key={r.id}
-                          onClick={() => { setLocalDay(idx, r.id); setLocalServings(idx, 2); setShowPickerFor(null); }}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
-                        >
-                          {r.title}
-                          {r.cooking_time_mins && (
-                            <span className="text-gray-400 dark:text-gray-500 ml-2">({r.cooking_time_mins} min)</span>
-                          )}
-                        </button>
-                      ))}
-                      {(!recipes || recipes.length === 0) && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 px-2">No recipes available</p>
+              <DragOverlay dropAnimation={null}>
+                {activeDragDay !== null && (() => {
+                  const r = getRecipeSummary(resolvedPlan[activeDragDay] ?? null);
+                  return r ? (
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-indigo-400 shadow-2xl px-4 py-3 opacity-95 pointer-events-none">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.title}</p>
+                      {r.cooking_time_mins && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />{r.cooking_time_mins} min
+                        </p>
                       )}
                     </div>
-                    <button
-                      onClick={() => setShowPickerFor(null)}
-                      className="mt-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  ) : null;
+                })()}
+              </DragOverlay>
+            </DndContext>
+          )}
 
           {!planLoading && (
             <div className="pt-2">
               <button
                 onClick={handleSavePlan}
                 disabled={setWeekPlanMutation.isPending}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl transition-colors disabled:opacity-50"
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl transition-colors disabled:opacity-50"
               >
                 {setWeekPlanMutation.isPending ? 'Saving...' : 'Save Plan'}
               </button>
@@ -456,7 +620,7 @@ export default function PlannerPage() {
           {shopError && (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load shopping list</p>
-              <button onClick={() => refetchShopping()} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium">
+              <button onClick={() => refetchShopping()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
                 Retry
               </button>
             </div>
@@ -605,7 +769,7 @@ export default function PlannerPage() {
                         <button
                           onClick={handleMarkCheckedAsBought}
                           disabled={bulkConfirmMutation.isPending}
-                          className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                          className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                         >
                           {bulkConfirmMutation.isPending ? 'Saving...' : `Mark ${checkedItems.size} as bought`}
                         </button>
@@ -617,7 +781,7 @@ export default function PlannerPage() {
                       <button
                         onClick={handleMarkAllAsBought}
                         disabled={bulkConfirmMutation.isPending}
-                        className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                        className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                       >
                         I bought everything
                       </button>
@@ -652,7 +816,7 @@ export default function PlannerPage() {
                     onClick={() => setSelectedMoods((prev) => prev.includes(mood) ? prev.filter((m) => m !== mood) : [...prev, mood])}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       selectedMoods.includes(mood)
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-indigo-600 text-white'
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
@@ -665,9 +829,9 @@ export default function PlannerPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Servings per meal</p>
               <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-1 py-0.5">
-                <button onClick={() => setAutoFillServings((s) => Math.max(1, s - 1))} disabled={autoFillServings <= 1} className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">−</button>
+                <button onClick={() => setAutoFillServings((s) => Math.max(1, s - 1))} disabled={autoFillServings <= 1} className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-indigo-600 disabled:opacity-30 font-bold text-base">−</button>
                 <span className="w-5 text-center text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{autoFillServings}</span>
-                <button onClick={() => setAutoFillServings((s) => Math.min(12, s + 1))} disabled={autoFillServings >= 12} className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-emerald-600 disabled:opacity-30 font-bold text-base">+</button>
+                <button onClick={() => setAutoFillServings((s) => Math.min(12, s + 1))} disabled={autoFillServings >= 12} className="w-7 h-7 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-indigo-600 disabled:opacity-30 font-bold text-base">+</button>
               </div>
             </div>
 
@@ -678,7 +842,7 @@ export default function PlannerPage() {
                   type="number" min={10} max={180} step={5} value={maxCookTime}
                   onChange={(e) => setMaxCookTime(e.target.value ? Number(e.target.value) : '')}
                   placeholder="Any"
-                  className="w-20 text-right px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-20 text-right px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-gray-500 dark:text-gray-400">min</span>
               </div>
@@ -689,7 +853,7 @@ export default function PlannerPage() {
             <button
               onClick={handleAutoFill}
               disabled={autoFillLoading}
-              className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              className="w-full py-3.5 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               {autoFillLoading ? 'Finding recipes…' : 'Fill my week'}
             </button>

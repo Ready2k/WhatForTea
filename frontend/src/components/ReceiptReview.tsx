@@ -79,7 +79,7 @@ export function ReceiptReview({ items, onDone }: Props) {
         </p>
         <button
           onClick={onDone}
-          className="mt-2 px-6 py-2 bg-emerald-500 text-white text-sm font-medium rounded-xl hover:bg-emerald-600 transition-colors"
+          className="mt-2 px-6 py-2 bg-indigo-500 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 transition-colors"
         >
           Done
         </button>
@@ -181,7 +181,7 @@ export function ReceiptReview({ items, onDone }: Props) {
       <button
         onClick={handleConfirm}
         disabled={resolvedSelected.length === 0 || saving}
-        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-2xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-2xl transition-colors flex items-center justify-center gap-2"
       >
         {saving ? (
           <><Loader2 size={16} className="animate-spin" /> Saving…</>

@@ -2,11 +2,12 @@
 
 import { useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useMatches, useCollections, useCollectionRecipeIds } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
 import type { RecipeMatchResult } from '@/lib/types';
-import { UtensilsCrossed, Clock, Search } from 'lucide-react';
+import { Clock, Search } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const FILTER_TABS = [
@@ -36,7 +37,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <UtensilsCrossed className="w-12 h-12 text-emerald-400/50" />
+          <span className="text-3xl opacity-30">🍽</span>
         )}
       </div>
       <div className="p-3 space-y-1.5">
@@ -180,7 +181,7 @@ function RecipesContent() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search recipes by name…"
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
         />
         {query && (
           <button
@@ -203,7 +204,7 @@ function RecipesContent() {
             onClick={() => setSelectedCategory(tab.value)}
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === tab.value
-                ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-500/30'
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
                 : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
           >
@@ -307,7 +308,7 @@ function RecipesContent() {
           <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load recipes</p>
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
           >
             Retry
           </button>
@@ -326,28 +327,41 @@ function RecipesContent() {
       {/* ── Empty state ──────────────────────────────────────────────────────── */}
       {!isLoading && !isError && filtered.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          {hasActiveFilters ? <Search className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" /> : <UtensilsCrossed className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />}
-          <p className="font-medium text-gray-600 dark:text-gray-300">
-            {hasActiveFilters ? 'No recipes match your search' : 'No recipes found'}
-          </p>
           {hasActiveFilters ? (
-            <button
-              onClick={clearFilters}
-              className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
-            >
-              Clear filters
-            </button>
-          ) : (
             <>
-              <p className="text-sm mt-1">
-                {selectedCategory ? 'Try a different filter' : 'Scan a recipe card to get started'}
-              </p>
+              <Search className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+              <p className="font-medium text-gray-600 dark:text-gray-300">No recipes match your search</p>
+              <button
+                onClick={clearFilters}
+                className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+              >
+                Clear filters
+              </button>
+            </>
+          ) : (matches?.length ?? 0) === 0 ? (
+            // True first-run: no recipes at all
+            <div className="flex flex-col items-center gap-4 px-6">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow-lg">
+                <Image src="/teabot-chef.png" alt="TeaBot" width={96} height={96} className="object-cover" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-700 dark:text-gray-200">Hi, I&apos;m TeaBot!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Your kitchen is empty. Scan your first recipe card to get started.
+                </p>
+              </div>
               <Link
                 href="/ingest"
-                className="inline-block mt-4 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700"
+                className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm transition-colors"
               >
-                Scan Recipe Card
+                Scan a Recipe Card
               </Link>
+            </div>
+          ) : (
+            // Has recipes but current filter shows nothing
+            <>
+              <p className="font-medium text-gray-600 dark:text-gray-300">No recipes in this category</p>
+              <p className="text-sm mt-1">Try a different filter</p>
             </>
           )}
         </div>

@@ -84,9 +84,32 @@ class LoginRequest(BaseModel):
     password: str
 
 
+_BRUTE_FORCE_LIMIT = 10      # max failures allowed
+_BRUTE_FORCE_WINDOW = 600    # seconds (10 minutes)
+
+
+def _brute_force_key(username: str) -> str:
+    # Hash the username so the Redis key doesn't log the raw value
+    return "auth:failures:" + hashlib.sha256(username.lower().encode()).hexdigest()[:16]
+
+
 @router.post("/login")
-async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+async def login(body: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     from app.models.user import User
+
+    redis = getattr(request.app.state, "redis", None)
+    bf_key = _brute_force_key(body.username)
+
+    # Reject immediately if already locked out
+    if redis is not None:
+        count = await redis.get(bf_key)
+        if count and int(count) >= _BRUTE_FORCE_LIMIT:
+            logger.warning("auth.brute_force_blocked", extra={"username": body.username})
+            raise AppError(
+                ErrorCode.UNAUTHORIZED,
+                "Too many failed attempts. Try again in 10 minutes.",
+                status_code=429,
+            )
 
     stmt = select(User).where(User.username == body.username)
     user = (await db.execute(stmt)).scalar_one_or_none()
@@ -111,7 +134,15 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
 
     if not valid:
         logger.warning("auth.login_failed", extra={"username": body.username})
+        if redis is not None:
+            new_count = await redis.incr(bf_key)
+            if new_count == 1:
+                await redis.expire(bf_key, _BRUTE_FORCE_WINDOW)
         raise AppError(ErrorCode.UNAUTHORIZED, "Invalid credentials", status_code=401)
+
+    # Successful login — clear any accumulated failure count
+    if redis is not None:
+        await redis.delete(bf_key)
 
     if user:
         user_id = str(user.id)

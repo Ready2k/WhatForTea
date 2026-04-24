@@ -1,0 +1,16 @@
+{
+  "fixtures": [
+    {
+      "match": {
+        "userMessage": "Extract all recipe information from the image(s) above and return it as valid JSON exactly matching the schema in the system prompt."
+      },
+      "response": {
+        "error": {
+          "message": "Could not detect response format from upstream",
+          "type": "proxy_error"
+        },
+        "status": 400
+      }
+    }
+  ]
+}

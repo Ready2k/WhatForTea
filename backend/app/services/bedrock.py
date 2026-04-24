@@ -15,7 +15,15 @@ from typing import Any
 import boto3
 import yaml
 from jinja2 import Template
-from langfuse.decorators import langfuse_context, observe
+try:
+    from langfuse.decorators import langfuse_context, observe
+except ImportError:
+    # Fallback to no-op decorators if langfuse is not installed
+    def observe(*args, **kwargs):
+        def wrapper(func):
+            return func
+        return wrapper
+    langfuse_context = None
 
 logger = logging.getLogger(__name__)
 
@@ -51,15 +59,27 @@ def _load_prompt(filename: str) -> str:
         return f.read()
 
 
-@lru_cache(maxsize=1)
 def _get_client():
-    from app.config import settings
-    return boto3.client(
+    raise RuntimeError("CRASH TEST")
+    client = boto3.client(
         "bedrock-runtime",
         region_name=settings.aws_region,
         aws_access_key_id=settings.aws_access_key_id or None,
         aws_secret_access_key=settings.aws_secret_access_key or None,
+        endpoint_url=settings.aws_endpoint_url or None,
     )
+
+    # If using a mock/proxy, override the Host header for signing so SigV4 is valid for real AWS
+    if settings.aws_endpoint_url:
+        def before_sign(request, **kwargs):
+            real_host = f"bedrock-runtime.{settings.aws_region}.amazonaws.com"
+            request.headers["Host"] = real_host
+            print(f"DEBUG: SigV4 Host override: {real_host}")
+            print(f"DEBUG: Headers: {list(request.headers.keys())}")
+
+        client.meta.events.register("before-sign", before_sign)
+
+    return client
 
 
 @observe(as_type="generation", name="nutrition_llm")
@@ -230,15 +250,22 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
             text = text.strip()
         parsed = json.loads(text)
         usage = raw.get("usage", {})
+        intent = parsed.get("intent", "unknown")
         langfuse_context.update_current_observation(
             model=model,
             input={"transcript": transcript, "context": context},
             output=parsed,
             usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+            metadata={
+                "intent": intent,
+                "model": model,
+                "input_tokens": usage.get("input_tokens"),
+                "output_tokens": usage.get("output_tokens"),
+            },
         )
         logger.info(
             "voice command LLM call",
-            extra={"transcript": transcript[:80], "intent": parsed.get("intent")},
+            extra={"transcript": transcript[:80], "intent": intent},
         )
         return parsed
     except Exception as exc:
@@ -489,7 +516,7 @@ async def call_auto_crop_llm(image_path: Path) -> dict:
     return crop
 
 
-@observe(as_type="generation", name="ingestion_llm")
+
 async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
     """
     Send recipe card image(s) to Claude via Bedrock for structured extraction.

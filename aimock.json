@@ -1,0 +1,9 @@
+{
+  "port": 5001,
+  "fixtures": "/app/tests/fixtures/aimock/fixtures.json",
+  "providers": {
+    "bedrock": {
+      "mode": "replay"
+    }
+  }
+}

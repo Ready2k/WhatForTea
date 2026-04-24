@@ -108,6 +108,10 @@ export default function CookingModePage() {
   const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const [isPaused, setIsPaused] = useState(false);
+  // iOS WKWebView: speechSynthesis.pause() is silently broken — speech continues unpaused
+  const canPause = typeof navigator !== 'undefined' &&
+    !/iPad|iPhone|iPod/.test(navigator.userAgent) &&
+    !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const hasSpeechRecognition = typeof window !== 'undefined' && !!(
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   );
@@ -156,6 +160,11 @@ export default function CookingModePage() {
         endCookingSession(sessionIdRef.current).catch(() => {});
       }
       if (patchTimerRef.current) clearTimeout(patchTimerRef.current);
+      // Stop any active voice command recognition and TTS
+      try { commandRecognitionRef.current?.stop(); } catch { /* ignore */ }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipe?.id]);
@@ -644,18 +653,20 @@ export default function CookingModePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
               </button>
-              {/* Pause / Resume */}
-              <button
-                onClick={isPaused ? resumeSpeaking : pauseSpeaking}
-                aria-label={isPaused ? 'Resume reading' : 'Pause reading'}
-                title={isPaused ? 'Resume' : 'Pause'}
-                className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors"
-              >
-                {isPaused
-                  ? <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  : <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                }
-              </button>
+              {/* Pause / Resume — hidden on iOS where pause() is broken */}
+              {canPause && (
+                <button
+                  onClick={isPaused ? resumeSpeaking : pauseSpeaking}
+                  aria-label={isPaused ? 'Resume reading' : 'Pause reading'}
+                  title={isPaused ? 'Resume' : 'Pause'}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors"
+                >
+                  {isPaused
+                    ? <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    : <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                  }
+                </button>
+              )}
               {/* Stop */}
               <button
                 onClick={stopSpeaking}

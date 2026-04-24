@@ -204,7 +204,7 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
               <div className="flex gap-2">
                 <button
                   onClick={() => onResolved(result)}
-                  className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-colors"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
                 >
                   Add to Pantry
                 </button>
@@ -237,12 +237,12 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 placeholder={hasBarcodeDetector ? 'Or enter barcode manually' : 'Enter barcode number'}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
               <button
                 type="submit"
                 disabled={!manualInput.trim()}
-                className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 disabled:opacity-40 transition-colors"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-40 transition-colors"
               >
                 Go
               </button>

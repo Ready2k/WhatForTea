@@ -160,7 +160,7 @@ export default function PantryPage() {
           </button>
           <button
             onClick={() => { setShowAddForm((v) => !v); setFormError(''); setForm(EMPTY_FORM); }}
-            className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             {showAddForm ? 'Cancel' : '+ Add Item'}
           </button>
@@ -191,8 +191,8 @@ export default function PantryPage() {
               autoComplete="off"
               className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 ${
                 form.ingredient
-                  ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 focus:ring-emerald-400'
-                  : 'border-gray-300 dark:border-gray-500 focus:ring-emerald-400'
+                  ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 focus:ring-indigo-400'
+                  : 'border-gray-300 dark:border-gray-500 focus:ring-indigo-400'
               }`}
             />
             {(suggestions.length > 0 || noResults) && (
@@ -244,7 +244,7 @@ export default function PantryPage() {
                   <select
                     value={newIngForm.category}
                     onChange={(e) => setNewIngForm((f) => f && ({ ...f, category: e.target.value }))}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
                   >
                     {['produce','dairy','meat','fish','pantry','spice','bakery','other'].map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -256,7 +256,7 @@ export default function PantryPage() {
                   <select
                     value={newIngForm.dimension}
                     onChange={(e) => setNewIngForm((f) => f && ({ ...f, dimension: e.target.value }))}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
                   >
                     {['mass','volume','count','pack'].map((d) => (
                       <option key={d} value={d}>{d}</option>
@@ -270,7 +270,7 @@ export default function PantryPage() {
                     value={newIngForm.unit}
                     onChange={(e) => setNewIngForm((f) => f && ({ ...f, unit: e.target.value }))}
                     placeholder="ml / g / unit"
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                   />
                 </div>
               </div>
@@ -295,7 +295,7 @@ export default function PantryPage() {
                     }
                   }}
                   disabled={createIngredientMutation.isPending}
-                  className="flex-1 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
                 >
                   {createIngredientMutation.isPending ? 'Creating...' : 'Create & Select'}
                 </button>
@@ -319,7 +319,7 @@ export default function PantryPage() {
                 value={form.quantity}
                 onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
                 placeholder="1"
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             <div className="flex-1">
@@ -329,7 +329,7 @@ export default function PantryPage() {
                 value={form.unit}
                 onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
                 placeholder="g / ml / unit"
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
           </div>
@@ -342,14 +342,14 @@ export default function PantryPage() {
               value={form.expires_at}
               onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
               min={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
             />
           </div>
           {formError && <p className="text-xs text-red-600 dark:text-red-400">{formError}</p>}
           <button
             type="submit"
             disabled={upsertMutation.isPending}
-            className="w-full py-2.5 bg-emerald-600 text-white font-medium text-sm rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="w-full py-2.5 bg-indigo-600 text-white font-medium text-sm rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
             {upsertMutation.isPending ? 'Adding...' : 'Add to Pantry'}
           </button>
@@ -386,7 +386,7 @@ export default function PantryPage() {
                   step="any"
                   value={scanQty}
                   onChange={(e) => setScanQty(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
                 />
               </div>
               <div className="flex-1">
@@ -396,7 +396,7 @@ export default function PantryPage() {
                   value={scanUnit}
                   onChange={(e) => setScanUnit(e.target.value)}
                   placeholder="g / ml / unit"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
                 />
               </div>
               <button
@@ -413,7 +413,7 @@ export default function PantryPage() {
                   setScanQty('1');
                   setScanUnit('unit');
                 }}
-                className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
                 {upsertMutation.isPending ? '...' : 'Add'}
               </button>
@@ -427,7 +427,7 @@ export default function PantryPage() {
           <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load pantry</p>
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium"
           >
             Retry
           </button>
@@ -497,14 +497,14 @@ export default function PantryPage() {
                             if (e.key === 'Escape') setEditingId(null);
                           }}
                           autoFocus
-                          className="w-24 px-2 py-1 text-sm border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                          className="w-24 px-2 py-1 text-sm border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
                         />
                         <span className="text-xs text-gray-500 dark:text-gray-400">{item.unit}</span>
                         <button
                           type="button"
                           onClick={() => handleUpdateQty(item)}
                           disabled={upsertMutation.isPending}
-                          className="text-xs px-2 py-1 bg-emerald-600 text-white rounded-lg disabled:opacity-50"
+                          className="text-xs px-2 py-1 bg-indigo-600 text-white rounded-lg disabled:opacity-50"
                         >
                           Save
                         </button>
@@ -553,7 +553,7 @@ export default function PantryPage() {
                     <button
                       onClick={() => confirmMutation.mutate(item.pantry_item_id)}
                       disabled={confirmMutation.isPending}
-                      className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
                       {confirmMutation.isPending ? '...' : 'Confirm'}
                     </button>

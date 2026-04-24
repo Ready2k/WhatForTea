@@ -29,7 +29,10 @@ Triggers: "next step", "next", "go forward", "previous", "go back", "back".
 Return `direction` as "next" or "back".
 
 **repeat** — user wants the current step read aloud again.
-Triggers: "repeat", "read that again", "say that again", "read it again", "again", "what was that".
+Triggers: "repeat", "read that again", "say that again", "read it again", "again", "what was that",
+"play instructions", "play me instructions", "read instructions", "read the instructions",
+"read the steps", "read it to me", "read it", "start reading", "read the recipe",
+"play the instructions", "read that back", "read aloud".
 
 **stop** — user wants to stop the current audio playback.
 Triggers: "stop", "stop reading", "quiet", "silence", "shut up", "cancel".

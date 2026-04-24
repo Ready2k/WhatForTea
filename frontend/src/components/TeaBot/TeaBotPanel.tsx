@@ -53,6 +53,7 @@ export function TeaBotPanel() {
     typeof window !== 'undefined' ? localStorage.getItem('teabot_thread_id') : null
   );
   const pendingHitlWidget = useRef<(A2UIDescriptor & { thread_id: string }) | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -153,6 +154,9 @@ export function TeaBotPanel() {
     setIsLoading(true);
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
+    const abort = new AbortController();
+    streamAbortRef.current = abort;
+
     try {
       const resumeBody = JSON.stringify({ thread_id: tid, decision, quantity });
       let res = await fetch('/api/v1/chat/resume', {
@@ -160,6 +164,7 @@ export function TeaBotPanel() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: resumeBody,
+        signal: abort.signal,
       });
       if (res.status === 401) {
         const refreshed = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
@@ -169,6 +174,7 @@ export function TeaBotPanel() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: resumeBody,
+          signal: abort.signal,
         });
       }
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -241,6 +247,7 @@ export function TeaBotPanel() {
         }
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError') return;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
@@ -250,6 +257,7 @@ export function TeaBotPanel() {
         return updated;
       });
     } finally {
+      streamAbortRef.current = null;
       setIsLoading(false);
     }
   }, [executeActions]);
@@ -287,6 +295,18 @@ export function TeaBotPanel() {
     return () => window.removeEventListener('teabot-toggle', handleToggle);
   }, []);
 
+  // Abort any in-flight SSE stream when the panel closes or the component unmounts
+  useEffect(() => {
+    if (!isOpen) {
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+    }
+    return () => {
+      streamAbortRef.current?.abort();
+      streamAbortRef.current = null;
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
@@ -303,6 +323,9 @@ export function TeaBotPanel() {
     // Add empty assistant placeholder
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
+    const abort = new AbortController();
+    streamAbortRef.current = abort;
+
     try {
       // Only send the current user message — LangGraph checkpointer holds full
       // thread history on the backend; sending the entire array wastes bandwidth
@@ -317,6 +340,7 @@ export function TeaBotPanel() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body,
+        signal: abort.signal,
       });
 
       // Attempt silent token refresh on 401, then retry once
@@ -331,6 +355,7 @@ export function TeaBotPanel() {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body,
+          signal: abort.signal,
         });
       }
 
@@ -400,14 +425,14 @@ export function TeaBotPanel() {
         .map(w => (w.type === 'pantry_confirm' && hitlWidget ? { ...w, thread_id: hitlWidget.thread_id } : w));
       const actionWidgets  = widgets.filter(w =>  AUTO_EXECUTE_TYPES.has(w.type));
 
-      // Update message with clean text + display widgets
+      // Update message with clean text + display widgets, capped at 100 messages
       setMessages(prev => {
         const updated = [...prev];
         const idx = updated.length - 1;
         if (updated[idx]?.role === 'assistant') {
           updated[idx] = { ...updated[idx], content: text, widgets: displayWidgets };
         }
-        return updated;
+        return updated.length > 100 ? updated.slice(updated.length - 100) : updated;
       });
 
       // Execute action widgets outside any state setter — safe to navigate here
@@ -425,6 +450,7 @@ export function TeaBotPanel() {
         }
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError') return;
       setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
@@ -434,6 +460,7 @@ export function TeaBotPanel() {
         return updated;
       });
     } finally {
+      streamAbortRef.current = null;
       setIsLoading(false);
     }
   };

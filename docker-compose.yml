@@ -45,11 +45,14 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-whatsfortea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-whatsfortea}
       REDIS_URL: redis://redis:6379
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://aimock:5001}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      aimock:
+        condition: service_started
 
   worker:
     build:
@@ -64,11 +67,14 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-whatsfortea}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-whatsfortea}
       REDIS_URL: redis://redis:6379
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://aimock:5001}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      aimock:
+        condition: service_started
 
   frontend:
     build:
@@ -85,6 +91,18 @@ services:
       WATCHPACK_POLLING: "true"
     depends_on:
       - api
+
+  aimock:
+    image: node:24-alpine
+    working_dir: /app
+    env_file: .env
+    environment:
+      AWS_ENDPOINT_URL: ""
+    volumes:
+      - .:/app
+    ports:
+      - "5001:5001"
+    command: node frontend/node_modules/@copilotkit/aimock/dist/aimock-cli.js --config aimock.json --host 0.0.0.0 --port 5001
 
 volumes:
   frontend_node_modules:

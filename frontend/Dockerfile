@@ -6,7 +6,7 @@
 #   development  — hot-reload via `next dev`; source mounted as volume
 #   production   — `next build` with output:standalone; built as linux/amd64 for NAS
 
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 WORKDIR /app
 
 # ── Dependencies ──────────────────────────────────────────────────────────────

@@ -24,5 +24,6 @@ def get_haiku() -> ChatBedrock:
         aws_access_key_id=settings.aws_access_key_id or None,
         aws_secret_access_key=settings.aws_secret_access_key or None,
         region_name=settings.aws_region,
+        endpoint_url=settings.aws_endpoint_url or None,
     )
     return ChatBedrock(client=client, model_id=HAIKU_MODEL_ID)

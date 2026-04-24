@@ -89,7 +89,7 @@ export default function LoginPage() {
             onClick={() => switchMode('login')}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === 'login'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
@@ -99,7 +99,7 @@ export default function LoginPage() {
             onClick={() => switchMode('join')}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               mode === 'join'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
@@ -125,7 +125,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             <div className="space-y-1.5">
@@ -139,13 +139,13 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -173,7 +173,7 @@ export default function LoginPage() {
                 onChange={(e) => setInviteCode(e.target.value)}
                 required
                 placeholder="Paste code from your household admin"
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
               />
             </div>
             <div className="space-y-1.5">
@@ -187,7 +187,7 @@ export default function LoginPage() {
                 value={joinUsername}
                 onChange={(e) => setJoinUsername(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div className="space-y-1.5">
@@ -201,7 +201,7 @@ export default function LoginPage() {
                 value={joinDisplayName}
                 onChange={(e) => setJoinDisplayName(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div className="space-y-1.5">
@@ -214,7 +214,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={joinEmail}
                 onChange={(e) => setJoinEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div className="space-y-1.5">
@@ -229,7 +229,7 @@ export default function LoginPage() {
                 onChange={(e) => setJoinPassword(e.target.value)}
                 required
                 minLength={8}
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div className="space-y-1.5">
@@ -243,13 +243,13 @@ export default function LoginPage() {
                 value={joinConfirm}
                 onChange={(e) => setJoinConfirm(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 dark:bg-gray-700 dark:text-white"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>

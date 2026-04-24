@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
+    aws_endpoint_url: str = ""
     bedrock_model_id: str = "us.anthropic.claude-sonnet-4-6"          # vision tasks
     bedrock_text_model_id: str = "us.anthropic.claude-haiku-4-5-20251001-v1:0"  # text/chat tasks
 
@@ -28,6 +29,19 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+
+    # Web Push (VAPID)
+    # Generate keys: docker compose exec api poetry run python -c "
+    #   from cryptography.hazmat.primitives.asymmetric import ec
+    #   from cryptography.hazmat.primitives import serialization
+    #   import base64, json
+    #   k = ec.generate_private_key(ec.SECP256R1())
+    #   priv = base64.urlsafe_b64encode(k.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())).decode()
+    #   pub = base64.urlsafe_b64encode(k.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)).rstrip(b'=').decode()
+    #   print(json.dumps({'VAPID_PRIVATE_KEY': priv, 'VAPID_PUBLIC_KEY': pub}))"
+    vapid_private_key: str = ""
+    vapid_public_key: str = ""
+    vapid_claims_email: str = "admin@whatsfortea.local"
 
     # Email / SMTP (for password reset)
     smtp_host: str = ""

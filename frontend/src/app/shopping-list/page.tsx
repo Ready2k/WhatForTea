@@ -225,7 +225,7 @@ export default function ShoppingListPage() {
                   type="checkbox"
                   checked={false}
                   onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })}
-                  className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer"
+                  className="w-4 h-4 accent-indigo-500 flex-shrink-0 cursor-pointer"
                 />
                 <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">
                   {item.raw_name}
@@ -254,7 +254,7 @@ export default function ShoppingListPage() {
                   type="checkbox"
                   checked={true}
                   onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })}
-                  className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer"
+                  className="w-4 h-4 accent-indigo-500 flex-shrink-0 cursor-pointer"
                 />
                 <span className="flex-1 text-sm text-gray-400 line-through">{item.raw_name}</span>
                 <button
@@ -311,7 +311,7 @@ export default function ShoppingListPage() {
         {planError && (
           <div className="text-center py-8">
             <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">Failed to load meal plan list</p>
-            <button onClick={() => refetch()} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium">
+            <button onClick={() => refetch()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
               Retry
             </button>
           </div>
@@ -346,7 +346,7 @@ export default function ShoppingListPage() {
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => {}}
-                              className="w-4 h-4 accent-emerald-600 flex-shrink-0 pointer-events-none"
+                              className="w-4 h-4 accent-indigo-500 flex-shrink-0 pointer-events-none"
                             />
                             <div className="flex-1 min-w-0">
                               <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
@@ -379,7 +379,7 @@ export default function ShoppingListPage() {
                 <button
                   onClick={handleMarkChecked}
                   disabled={bulkConfirmMutation.isPending}
-                  className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                 >
                   {bulkConfirmMutation.isPending ? 'Saving…' : `Mark ${checkedItems.size} as bought`}
                 </button>
@@ -394,7 +394,7 @@ export default function ShoppingListPage() {
               <button
                 onClick={handleMarkAll}
                 disabled={bulkConfirmMutation.isPending}
-                className="flex-1 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
                 I bought everything
               </button>

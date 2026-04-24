@@ -361,7 +361,7 @@ export default function RecipeDetailPage() {
                   <button
                     onClick={() => updateMutation.mutate({ ingredients: editIngredients })}
                     disabled={updateMutation.isPending}
-                    className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                    className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
                   >
                     {updateMutation.isPending ? 'Saving...' : 'Save'}
                   </button>
@@ -408,7 +408,7 @@ export default function RecipeDetailPage() {
                         next[idx].raw_name = e.target.value;
                         setEditIngredients(next);
                       }}
-                      className="flex-1 min-w-0 bg-transparent text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="flex-1 min-w-0 bg-transparent text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       placeholder="Ingredient name"
                     />
                     <input
@@ -420,7 +420,7 @@ export default function RecipeDetailPage() {
                         next[idx].quantity = parseFloat(e.target.value) || 0;
                         setEditIngredients(next);
                       }}
-                      className="w-16 bg-transparent text-sm text-right text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-16 bg-transparent text-sm text-right text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       placeholder="Qty"
                     />
                     <input
@@ -431,7 +431,7 @@ export default function RecipeDetailPage() {
                         next[idx].unit = e.target.value;
                         setEditIngredients(next);
                       }}
-                      className="w-16 bg-transparent text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-16 bg-transparent text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       placeholder="Unit"
                     />
                     <button
@@ -522,7 +522,7 @@ export default function RecipeDetailPage() {
                 <button
                   onClick={() => updateStepsMutation.mutate({ steps: editSteps })}
                   disabled={updateStepsMutation.isPending}
-                  className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
+                  className="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-0.5 rounded transition-colors disabled:opacity-50"
                 >
                   {updateStepsMutation.isPending ? 'Saving...' : 'Save'}
                 </button>
@@ -553,7 +553,7 @@ export default function RecipeDetailPage() {
                         setEditSteps(next);
                       }}
                       rows={3}
-                      className="w-full text-sm text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none leading-relaxed"
+                      className="w-full text-sm text-gray-900 dark:text-white bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
                       placeholder="Step instructions"
                     />
                     <div className="flex items-center gap-2">
@@ -570,7 +570,7 @@ export default function RecipeDetailPage() {
                             next[idx] = { ...next[idx], timer_seconds: mins > 0 ? Math.round(mins * 60) : undefined };
                             setEditSteps(next);
                           }}
-                          className="w-24 bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          className="w-24 bg-transparent border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                         />
                         <span>min</span>
                       </label>
@@ -736,7 +736,7 @@ export default function RecipeDetailPage() {
         {/* CTA */}
         <Link
           href={`/recipes/${recipe.id}/cook`}
-          className="block w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-sm"
+          className="block w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-center font-semibold text-base rounded-2xl transition-colors shadow-sm"
         >
           Start Cooking
         </Link>

@@ -21,8 +21,6 @@ from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from pydantic import BaseModel
 
-from redis.asyncio import Redis
-from app.config import settings
 from app.services.rate_limiter import RateLimitExceeded, check_user_chat_rate
 from app.services.tracing import get_langfuse_handler, score_trace
 
@@ -104,18 +102,18 @@ async def chat(body: ChatRequest, request: Request):
     thread_id = body.thread_id or str(uuid.uuid4())
     user_id = getattr(request.state, "user_id", None)
 
-    try:
-        redis_client = Redis.from_url(settings.redis_url, decode_responses=False)
+    redis_client = getattr(request.app.state, "redis", None)
+    if redis_client is not None:
         try:
             await check_user_chat_rate(redis_client, str(user_id) if user_id else "anon")
-        finally:
-            await redis_client.aclose()
-    except RateLimitExceeded as exc:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many requests. Please wait {exc.retry_after} seconds.",
-            headers={"Retry-After": str(exc.retry_after)},
-        )
+        except RateLimitExceeded as exc:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Too many requests. Please wait {exc.retry_after} seconds.",
+                headers={"Retry-After": str(exc.retry_after)},
+            )
+        except Exception:
+            logger.warning("chat rate-limit check failed — skipping", exc_info=True)
 
     graph = _get_graph(request)
 

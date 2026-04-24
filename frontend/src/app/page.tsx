@@ -2,14 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMatches, useAvailable, useCurrentPlan } from '@/lib/hooks';
 import { MatchBadge } from '@/components/MatchBadge';
-import { getActiveCookingSession } from '@/lib/api';
+import { getActiveCookingSession, endCookingSession } from '@/lib/api';
 import type { RecipeMatchResult } from '@/lib/types';
+import Image from 'next/image';
 import {
   UtensilsCrossed, ChefHat, AlertTriangle, Flame, CalendarDays,
-  ShoppingBasket, ScanLine, PackageSearch, Clock, Users, Sparkles,
+  ShoppingBasket, ScanLine, PackageSearch, Clock, Users, Sparkles, X,
 } from 'lucide-react';
 
 type Mode = 'planning' | 'hangry';
@@ -58,10 +59,15 @@ export default function Dashboard() {
   const { data: currentPlan } = useCurrentPlan();
   const atRiskCount = available?.filter((a) => a.confidence < 0.5).length ?? 0;
   
+  const queryClient = useQueryClient();
   const { data: activeSession } = useQuery({
     queryKey: ['cookingSession'],
     queryFn: () => getActiveCookingSession(),
     staleTime: 30_000,
+  });
+  const cancelSession = useMutation({
+    mutationFn: () => endCookingSession(activeSession!.id, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cookingSession'] }),
   });
 
   const todayIndex = (new Date().getDay() + 6) % 7;
@@ -74,30 +80,40 @@ export default function Dashboard() {
     return true;
   }) ?? [];
 
-  const topMatches = filteredMatches.slice(0, 3);
+  const topMatches = filteredMatches.slice(0, 5);
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
 
       {/* Resume cooking banner */}
       {activeSession && (
-        <Link
-          href={`/recipes/${activeSession.recipe_id}/cook`}
-          className="flex items-center gap-3 w-full px-4 py-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700/50 rounded-2xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
-        >
-          <ChefHat className="w-6 h-6 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 truncate">
-              Resume cooking
-            </p>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
-              {activeSession.recipe_title ?? 'Continue where you left off'} — step {activeSession.current_step}
-            </p>
-          </div>
-          <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
+        <div className="flex items-center gap-2 w-full px-4 py-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700/50 rounded-2xl">
+          <Link
+            href={`/recipes/${activeSession.recipe_id}/cook`}
+            className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+          >
+            <ChefHat className="w-6 h-6 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 truncate">
+                Resume cooking
+              </p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
+                {activeSession.recipe_title ?? 'Continue where you left off'} — step {activeSession.current_step}
+              </p>
+            </div>
+            <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+          <button
+            onClick={() => cancelSession.mutate()}
+            disabled={cancelSession.isPending}
+            className="flex-shrink-0 p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50 disabled:opacity-40 transition-colors"
+            title="Dismiss session"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
       {/* Header */}
@@ -110,10 +126,10 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => setMode((m) => (m === 'planning' ? 'hangry' : 'planning'))}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
             mode === 'hangry'
-              ? 'bg-orange-500 text-white shadow-orange-200 shadow-md'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              ? 'bg-orange-500 text-white border-orange-500 shadow-orange-200 shadow-md'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700'
           }`}
         >
           {mode === 'hangry' ? <><Flame className="w-3.5 h-3.5 inline mr-1" />Hangry</> : <><CalendarDays className="w-3.5 h-3.5 inline mr-1" />Planning</>}
@@ -148,12 +164,27 @@ export default function Dashboard() {
               <div className="text-4xl font-extrabold leading-none mt-1 mb-1.5 group-hover:scale-105 transition-transform origin-left">{isLoading ? '-' : cookNowCount}</div>
               <div className="text-[11px] text-emerald-100 font-medium">recipes ready to make</div>
             </div>
-            <div className="text-right hidden sm:block flex-shrink-0">
-               <div className="text-[10px] text-white/60 font-medium mb-1.5">Top picks</div>
-               {topMatches.slice(0,2).map((m, i) => (
-                 <div key={i} className="text-xs font-semibold text-white mb-0.5 truncate max-w-[200px]">✓ {m.recipe.title}</div>
-               ))}
-               {topMatches.length > 2 && <div className="text-[10px] text-white/50 mt-1">+{topMatches.length - 2} more →</div>}
+            <div className="text-right hidden sm:block flex-shrink-0 max-w-[220px]">
+              {cookNowCount > 0 ? (
+                <>
+                  <div className="text-[10px] text-white/60 font-medium mb-1.5">Top picks</div>
+                  {allMatches?.filter(m => m.category === 'cook_now').slice(0, 2).map((m, i) => (
+                    <div key={i} className="text-xs font-semibold text-white mb-0.5 truncate">✓ {m.recipe.title}</div>
+                  ))}
+                  {cookNowCount > 2 && (
+                    <div className="text-[10px] text-white/60 mt-1 hover:text-white/90 transition-colors underline underline-offset-2">
+                      +{cookNowCount - 2} more
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-right">
+                  <div className="text-[11px] text-white/60 leading-snug">Add pantry items<br />to unlock matches</div>
+                  <div className="mt-2 inline-block text-[10px] font-bold text-white/80 border border-white/30 rounded-lg px-2 py-1 hover:bg-white/10 transition-colors">
+                    Update Pantry →
+                  </div>
+                </div>
+              )}
             </div>
           </Link>
         )}
@@ -166,10 +197,18 @@ export default function Dashboard() {
               <ShoppingBasket className="w-6 h-6 mb-1.5 text-emerald-500" />
               <div className="text-xs font-bold text-gray-900 dark:text-white">My Pantry</div>
               <div className="text-[10px] text-gray-500 mt-0.5 font-medium">{count} ingredients</div>
-              <div className="mt-2.5 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${stockedPct}%` }}></div>
-              </div>
-              <div className="text-[9px] text-gray-400 mt-1.5 font-medium border-t border-transparent">{stockedPct}% stocked</div>
+              {count === 0 ? (
+                <div className="mt-2.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  Add items →
+                </div>
+              ) : (
+                <>
+                  <div className="mt-2.5 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${stockedPct}%` }}></div>
+                  </div>
+                  <div className="text-[9px] text-gray-400 mt-1.5 font-medium">{stockedPct}% stocked</div>
+                </>
+              )}
             </Link>
           );
         })()}
@@ -178,17 +217,23 @@ export default function Dashboard() {
           <div className="text-[9px] font-bold text-emerald-500 mb-1 leading-none tracking-wider uppercase border-b border-transparent">This week</div>
           <div className="text-xs font-bold text-gray-900 dark:text-white border-t border-transparent leading-none mt-1">Meal Plan</div>
           <div className="text-[10px] text-gray-500 mt-1 font-medium">{currentPlan?.entries.length ?? 0} of 7 planned</div>
-          <div className="flex gap-1 mt-2.5 h-6 items-center">
-             {['M','T','W','T','F','S','S'].map((day, idx) => {
+          {(currentPlan?.entries.length ?? 0) === 0 ? (
+            <div className="mt-2.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+              Plan your week →
+            </div>
+          ) : (
+            <div className="flex gap-1 mt-2.5 h-6 items-center">
+              {['M','T','W','T','F','S','S'].map((day, idx) => {
                 const isPlanned = currentPlan?.entries.some(e => e.day_of_week === idx);
                 const isToday = todayIndex === idx;
                 return (
                   <div key={idx} className={`w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold ${isPlanned ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'} ${isToday && !isPlanned ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-800 ring-blue-500 bg-blue-500 text-white' : ''} ${isToday && isPlanned ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-800 ring-emerald-500' : ''}`}>
                     {day}
                   </div>
-                )
-             })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </Link>
 
         {/* Scan / At Risk subgrid */}
@@ -232,6 +277,16 @@ export default function Dashboard() {
           </Link>
         </div>
 
+        {(available?.length ?? 0) === 0 && (allMatches?.length ?? 0) > 0 && (
+          <Link href="/pantry" className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-xl hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
+            <ShoppingBasket className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            <p className="text-xs text-amber-800 dark:text-amber-300 flex-1">
+              Your pantry is empty — add ingredients to see real match scores.
+            </p>
+            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 whitespace-nowrap">Add items →</span>
+          </Link>
+        )}
+
         {isLoading ? (
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
             {[1, 2, 3].map((i) => (
@@ -245,17 +300,35 @@ export default function Dashboard() {
             ))}
           </div>
         ) : topMatches.length === 0 ? (
-          <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-            <PackageSearch className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-            <p className="text-sm text-gray-500 dark:text-gray-400 px-8">
-              {mode === 'hangry' 
-                ? "No recipes ready to cook right now. Try updating your pantry!" 
-                : "No recipes yet. Scan your first card!"}
-            </p>
-            {mode === 'hangry' && (
-              <Link href="/pantry" className="inline-block mt-4 text-xs font-bold text-orange-600 hover:text-orange-500 uppercase tracking-wider">
-                Update Pantry →
-              </Link>
+          <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center gap-3">
+            {allMatches && allMatches.length === 0 ? (
+              // No recipes at all — first run
+              <>
+                <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow">
+                  <Image src="/teabot-chef.png" alt="TeaBot" width={64} height={64} className="object-cover" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 px-8">
+                  No recipes yet — scan your first card to get started!
+                </p>
+                <Link href="/ingest" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-wider">
+                  Scan a Card →
+                </Link>
+              </>
+            ) : (
+              // Has recipes but nothing matches current pantry / mode
+              <>
+                <PackageSearch className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400 px-8">
+                  {mode === 'hangry'
+                    ? "Nothing ready to cook right now. Try updating your pantry!"
+                    : "No recipes match the current filter."}
+                </p>
+                {mode === 'hangry' && (
+                  <Link href="/pantry" className="text-xs font-bold text-orange-600 hover:text-orange-500 uppercase tracking-wider">
+                    Update Pantry →
+                  </Link>
+                )}
+              </>
             )}
           </div>
         ) : (

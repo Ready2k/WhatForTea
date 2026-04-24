@@ -1,0 +1,12 @@
+{
+  "fixtures": [
+    {
+      "match": {
+        "userMessage": { "$regex": ".*" }
+      },
+      "response": {
+        "content": "```json\n{\n  \"title\": \"Honey-Glazed Salmon with Roasted Potatoes & Green Beans\",\n  \"cooking_time_mins\": 30,\n  \"serves\": 2,\n  \"ingredients\": [\n    {\n      \"raw_name\": \"Salmon fillets\",\n      \"quantity\": 2,\n      \"unit\": \"pieces (250g)\"\n    },\n    {\n      \"raw_name\": \"Honey\",\n      \"quantity\": 1,\n      \"unit\": \"tbsp\"\n    },\n    {\n      \"raw_name\": \"Potatoes\",\n      \"quantity\": 300,\n      \"unit\": \"g\"\n    },\n    {\n      \"raw_name\": \"Green Beans\",\n      \"quantity\": 200,\n      \"unit\": \"g\"\n    },\n    {\n      \"raw_name\": \"Soy Sauce\",\n      \"quantity\": 1,\n      \"unit\": \"tbsp\"\n    },\n    {\n      \"raw_name\": \"Garlic\",\n      \"quantity\": 1,\n      \"unit\": \"clove\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"order\": 1,\n      \"text\": \"Preheat oven. Chop potatoes and prepare for roasting.\"\n    },\n    {\n      \"order\": 2,\n      \"text\": \"Roast Potatoes. Place on trays with vegetables and roast in oven.\"\n    },\n    {\n      \"order\": 3,\n      \"text\": \"Make Glaze. Mix together honey, soy sauce, and garlic.\"\n    },\n    {\n      \"order\": 4,\n      \"text\": \"Sear Salmon. Heat oil in pan, add salmon fillets and sear, then move salmon to coat in the glaze.\"\n    },\n    {\n      \"order\": 5,\n      \"text\": \"Add Glaze. Brush salmon with the honey glaze.\"\n    },\n    {\n      \"order\": 6,\n      \"text\": \"Serve. Plate and garnish with lemon and fresh herbs.\"\n    }\n  ]\n}\n```"
+      }
+    }
+  ]
+}

@@ -478,12 +478,12 @@ export default function IngestPage() {
               onChange={(e) => setUrlInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUrlImport()}
               placeholder="https://www.bbcgoodfood.com/recipes/..."
-              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
             />
             <button
               onClick={handleUrlImport}
               disabled={!urlInput.trim() || urlLoading}
-              className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-4 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {urlLoading ? 'Fetching recipe…' : 'Fetch Recipe'}
             </button>
@@ -538,14 +538,14 @@ export default function IngestPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => receiptCameraRef.current?.click()}
-                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
+                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
                       >
                         <ScanLine className="w-8 h-8" />
                         <span className="text-sm font-medium">Camera</span>
                       </button>
                       <button
                         onClick={() => receiptFileRef.current?.click()}
-                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
+                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
                       >
                         <FolderOpen className="w-8 h-8" />
                         <span className="text-sm font-medium">Choose File</span>
@@ -569,7 +569,7 @@ export default function IngestPage() {
                     />
                     {receiptFlowState === 'extracting' && (
                       <div className="text-center py-6 space-y-2">
-                        <div className="w-8 h-8 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+                        <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto" />
                         <p className="text-sm text-gray-500 dark:text-gray-400">Reading your receipt…</p>
                       </div>
                     )}
@@ -584,7 +584,7 @@ export default function IngestPage() {
                     <button
                       onClick={() => receiptPdfRef.current?.click()}
                       disabled={receiptFlowState === 'extracting'}
-                      className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800 disabled:opacity-50"
+                      className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800 disabled:opacity-50"
                     >
                       <FileText className="w-8 h-8" />
                       <span className="text-sm font-medium">
@@ -600,7 +600,7 @@ export default function IngestPage() {
                     />
                     {receiptFlowState === 'extracting' && (
                       <div className="text-center py-4 space-y-2">
-                        <div className="w-8 h-8 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+                        <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto" />
                         <p className="text-sm text-gray-500 dark:text-gray-400">Extracting items from PDF…</p>
                       </div>
                     )}
@@ -617,12 +617,12 @@ export default function IngestPage() {
                       onChange={(e) => setReceiptText(e.target.value)}
                       placeholder="Paste your order items here…"
                       rows={8}
-                      className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                     />
                     <button
                       onClick={() => receiptText.trim() && handleReceiptSubmit(receiptText.trim())}
                       disabled={!receiptText.trim() || receiptFlowState === 'extracting'}
-                      className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       {receiptFlowState === 'extracting' ? 'Processing…' : 'Extract Items'}
                     </button>
@@ -637,7 +637,7 @@ export default function IngestPage() {
         {uploadTab === 'scan' && <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
+            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
           >
             <ScanLine className="w-8 h-8" />
             <span className="text-sm font-medium">
@@ -646,7 +646,7 @@ export default function IngestPage() {
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-500 hover:text-emerald-700 transition-colors bg-white dark:bg-gray-800"
+            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
           >
             <FolderOpen className="w-8 h-8" />
             <span className="text-sm font-medium">Choose File</span>
@@ -718,7 +718,7 @@ export default function IngestPage() {
           <button
             onClick={handleUpload}
             disabled={capturedPhotos.length !== 2 || ingestMutation.isPending}
-            className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-4 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {ingestMutation.isPending ? 'Uploading...' : capturedPhotos.length === 2 ? 'Upload & Process' : `${capturedPhotos.length}/2 photos — add ${2 - capturedPhotos.length} more`}
           </button>
@@ -767,7 +767,7 @@ export default function IngestPage() {
                   )}
                 </div>
                 {active && (
-                  <div className="w-4 h-4 rounded-full border-2 border-emerald-300 border-t-emerald-600 animate-spin flex-shrink-0" />
+                  <div className="w-4 h-4 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin flex-shrink-0" />
                 )}
               </div>
             );
@@ -888,7 +888,7 @@ export default function IngestPage() {
         <button
           onClick={() => handleConfirm(false)}
           disabled={confirmLoading}
-          className="w-full py-4 bg-emerald-600 text-white font-semibold rounded-2xl hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          className="w-full py-4 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
           {confirmLoading ? 'Saving...' : 'Confirm Recipe'}
         </button>
@@ -909,7 +909,7 @@ export default function IngestPage() {
               <div className="flex flex-col gap-2">
                 <Link
                   href={`/recipes/${duplicateInfo.id}`}
-                  className="w-full py-2.5 text-center bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors text-sm"
+                  className="w-full py-2.5 text-center bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors text-sm"
                 >
                   View existing recipe
                 </Link>
@@ -949,7 +949,7 @@ export default function IngestPage() {
           {savedRecipeId && (
             <Link
               href={`/recipes/${savedRecipeId}`}
-              className="flex-1 py-3.5 bg-emerald-600 text-white text-center font-semibold rounded-2xl hover:bg-emerald-700 transition-colors"
+              className="flex-1 py-3.5 bg-indigo-600 text-white text-center font-semibold rounded-2xl hover:bg-indigo-700 transition-colors"
             >
               View Recipe
             </Link>

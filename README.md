@@ -2,6 +2,8 @@
 
 A locally-hosted recipe manager and kitchen assistant designed for Synology NAS deployment via Docker. Digitizes physical HelloFresh recipe cards using AI vision and provides intelligent meal planning with confidence-based pantry management.
 
+> For a structured product evaluation — feature matrix vs competitors, honest limitations, and architecture summary — see **[PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md)**.
+
 ---
 
 ## Features
