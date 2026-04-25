@@ -378,7 +378,7 @@ export default function IngestPage() {
     return (
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Add Recipe</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{uploadTab === 'receipt' ? 'Add Receipt' : 'Add Recipe'}</h1>
         </div>
 
         {/* Pending review banner — resume or dismiss abandoned ingest jobs */}
@@ -436,7 +436,7 @@ export default function IngestPage() {
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
-            Scan Card
+            Scanner
           </button>
           <button
             onClick={() => setUploadTab('url')}

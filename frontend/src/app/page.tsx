@@ -241,7 +241,7 @@ export default function Dashboard() {
           <Link href="/ingest" className="bg-white dark:bg-gray-800 border-transparent dark:border-gray-700/60 border hover:border-gray-300 dark:hover:border-gray-500 rounded-[16px] p-3 pl-4 flex items-center gap-3 transition-colors col-span-2 lg:col-span-1">
             <ScanLine className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <div>
-              <div className="text-[11px] font-bold text-gray-900 dark:text-white">Scan Card</div>
+              <div className="text-[11px] font-bold text-gray-900 dark:text-white">Scanner</div>
               <div className="text-[9px] text-gray-500 font-medium mt-0.5">Add recipe</div>
             </div>
           </Link>

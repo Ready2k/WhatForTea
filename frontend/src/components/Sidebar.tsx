@@ -13,7 +13,7 @@ const navItems = [
   { href: '/pantry', label: 'Pantry', icon: ShoppingBasket },
   { href: '/planner', label: 'Planner', icon: CalendarDays },
   { href: '/shopping-list', label: 'Shopping', icon: ShoppingCart },
-  { href: '/ingest', label: 'Scan Card', icon: ScanLine },
+  { href: '/ingest', label: 'Scanner', icon: ScanLine },
 ];
 
 const VERSION = process.env.NEXT_PUBLIC_RELEASE_ID ?? 'dev';

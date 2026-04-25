@@ -60,7 +60,6 @@ def _load_prompt(filename: str) -> str:
 
 
 def _get_client():
-    raise RuntimeError("CRASH TEST")
     client = boto3.client(
         "bedrock-runtime",
         region_name=settings.aws_region,
