@@ -27,6 +27,8 @@ _SKIP_PATHS = {
     "/api/auth/refresh",
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
+    "/api/auth/google",
+    "/api/auth/google/callback",
     "/api/v1/household/join",
     "/docs",
     "/redoc",

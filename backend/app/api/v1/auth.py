@@ -1,20 +1,25 @@
 """
 Authentication endpoints.
 
-POST /api/auth/login            — verify credentials against users table, set httpOnly cookies
-POST /api/auth/refresh          — rotate access token using refresh cookie
-POST /api/auth/logout           — clear cookies
-GET  /api/auth/me               — current user profile (requires valid access token)
-POST /api/auth/forgot-password  — send one-time reset link to user's email
-POST /api/auth/reset-password   — consume reset token and set new password
+POST /api/auth/login              — verify credentials against users table, set httpOnly cookies
+POST /api/auth/refresh            — rotate access token using refresh cookie
+POST /api/auth/logout             — clear cookies
+GET  /api/auth/me                 — current user profile (requires valid access token)
+POST /api/auth/forgot-password    — send one-time reset link to user's email
+POST /api/auth/reset-password     — consume reset token and set new password
+GET  /api/auth/google             — redirect to Google OAuth consent screen
+GET  /api/auth/google/callback    — handle Google OAuth callback, set cookies
 """
 import hashlib
 import secrets
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
+from fastapi.responses import RedirectResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -264,6 +269,158 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     await db.commit()
     logger.info("auth.password_reset", extra={"user_id": str(user.id), "username": user.username})
     return {"ok": True}
+
+
+_GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+_OAUTH_STATE_TTL = 300  # seconds
+
+
+@router.get("/google")
+async def google_login(request: Request):
+    if not settings.google_client_id:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Google SSO is not configured", status_code=501)
+
+    state = secrets.token_urlsafe(32)
+    redis = getattr(request.app.state, "redis", None)
+    if redis:
+        await redis.setex(f"oauth:state:{state}", _OAUTH_STATE_TTL, "1")
+
+    redirect_uri = f"{settings.app_url}/api/auth/google/callback"
+    params = urllib.parse.urlencode({
+        "client_id": settings.google_client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "offline",
+        "prompt": "select_account",
+    })
+    return RedirectResponse(f"{_GOOGLE_AUTH_URL}?{params}", status_code=302)
+
+
+@router.get("/google/callback")
+async def google_callback(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.user import Household, User
+
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
+    error = request.query_params.get("error")
+
+    frontend_url = settings.app_url
+
+    if error or not code or not state:
+        return RedirectResponse(f"{frontend_url}/login?error=oauth_cancelled", status_code=302)
+
+    redis = getattr(request.app.state, "redis", None)
+    if redis:
+        stored = await redis.getdel(f"oauth:state:{state}")
+        if not stored:
+            return RedirectResponse(f"{frontend_url}/login?error=oauth_invalid_state", status_code=302)
+
+    # Exchange code for tokens
+    redirect_uri = f"{settings.app_url}/api/auth/google/callback"
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(_GOOGLE_TOKEN_URL, data={
+                "code": code,
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            })
+            token_resp.raise_for_status()
+            access_token = token_resp.json()["access_token"]
+
+            info_resp = await client.get(
+                _GOOGLE_USERINFO_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            info_resp.raise_for_status()
+            info = info_resp.json()
+    except Exception:
+        logger.exception("auth.google_callback_error")
+        return RedirectResponse(f"{frontend_url}/login?error=oauth_failed", status_code=302)
+
+    google_sub = info.get("id") or info.get("sub")
+    google_email = (info.get("email") or "").lower().strip()
+    google_name = info.get("name") or google_email.split("@")[0]
+
+    if not google_sub or not google_email:
+        return RedirectResponse(f"{frontend_url}/login?error=oauth_no_email", status_code=302)
+
+    # Find existing user by oauth_sub first, then fall back to email
+    user = (await db.execute(
+        select(User).where(User.oauth_sub == google_sub)
+    )).scalar_one_or_none()
+
+    if user is None and google_email:
+        user = (await db.execute(
+            select(User).where(User.email == google_email)
+        )).scalar_one_or_none()
+        if user:
+            # Link the Google identity to the existing account
+            user.oauth_provider = "google"
+            user.oauth_sub = google_sub
+            await db.commit()
+
+    if user is None:
+        # First Google login — create a household and admin user
+        import re
+        base_username = re.sub(r"[^a-z0-9._-]", "", google_email.split("@")[0].lower()) or "user"
+        username = base_username
+        suffix = 1
+        while (await db.execute(select(User).where(User.username == username))).scalar_one_or_none():
+            username = f"{base_username}{suffix}"
+            suffix += 1
+
+        household = Household(
+            name=f"{google_name}'s Household",
+            invite_code=secrets.token_urlsafe(6)[:8],
+        )
+        db.add(household)
+        await db.flush()
+
+        user = User(
+            household_id=household.id,
+            username=username,
+            display_name=google_name,
+            email=google_email,
+            password_hash=None,
+            oauth_provider="google",
+            oauth_sub=google_sub,
+            is_admin=True,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        logger.info("auth.google_new_user", extra={"user_id": str(user.id), "email": google_email})
+    else:
+        logger.info("auth.google_login", extra={"user_id": str(user.id), "email": google_email})
+
+    user_id = str(user.id)
+    household_id = str(user.household_id)
+    access = _make_token(user_id, household_id, timedelta(minutes=ACCESS_TTL_MINUTES))
+    refresh = _make_token(user_id, household_id, timedelta(days=REFRESH_TTL_DAYS))
+
+    # Redirect response — set cookies on it directly
+    redirect = RedirectResponse(url=f"{frontend_url}/", status_code=302)
+    redirect.set_cookie(
+        key=ACCESS_COOKIE, value=access, httponly=True,
+        secure=settings.cookie_secure, samesite="strict",
+        max_age=ACCESS_TTL_MINUTES * 60, path="/",
+    )
+    redirect.set_cookie(
+        key=REFRESH_COOKIE, value=refresh, httponly=True,
+        secure=settings.cookie_secure, samesite="strict",
+        max_age=REFRESH_TTL_DAYS * 86400, path="/api/auth/refresh",
+    )
+    return redirect
 
 
 @router.get("/me", response_model=UserProfile)

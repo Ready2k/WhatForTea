@@ -33,7 +33,9 @@ class User(Base):
     username: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
     email: Mapped[Optional[str]] = mapped_column(Text, nullable=True, unique=True)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    password_hash: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    oauth_provider: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    oauth_sub: Mapped[Optional[str]] = mapped_column(Text, nullable=True, unique=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     force_password_change: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
