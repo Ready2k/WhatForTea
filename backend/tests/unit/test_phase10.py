@@ -16,6 +16,8 @@ import pytest
 # ─────────────────────────────────────────────────────────────────────────────
 
 from app.services.matcher import ingredient_score, get_category
+from app.services.pantry import calculate_confidence
+from app.services.planner import round_to_pack_size
 
 
 class TestIngredientScore:
@@ -77,7 +79,6 @@ class TestGetCategory:
 # Pantry decay — time-simulated scenarios
 # ─────────────────────────────────────────────────────────────────────────────
 
-from app.services.pantry import calculate_confidence
 
 
 class TestPantryDecay:
@@ -142,7 +143,6 @@ class TestPantryDecay:
 # Shopping list pack-size rounding — edge cases
 # ─────────────────────────────────────────────────────────────────────────────
 
-from app.services.planner import round_to_pack_size
 
 
 class TestPackSizeRounding:

@@ -5,7 +5,6 @@ Run: docker-compose exec api poetry run pytest tests/unit/test_pantry.py -v
 Pure function tests require no DB. Integration tests require DATABASE_URL.
 """
 import os
-import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest

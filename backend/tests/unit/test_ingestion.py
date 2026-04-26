@@ -7,15 +7,13 @@ Tests are split into:
   - Integration tests — real PostgreSQL DB, mocked Bedrock + rate limiter.
 """
 import os
-import uuid
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.models.ingest import IngestJob, IngestStatus, LlmOutput
-from app.services.ingestion import _validate_llm_result, confirm_recipe, run_ingestion
+from app.services.ingestion import _validate_llm_result, run_ingestion
 
 
 # ── Pure function tests (no I/O) ──────────────────────────────────────────────

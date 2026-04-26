@@ -31,9 +31,10 @@ from app.config import settings
 from app.database import get_db
 from app.errors import AppError, ErrorCode
 
-logger = logging.getLogger("whatsfortea.audit")
 from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserProfile
 from app.services.email import send_password_reset
+
+logger = logging.getLogger("whatsfortea.audit")
 
 _ph = PasswordHasher()
 
@@ -272,7 +273,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
 
 
 _GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+_GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"  # nosec B105
 _GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 _OAUTH_STATE_TTL = 300  # seconds
 

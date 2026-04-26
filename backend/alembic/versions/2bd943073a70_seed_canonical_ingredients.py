@@ -65,17 +65,6 @@ INGREDIENTS = [
 
 
 def upgrade() -> None:
-    ingredients_table = sa.table(
-        "ingredients",
-        sa.column("id", sa.Text),
-        sa.column("canonical_name", sa.Text),
-        sa.column("aliases", sa.ARRAY(sa.Text)),
-        sa.column("category", sa.Text),
-        sa.column("dimension", sa.Text),
-        sa.column("typical_unit", sa.Text),
-        sa.column("count_to_mass_g", sa.Numeric),
-    )
-
     rows = []
     for canonical_name, category, dimension, typical_unit, count_to_mass_g, aliases in INGREDIENTS:
         rows.append({

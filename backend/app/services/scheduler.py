@@ -57,10 +57,8 @@ async def _llm_output_cleanup_job() -> None:
 async def _expiry_check_job() -> None:
     """Log and push-notify expiring pantry items (within 3 days), grouped by household."""
     try:
-        from sqlalchemy import select
         from app.database import AsyncSessionLocal
         from app.services.pantry import get_expiring_soon
-        from app.models.pantry import PantryItem
         from app.services.push import send_to_household
 
         async with AsyncSessionLocal() as db:
@@ -105,7 +103,7 @@ async def _expiry_check_job() -> None:
 async def _empty_plan_check_job() -> None:
     """Monday morning: notify households whose current week plan is empty."""
     try:
-        from datetime import date, timedelta
+        from datetime import date
         from sqlalchemy import select, func
         from app.database import AsyncSessionLocal
         from app.models.plan import MealPlan, MealPlanEntry

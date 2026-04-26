@@ -7,11 +7,10 @@ Tests use FastAPI's TestClient (sync) — no DB required.
 from datetime import timedelta
 from unittest.mock import patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.api.v1.auth import _make_token, ACCESS_COOKIE, REFRESH_COOKIE
+from app.api.v1.auth import _make_token, ACCESS_COOKIE
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

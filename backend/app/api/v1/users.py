@@ -21,9 +21,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 
-logger = logging.getLogger("whatsfortea.audit")
 from app.errors import AppError, ErrorCode
 from app.schemas.user import HouseholdInfo, JoinRequest, PasswordChange, UserProfile, UserUpdate
+
+logger = logging.getLogger("whatsfortea.audit")
 
 _ph = PasswordHasher()
 

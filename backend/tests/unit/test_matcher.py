@@ -6,8 +6,6 @@ Pure function tests require no DB.
 Integration tests require DATABASE_URL.
 """
 import os
-import uuid
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

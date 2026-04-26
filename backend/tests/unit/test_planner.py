@@ -134,7 +134,7 @@ async def db_session():
 @pytest.mark.asyncio
 async def test_set_week_plan_empty(db_session):
     """Creating an empty plan returns a MealPlan with no entries."""
-    from app.services.planner import set_week_plan, get_plan
+    from app.services.planner import set_week_plan
     from app.schemas.plan import MealPlanCreate
     from app.models.plan import MealPlan as MealPlanModel
 

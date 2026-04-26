@@ -12,14 +12,12 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, List, Literal, Optional, TypedDict
 
-import boto3
 from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
 
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
