@@ -1,6 +1,11 @@
 import asyncio
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
+
+# Add the project root (parent of the alembic directory) to sys.path
+sys.path.append(str(Path(__file__).parent.parent))
 
 from alembic import context
 from sqlalchemy import pool

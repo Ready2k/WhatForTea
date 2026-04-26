@@ -63,6 +63,7 @@ jobs:
       - name: Run migrations
         env:
           DATABASE_URL: postgresql+asyncpg://whatsfortea:password@localhost:5432/whatsfortea_test
+          PYTHONPATH: .
         run: |
           cd backend
           poetry run alembic upgrade head
@@ -77,6 +78,7 @@ jobs:
           AWS_REGION: us-east-1
           BEDROCK_MODEL_ID: mock
           BEDROCK_TEXT_MODEL_ID: mock
+          PYTHONPATH: .
         run: |
           cd backend
           poetry run pytest
