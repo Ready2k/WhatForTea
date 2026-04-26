@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "../styles/tokens.css";
 import { Providers } from "@/components/providers";
 import { ShellUI } from "@/components/ShellUI";
 
 export const metadata: Metadata = {
   title: "What's for Tea?",
   description: "AI-powered recipe manager and kitchen assistant",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

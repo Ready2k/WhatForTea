@@ -68,6 +68,7 @@ export function Nav() {
               <Link
                 key={tab.href}
                 href={tab.href}
+                aria-label={tab.label}
                 className={`flex flex-col items-center justify-center flex-1 gap-0.5 text-xs font-medium transition-colors ${
                   active ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                 }`}

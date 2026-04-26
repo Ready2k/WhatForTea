@@ -19,6 +19,14 @@ const nextConfig: NextConfig = {
     const apiUrl = process.env.API_URL ?? "http://api:8000";
     return [
       {
+        source: "/api/v1/chat",
+        destination: "http://aimock:5001/api/v1/chat",
+      },
+      {
+        source: "/api/v1/chat/resume",
+        destination: "http://aimock:5001/api/v1/chat", // Mock resume on the same aimock path
+      },
+      {
         source: "/api/:path*",
         destination: `${apiUrl}/api/:path*`,
       },

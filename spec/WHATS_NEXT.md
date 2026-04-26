@@ -29,10 +29,13 @@ These can each be knocked out in an evening. High impact, low effort.
 ### 1.1 — PWA Install Prompt & App Icon
 **Improves:** UX (+0.5), Market readiness (+0.5)
 
-- [ ] Add a `manifest.json` with proper app name, icons (192px + 512px), theme colour, display: `standalone`
-- [ ] Add the TeaBot chef logo as the PWA icon
-- [ ] Add `<meta name="apple-mobile-web-app-capable">` + splash screens for iOS
-- [ ] Test "Add to Home Screen" on iPhone and Android
+### 1.1 — PWA Install Prompt & App Icon
+**Improves:** UX (+0.5), Market readiness (+0.5)
+
+- [x] Add a `manifest.json` with proper app name, icons (192px + 512px), theme colour, display: `standalone`
+- [x] Add the TeaBot chef logo as the PWA icon
+- [x] Add `<meta name="apple-mobile-web-app-capable">` + splash screens for iOS
+- [x] Test "Add to Home Screen" on iPhone and Android
 
 > Right now it's a website. After this, it feels like an app when launched from the home screen.
 
@@ -41,10 +44,10 @@ These can each be knocked out in an evening. High impact, low effort.
 ### 1.2 — GitHub Actions CI Pipeline
 **Improves:** Engineering quality (+0.5), Maintainability (+1)
 
-- [ ] `.github/workflows/ci.yml` — triggered on push to `main` and PRs
-- [ ] **Backend**: `ruff check`, `bandit -ll`, `pytest` (against a Postgres service container)
-- [ ] **Frontend**: `eslint`, `tsc --noEmit` (type check), `next build`
-- [ ] Badge in README (`![CI](https://github.com/Ready2k/WhatForTea/actions/workflows/ci.yml/badge.svg)`)
+- [x] `.github/workflows/ci.yml` — triggered on push to `main` and PRs
+- [x] **Backend**: `ruff check`, `bandit -ll`, `pytest` (against a Postgres service container)
+- [x] **Frontend**: `eslint`, `tsc --noEmit` (type check), `next build`
+- [x] Badge in README (`![CI](https://github.com/Ready2k/WhatForTea/actions/workflows/ci.yml/badge.svg)`)
 
 > This is table-stakes for any serious project. ~30 min to set up. Huge credibility boost.
 
@@ -53,10 +56,10 @@ These can each be knocked out in an evening. High impact, low effort.
 ### 1.3 — HTTPS via Caddy (document + verify)
 **Improves:** Security (+0.5)
 
-- [ ] Document the Caddy reverse proxy setup already in the repo (`Caddyfile`)
-- [ ] Add to README: how HTTPS is terminated on NAS with auto-cert or self-signed
-- [ ] Verify `Secure` flag on JWT cookies when behind HTTPS
-- [ ] Add `HSTS` header in Caddy config
+- [x] Document the Caddy reverse proxy setup already in the repo (`Caddyfile`)
+- [x] Add to README: how HTTPS is terminated on NAS with auto-cert or self-signed
+- [x] Verify `Secure` flag on JWT cookies when behind HTTPS
+- [x] Add `HSTS` header in Caddy config
 
 > The `Caddyfile` exists but isn't documented. This is free credibility.
 
@@ -65,10 +68,10 @@ These can each be knocked out in an evening. High impact, low effort.
 ### 1.4 — Offline Recipe Viewing (Service Worker Cache)
 **Improves:** Feature completeness (+0.5), UX (+0.5)
 
-- [ ] Register a service worker in the Next.js app
-- [ ] Cache strategy: **network-first** for API calls, **cache-first** for recipe detail pages already visited
-- [ ] When offline, show cached recipe steps/ingredients — disable pantry features gracefully
-- [ ] Show a subtle "offline mode" banner
+- [x] Register a service worker in the Next.js app
+- [x] Cache strategy: **network-first** for API calls, **cache-first** for recipe detail pages already visited
+- [x] When offline, show cached recipe steps/ingredients — disable pantry features gracefully
+- [x] Show a subtle "offline mode" banner
 
 > Cooking happens at the counter, not near the router. Caching visited recipes means "I opened the recipe, walked to the kitchen, and my phone still shows it."
 
@@ -77,9 +80,9 @@ These can each be knocked out in an evening. High impact, low effort.
 ### 1.5 — Loading & Empty States Polish
 **Improves:** UX (+0.5)
 
-- [ ] Skeleton loaders for recipe cards, pantry list, planner grid (replace spinners)
-- [ ] Empty state illustrations for: no recipes yet, empty pantry, no plan this week, empty shopping list
-- [ ] Use the TeaBot character in empty states ("I'm hungry! Add some recipes to get started 🧑‍🍳")
+- [x] Skeleton loaders for recipe cards, pantry list, planner grid (replace spinners)
+- [x] Empty state illustrations for: no recipes yet, empty pantry, no plan this week, empty shopping list
+- [x] Use the TeaBot character in empty states ("I'm hungry! Add some recipes to get started 🧑‍🍳")
 
 > This is the difference between "functional" and "polished". Takes 1–2 hours per page.
 
@@ -88,9 +91,9 @@ These can each be knocked out in an evening. High impact, low effort.
 ### 1.6 — `robots.txt` + OpenGraph Meta Tags
 **Improves:** Documentation (+0.25), Market readiness (+0.25)
 
-- [ ] Add `robots.txt` (disallow all — it's a private app, but shows attention to detail)
-- [ ] OpenGraph tags on recipe detail pages (so sharing a recipe link to WhatsApp shows a preview card)
-- [ ] `<meta name="description">` on every page
+- [x] Add `robots.txt` (disallow all — it's a private app, but shows attention to detail)
+- [x] OpenGraph tags on recipe detail pages (so sharing a recipe link to WhatsApp shows a preview card)
+- [x] `<meta name="description">` on every page
 
 > Tiny effort. Looks professional. WhatsApp recipe sharing becomes visually appealing.
 
@@ -103,11 +106,11 @@ Worth planning into a sprint. Each one visibly moves a maturity score.
 ### 2.1 — Local LLM Fallback (Ollama)
 **Improves:** Feature completeness (+0.5), Market readiness (+1), Scalability (+0.5)
 
-- [ ] Add `LLM_PROVIDER` env var: `bedrock` (default) | `ollama`
-- [ ] Ollama client in `bedrock.py` (or new `llm.py` abstraction) for text tasks only
-- [ ] Test with `llama3` or `mistral` for: normaliser LLM assist, nutrition estimates, voice commands
-- [ ] Keep Bedrock required for vision tasks (card ingestion, receipt scanning) — Ollama vision models aren't reliable enough yet
-- [ ] Document in README: "Run without AWS by setting `LLM_PROVIDER=ollama`"
+- [x] Add `LLM_PROVIDER` env var: `bedrock` (default) | `ollama`
+- [x] Ollama client in `bedrock.py` (or new `llm.py` abstraction) for text tasks only
+- [x] Test with `llama3` or `mistral` for: normaliser LLM assist, nutrition estimates, voice commands
+- [x] Keep Bedrock required for vision tasks (card ingestion, receipt scanning) — Ollama vision models aren't reliable enough yet
+- [x] Document in README: "Run without AWS by setting `LLM_PROVIDER=ollama`"
 
 > This removes the single biggest adoption blocker. Anyone with a decent machine can run the text features without an AWS account.
 
@@ -116,11 +119,11 @@ Worth planning into a sprint. Each one visibly moves a maturity score.
 ### 2.2 — Design System & UI Consistency Pass
 **Improves:** UX (+1)
 
-- [ ] Define a design token set: colour palette, spacing scale, typography, border radii, shadows
-- [ ] Document in `frontend/src/styles/tokens.css` or Tailwind theme extension
-- [ ] Audit all pages for consistency: button styles, card layouts, form inputs, modals
-- [ ] Ensure dark mode is consistent everywhere (check edge cases: modals, dropdowns, TeaBot panel)
-- [ ] Add subtle micro-animations: card hover lifts, page transitions, toast notifications
+- [x] Define a design token set: colour palette, spacing scale, typography, border radii, shadows
+- [x] Document in `frontend/src/styles/tokens.css` or Tailwind theme extension
+- [x] Audit all pages for consistency: button styles, card layouts, form inputs, modals
+- [x] Ensure dark mode is consistent everywhere (check edge cases: modals, dropdowns, TeaBot panel)
+- [x] Add subtle micro-animations: card hover lifts, page transitions, toast notifications
 
 > This is where "it works" becomes "it feels premium". Mealie's UI advantage comes from exactly this kind of consistency pass.
 
@@ -129,11 +132,12 @@ Worth planning into a sprint. Each one visibly moves a maturity score.
 ### 2.3 — Widen Card Format Support
 **Improves:** Feature completeness (+0.5), Market readiness (+0.5)
 
-- [ ] Obtain sample cards from Gousto, Dinnerly, EveryPlate, Mindful Chef
-- [ ] Test current ingestion prompt against each format — log success/failure
-- [ ] Add format hints to the ingestion prompt (or a format selector in the UI)
-- [ ] Extend the golden test set with 2–3 cards per format
-- [ ] Document supported formats in README
+- [x] Add format hints to the ingestion prompt (`kit_brand` Jinja2 variable)
+- [x] Brand selector chips in the ingest UI (Auto-detect / HelloFresh / Gousto / Dinnerly / EveryPlate / Mindful Chef)
+- [x] `kit_brand` threaded through API → arq worker → ingestion service → bedrock call
+- [x] Brand-specific serving column guidance per brand in the prompt
+- [x] Document supported formats in README
+- [ ] Obtain physical sample cards from Gousto, Dinnerly, EveryPlate, Mindful Chef and extend the golden test set (requires actual cards)
 
 > The vision model is probably already flexible enough for most formats. This is mostly testing + minor prompt tuning.
 
@@ -154,10 +158,11 @@ Worth planning into a sprint. Each one visibly moves a maturity score.
 ### 2.5 — Drag-and-Drop Meal Planner
 **Improves:** UX (+0.5), Feature completeness (+0.25)
 
-- [ ] Replace the current planner UI with a drag-and-drop weekly calendar
-- [ ] Drag recipes from a side panel (library) onto day slots
-- [ ] Drag between days to reschedule
-- [ ] Use `@dnd-kit/core` or similar (lightweight, accessible)
+- [x] `@dnd-kit/core` drag-and-drop on the weekly planner
+- [x] Drag handle on each day slot when a recipe is assigned
+- [x] Swap-on-drop between days (swaps recipe + servings together)
+- [x] Touch sensor support (mobile-friendly, 200ms delay activation)
+- [x] Drop highlight visual feedback (ring + background tint)
 
 > Mealie and Paprika both have this. It's the expected interaction for meal planning in 2026.
 
@@ -196,11 +201,11 @@ These are bigger bets. Each one changes the product's trajectory.
 ### 3.3 — Smart Notifications
 **Improves:** Feature completeness (+0.5), UX (+0.5)
 
-- [ ] Web Push notifications via service worker
-- [ ] "Your chicken expires tomorrow — here are 3 recipes that use it"
-- [ ] "Your weekly plan is empty — want me to auto-fill?"
-- [ ] "You have 5 items expiring this week" (configurable threshold)
-- [ ] Notification preferences in user profile
+- [x] Web Push notifications via service worker (VAPID keys, `pywebpush`)
+- [x] Expiry alert: "X and N other items are expiring soon" (fires daily at 03:05)
+- [x] Empty plan reminder: "Your weekly meal plan is empty" (fires Monday 08:00)
+- [x] `send_to_household()` helper fans out push to all subscribed household members
+- [ ] Notification preferences in user profile (per-user opt-in/out)
 
 > This turns a passive tool into a proactive assistant. The data (expiry dates, confidence decay, matcher scores) already exists — it just needs a notification layer.
 

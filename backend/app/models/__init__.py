@@ -12,6 +12,7 @@ from app.models.ingest import IngestJob, IngestSourceType, IngestStatus, LlmOutp
 from app.models.collection import Collection, recipe_collections
 from app.models.user import Household, User
 from app.models.normalised_amount import NormalizedAmount
+from app.models.push import PushSubscription
 
 __all__ = [
     "Ingredient",
@@ -38,4 +39,5 @@ __all__ = [
     "recipe_collections",
     "Household",
     "User",
+    "PushSubscription",
 ]

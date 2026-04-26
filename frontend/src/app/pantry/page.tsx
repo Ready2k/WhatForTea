@@ -458,10 +458,14 @@ export default function PantryPage() {
       )}
 
       {!isLoading && !isError && sorted.length === 0 && (
-        <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-          <ShoppingBasket className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-          <p className="font-medium text-gray-600 dark:text-gray-300">Your pantry is empty</p>
-          <p className="text-sm mt-1">Add items to start tracking your ingredients</p>
+        <div className="text-center py-16 px-6">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow-lg mx-auto mb-4">
+            <img src="/teabot-chef.png" alt="TeaBot" className="w-full h-full object-cover" />
+          </div>
+          <p className="font-semibold text-gray-700 dark:text-gray-200">Your pantry is empty</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-[240px] mx-auto">
+            I can't suggest recipes if I don't know what you have! Add some items to get started.
+          </p>
         </div>
       )}
 

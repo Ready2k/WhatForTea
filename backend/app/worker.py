@@ -55,15 +55,16 @@ async def shutdown(ctx: dict) -> None:
 
 # ── Tasks ─────────────────────────────────────────────────────────────────────
 
-async def task_process_ingest_job(ctx: dict, job_id: str) -> dict:
+async def task_process_ingest_job(ctx: dict, job_id: str, kit_brand: str = "auto") -> dict:
     """Process a recipe card ingestion job end-to-end."""
-    logger.info("processing ingest job", extra={"job_id": job_id})
+    logger.info("processing ingest job", extra={"job_id": job_id, "kit_brand": kit_brand})
     async with ctx["session_factory"]() as db:
         await run_ingestion(
             job_id=uuid.UUID(job_id),
             db=db,
             redis_client=ctx["redis"],
             recipes_dir=_DEFAULT_RECIPES_DIR,
+            kit_brand=kit_brand,
         )
     return {"job_id": job_id}
 

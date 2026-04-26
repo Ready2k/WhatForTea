@@ -1,13 +1,13 @@
 {
   "fixtures": [
     {
-      "match": { "userMessage": { "$regex": "Red Leicester" } },
+      "match": { "userMessage": "Red Leicester" },
       "response": {
         "content": "{\"match\": true, \"confidence\": 1.0, \"reasoning\": \"Red Leicester is a variety of cheese similar enough to the candidate for this test case.\"}"
       }
     },
     {
-      "match": { "userMessage": { "$regex": "Extract the recipe data" } },
+      "match": { "userMessage": "Extract the recipe data" },
       "response": {
         "content": "```json\n{\n  \"title\": \"Honey-Glazed Salmon with Roasted Potatoes & Green Beans\",\n  \"cooking_time_mins\": 30,\n  \"serves\": 2,\n  \"ingredients\": [\n    {\n      \"raw_name\": \"Salmon fillets\",\n      \"quantity\": 2,\n      \"unit\": \"pieces (250g)\"\n    }\n  ],\n  \"steps\": [\n    {\n      \"order\": 1,\n      \"text\": \"Preheat oven.\"\n    }\n  ]\n}\n```"
       }

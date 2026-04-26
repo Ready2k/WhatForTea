@@ -17,8 +17,23 @@ HAIKU_MODEL_ID = "anthropic.claude-haiku-4-5-20251001-v1:0"
 
 
 @lru_cache(maxsize=1)
-def get_haiku() -> ChatBedrock:
-    """Cached Haiku 4.5 LangChain model for agent use."""
+def get_haiku():
+    """
+    Cached model for agent use.
+    Returns ChatBedrock (Haiku 4.5) by default, or ChatOllama if configured.
+    """
+    if settings.llm_provider == "ollama":
+        try:
+            from langchain_ollama import ChatOllama
+            return ChatOllama(
+                model=settings.ollama_model,
+                base_url=settings.ollama_base_url,
+                temperature=0.1,
+            )
+        except ImportError:
+            # Fallback to Bedrock if package missing
+            pass
+
     client = boto3.client(
         service_name="bedrock-runtime",
         aws_access_key_id=settings.aws_access_key_id or None,

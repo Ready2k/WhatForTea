@@ -14,7 +14,7 @@ from pathlib import Path
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,6 +61,7 @@ def _redis_settings() -> RedisSettings:
 @router.post("/ingest", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_recipe(
     images: list[UploadFile] = File(..., description="1 or 2 recipe card images (JPEG/PNG)"),
+    kit_brand: str = Form("auto", description="Meal kit brand hint: auto, hellofresh, gousto, dinnerly, everyplate, mindfulchef"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -84,7 +85,7 @@ async def ingest_recipe(
     # Enqueue the arq background task
     try:
         pool = await create_pool(_redis_settings())
-        await pool.enqueue_job("task_process_ingest_job", str(job.id))
+        await pool.enqueue_job("task_process_ingest_job", str(job.id), kit_brand=kit_brand)
         await pool.aclose()
     except Exception as exc:
         logger.error(
@@ -183,7 +184,7 @@ async def get_ingest_review(
     recipe_create = RecipeCreate(
         title=parsed.get("title", ""),
         cooking_time_mins=parsed.get("cooking_time_mins"),
-        hello_fresh_style=parsed.get("hello_fresh_style"),
+        hello_fresh_style=parsed.get("card_style") or parsed.get("hello_fresh_style"),
         base_servings=parsed.get("base_servings", 2),
         mood_tags=parsed.get("mood_tags", []),
         nutrition=nutrition,

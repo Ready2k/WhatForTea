@@ -1,6 +1,8 @@
 # WhatsForTea
 
-A locally-hosted recipe manager and kitchen assistant designed for Synology NAS deployment via Docker. Digitizes physical HelloFresh recipe cards using AI vision and provides intelligent meal planning with confidence-based pantry management.
+![CI](https://github.com/Ready2k/WhatsForTea/actions/workflows/ci.yml/badge.svg)
+
+A locally-hosted recipe manager and kitchen assistant designed for Synology NAS deployment via Docker. Digitizes meal kit recipe cards using AI vision and provides intelligent meal planning with confidence-based pantry management.
 
 > For a structured product evaluation — feature matrix vs competitors, honest limitations, and architecture summary — see **[PRODUCT_OVERVIEW.md](./PRODUCT_OVERVIEW.md)**.
 
@@ -8,19 +10,22 @@ A locally-hosted recipe manager and kitchen assistant designed for Synology NAS 
 
 ## Features
 
-- **AI Recipe Ingestion** — photograph HelloFresh card fronts and backs; Claude (via AWS Bedrock) extracts structured recipe data with a human review step before saving
+- **AI Recipe Ingestion** — photograph meal kit card fronts and backs; Claude (via AWS Bedrock) extracts structured recipe data with a human review step before saving. Supports **HelloFresh, Gousto, Dinnerly, EveryPlate, Mindful Chef**, and any other card format (auto-detect mode handles unknown brands)
 - **Recipe Import from URL** — paste any recipe URL; the LLM extracts and structures it using the same review/confirm flow
 - **Receipt Scanning** — photograph or upload a receipt (PDF/image); AI reads items and bulk-adds them to your pantry
 - **TeaBot AI Assistant** — conversational kitchen assistant powered by LangGraph with human-in-the-loop confirmations; knows your pantry, plan, and shopping list; streams responses in real time
 - **Hangry Matcher** — scores every recipe against your pantry in real time; ranks by what you can actually cook tonight
 - **Pantry Intelligence** — tracks ingredient inventory with confidence decay (fridge items decay faster than pantry staples); supports expiry dates with per-category shelf-life confidence; prevents double-counting via a reservation model
-- **Weekly Planner** — schedule meals Mon–Sun with mood-of-the-week auto-fill; generates a deduplicated, pack-size-rounded shopping list with WhatsApp export
+- **Weekly Planner** — drag-and-drop weekly calendar; schedule meals Mon–Sun with mood-of-the-week auto-fill; swap days by dragging; generates a deduplicated, pack-size-rounded shopping list with WhatsApp export
 - **Dedicated Shopping List** — separate page with two sections: manually added items (with ingredient autocomplete) and meal-plan-derived needs; items can be ticked off and bulk-marked as bought
 - **Cooking Mode** — step-by-step full-screen UI with swipe navigation, countdown timers, and voice commands ("TeaBot, add salt to list"); saves session history with ratings and notes
 - **Barcode Scanning** — scan pantry items via camera (BarcodeDetector API) or manual entry; resolves product names against the ingredient database via Open Food Facts
 - **Recipe Collections** — organise recipes into colour-coded folders; filter the library by collection
 - **Multi-User Households** — multiple household members each with their own login; admin can share an invite code; cooking history tracks who cooked what
 - **Nutritional Estimates** — background LLM task estimates calories, protein, fat, carbs per serving; shown on recipe detail
+- **Smart Notifications** — Web Push notifications via service worker: expiring pantry items, empty weekly plan reminders; configurable VAPID keys
+- **PWA / Offline Mode** — installs to home screen on iOS and Android; visited recipe pages cached for offline cooking; offline banner shown when connectivity is lost
+- **Local LLM Support (Ollama)** — run text-based features (TeaBot, normaliser, nutrition, voice) without an AWS account by setting `LLM_PROVIDER=ollama`
 
 ---
 
@@ -256,9 +261,22 @@ All routes are prefixed `/api/v1/`. Auth routes use `/api/auth/`. The frontend p
 
 ## Getting Started
 
+### Supported Meal Kit Card Formats
+
+| Brand | Format notes |
+|-------|-------------|
+| **HelloFresh** | 2P / 3P / 4P serving columns; coloured headers; front + back card |
+| **EveryPlate** | Same column format as HelloFresh (same parent company) |
+| **Gousto** | "2 people" / "4 people" serving labels; numbered step panels |
+| **Dinnerly** | Simpler layout; fewer step photos; 2–4 serving default |
+| **Mindful Chef** | 1–2 serving focus; detailed nutrition panels |
+| **Auto-detect** | Claude reads cues from the card design and logo — works for unlisted brands |
+
+Select the brand in the "Meal kit brand" chips on the Ingest page before uploading. "Auto-detect" (default) works well for all supported brands and is the right choice when you're unsure.
+
 ### Prerequisites
 - Docker + Docker Compose
-- AWS account with Bedrock access (Claude 3.5 Sonnet enabled in your region)
+- AWS account with Bedrock access (Claude Sonnet enabled in your region) — **or** a local [Ollama](https://ollama.ai) instance for text-only features
 
 ### Local Development
 
@@ -296,12 +314,30 @@ make shell-api   # Bash into the API container
 ### Running Tests
 
 ```bash
-# All tests
-docker-compose exec api poetry run pytest tests/ -v
+# All tests (against AIMock fixtures)
+make test-mock
 
 # Single file
 docker-compose exec api poetry run pytest tests/unit/test_normaliser.py -v
 ```
+
+### Deterministic Testing with AIMock
+
+WhatsForTea uses **AIMock** to provide zero-cost, deterministic testing of AI workflows. This allows you to run the full test suite without an AWS account or network access.
+
+#### How it works
+- **Interception**: The `aimock` container (port 5001) intercepts all AWS Bedrock calls and TeaBot chat SSE streams.
+- **Fixtures**: Responses are served from `aimock.json`. The backend is configured to use the mock via `AWS_ENDPOINT_URL=http://aimock:5001`.
+- **Chaos & Latency**: Test frontend resiliency by sending "chaos test" (malformed JSON) or "latency test" (5s delay) to TeaBot.
+
+#### Usage
+- **Run Tests**: `make test-mock` runs the backend pytest suite against the mock environment.
+- **Refresh Fixtures**: `make record-fixtures` starts AIMock in record mode. Any NEW calls made to Bedrock will be captured and saved to `aimock.json`.
+- **Add Manual Mocks**: Edit `aimock.json` to add new matching rules for specific prompts or chat messages.
+
+#### Environment Configuration
+The system uses `.env.test` for automated testing, which overrides the standard AWS credentials and points to the local mock endpoint.
+
 
 ### Creating a Migration
 
@@ -311,6 +347,19 @@ make migrate
 ```
 
 ---
+
+### HTTPS & Production Deployment
+
+For production (e.g., on a Synology NAS), it is recommended to terminate HTTPS using a reverse proxy. A `Caddyfile` is provided for this purpose.
+
+- **Caddy**: Automatically handles SSL certificates via Let's Encrypt.
+- **HSTS**: Enabled by default in the `Caddyfile` for improved security.
+- **JWT Security**: When running over HTTPS, ensure your `JWT_SECRET` is strong and that cookies are handled securely by the browser.
+
+To use Caddy:
+1. Update `Caddyfile` with your domain.
+2. Ensure ports 80 and 443 are forwarded to your NAS/server.
+3. Run Caddy alongside your Docker stack (or as a separate container).
 
 ## Deployment (Synology NAS)
 
@@ -355,6 +404,14 @@ Two model IDs are configured via environment variables — no code change needed
 |----------|---------|---------|
 | `BEDROCK_MODEL_ID` | `us.anthropic.claude-sonnet-4-6` | Vision tasks: recipe card scan, auto-crop |
 | `BEDROCK_TEXT_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Text tasks: TeaBot chat, normaliser LLM assist, nutrition, voice |
+
+### Local LLM Support (Ollama)
+
+WhatsForTea can run text-based AI features using a local Ollama instance instead of AWS Bedrock. This is ideal for reducing costs or offline use.
+
+- **Setup**: Set `LLM_PROVIDER=ollama` and `OLLAMA_BASE_URL=http://your-ollama-host:11434`.
+- **Model**: Default is `llama3`. Change via `OLLAMA_MODEL`.
+- **Note**: Vision tasks (recipe ingestion, receipt scanning) still require AWS Bedrock (Claude Sonnet) as current local vision models are not yet reliable enough for this specific workflow.
 
 ---
 
@@ -410,6 +467,20 @@ Two model IDs are configured via environment variables — no code change needed
 | Model routing (Sonnet/Haiku via env vars) | ✅ Complete |
 | ESLint 9 flat config | ✅ Complete |
 | Code quality (ruff clean, bandit clean) | ✅ Complete |
+
+### v3 Features
+
+| Feature | Status |
+|---------|--------|
+| CI pipeline (GitHub Actions — ruff, bandit, pytest, ESLint, tsc, build) | ✅ Complete |
+| PWA install + home screen icon | ✅ Complete |
+| Offline cooking mode (service worker + OfflineBanner) | ✅ Complete |
+| Smart push notifications (expiry alerts, empty-plan reminders) | ✅ Complete |
+| Drag-and-drop meal planner (@dnd-kit) | ✅ Complete |
+| Local LLM fallback (Ollama) for all text features | ✅ Complete |
+| Design system tokens + micro-animations | ✅ Complete |
+| Multi-brand card ingestion (HelloFresh, Gousto, Dinnerly, EveryPlate, Mindful Chef) | ✅ Complete |
+| HTTPS / HSTS via Caddy | ✅ Complete |
 
 ---
 

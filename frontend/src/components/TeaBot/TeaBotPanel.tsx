@@ -209,6 +209,23 @@ export function TeaBotPanel() {
               updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
               return updated;
             });
+          } else if (event.type === 'TEXT_MESSAGE_CONTENT' && event.delta) {
+            // Support for AIMock AGUI mock responses
+            accumulated += event.delta;
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
+              return updated;
+            });
+          } else if (event.type === 'ACTIVITY_SNAPSHOT' && event.activityType && event.content) {
+            // Support for AIMock AGUI widget snapshots
+            const widgetStr = `<widget>${JSON.stringify({ type: event.activityType, ...event.content })}</widget>`;
+            accumulated += widgetStr;
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { ...updated[updated.length - 1], content: accumulated };
+              return updated;
+            });
           } else if (event.type === 'hitl_waiting' && event.widget) {
             resumeHitlWidget = { ...event.widget, thread_id: event.thread_id };
           } else if (event.type === 'error') {
@@ -386,6 +403,29 @@ export function TeaBotPanel() {
           }
           if (event.type === 'text_delta' && event.content) {
             accumulated += event.content;
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated,
+              };
+              return updated;
+            });
+          } else if (event.type === 'TEXT_MESSAGE_CONTENT' && event.delta) {
+            // Support for AIMock AGUI mock responses
+            accumulated += event.delta;
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated,
+              };
+              return updated;
+            });
+          } else if (event.type === 'ACTIVITY_SNAPSHOT' && event.activityType && event.content) {
+            // Support for AIMock AGUI widget snapshots
+            const widgetStr = `<widget>${JSON.stringify({ type: event.activityType, ...event.content })}</widget>`;
+            accumulated += widgetStr;
             setMessages(prev => {
               const updated = [...prev];
               updated[updated.length - 1] = {

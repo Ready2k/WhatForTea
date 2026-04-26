@@ -186,6 +186,7 @@ async def run_ingestion(
     db: AsyncSession,
     redis_client,
     recipes_dir: Path = _DEFAULT_RECIPES_DIR,
+    kit_brand: str = "auto",
 ) -> None:
     """
     Full ingestion pipeline called by the arq worker.
@@ -213,7 +214,7 @@ async def run_ingestion(
 
         # LLM call — raw response intentionally NOT logged (would bloat NAS logs)
         from app.services.bedrock import call_ingestion_llm
-        raw_response, parsed = await call_ingestion_llm(image_paths)
+        raw_response, parsed = await call_ingestion_llm(image_paths, kit_brand=kit_brand)
 
         # Persist raw response immediately so it survives validation failures
         llm_out = LlmOutput(

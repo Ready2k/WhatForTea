@@ -13,6 +13,8 @@ help:
 	@echo "  make migrate        Run pending Alembic migrations"
 	@echo "  make push           Build + push development images (linux/amd64)"
 	@echo "  make push-prod      Build + push production images (linux/amd64)"
+	@echo "  make test-mock      Run backend tests against AIMock fixtures"
+	@echo "  make record-fixtures Start AIMock in record mode to refresh fixtures"
 
 init-dirs:
 	mkdir -p data/db data/redis data/recipes data/backups
@@ -43,3 +45,9 @@ push:
 
 push-prod:
 	./scripts/push-images.sh --prod
+
+test-mock:
+	docker-compose exec api poetry run pytest backend/tests
+
+record-fixtures:
+	docker-compose exec aimock node frontend/node_modules/@copilotkit/aimock/dist/aimock-cli.js --record --config aimock.json --host 0.0.0.0 --port 5001

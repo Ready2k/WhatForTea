@@ -348,24 +348,9 @@ async def _do_pantry_upsert(widget: dict, quantity: float) -> None:
 
 _llm_instance: Optional[ChatBedrock] = None
 
-def _build_llm() -> ChatBedrock:
-    global _llm_instance
-    if _llm_instance is not None:
-        return _llm_instance
-    from app.services.bedrock import _model_id
-    client = boto3.client(
-        service_name="bedrock-runtime",
-        aws_access_key_id=settings.aws_access_key_id or None,
-        aws_secret_access_key=settings.aws_secret_access_key or None,
-        region_name=settings.aws_region,
-        endpoint_url=settings.aws_endpoint_url or None,
-    )
-    _llm_instance = ChatBedrock(
-        client=client,
-        model_id=_model_id(vision=False),
-        streaming=True,
-    )
-    return _llm_instance
+def _build_llm():
+    from app.agents.llm import get_haiku
+    return get_haiku()
 
 
 # ── Node ──────────────────────────────────────────────────────────────────────

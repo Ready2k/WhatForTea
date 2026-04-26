@@ -121,6 +121,7 @@ export default function IngestPage() {
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [showRawLlm, setShowRawLlm] = useState(false);
+  const [kitBrand, setKitBrand] = useState<string>('auto');
   const { data: currentUser } = useCurrentUser();
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -283,6 +284,7 @@ export default function IngestPage() {
 
     const fd = new FormData();
     rotatedFiles.forEach((f) => fd.append('images', f));
+    fd.append('kit_brand', kitBrand);
 
     try {
       setApiStatus('uploading');
@@ -715,6 +717,35 @@ export default function IngestPage() {
               Add the other side of the card to continue
             </p>
           )}
+
+          {/* Brand selector */}
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Meal kit brand</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'auto', label: 'Auto-detect' },
+                { value: 'hellofresh', label: 'HelloFresh' },
+                { value: 'gousto', label: 'Gousto' },
+                { value: 'dinnerly', label: 'Dinnerly' },
+                { value: 'everyplate', label: 'EveryPlate' },
+                { value: 'mindfulchef', label: 'Mindful Chef' },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setKitBrand(value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    kitBrand === value
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={handleUpload}
             disabled={capturedPhotos.length !== 2 || ingestMutation.isPending}

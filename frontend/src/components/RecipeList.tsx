@@ -27,7 +27,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
   return (
     <Link
       href={`/recipes/${match.recipe.id}`}
-      className="group rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+      className="card-premium group overflow-hidden animate-in"
     >
       <div className="w-full aspect-video bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center overflow-hidden">
         {match.recipe.hero_image_path ? (

@@ -60,6 +60,7 @@ def _load_prompt(filename: str) -> str:
 
 
 def _get_client():
+    from app.config import settings
     client = boto3.client(
         "bedrock-runtime",
         region_name=settings.aws_region,
@@ -79,6 +80,29 @@ def _get_client():
         client.meta.events.register("before-sign", before_sign)
 
     return client
+
+
+async def _call_ollama(system_prompt: str, user_text: str) -> str:
+    """Helper to call Ollama API directly via httpx."""
+    from app.config import settings
+    import httpx
+    
+    url = f"{settings.ollama_base_url}/api/chat"
+    payload = {
+        "model": settings.ollama_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_text},
+        ],
+        "stream": False,
+        "options": {"temperature": 0.1}
+    }
+    
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data["message"]["content"]
 
 
 @observe(as_type="generation", name="nutrition_llm")
@@ -103,36 +127,43 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
         "Estimate the nutrition per serving and return JSON matching the schema."
     )
 
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 512,
-        "temperature": 0.1,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_text}],
-    }
+    from app.config import settings
+    if settings.llm_provider == "ollama":
+        text = await _call_ollama(system_prompt, user_text)
+    else:
+        body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 512,
+            "temperature": 0.1,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_text}],
+        }
 
-    client = _get_client()
-    response = client.invoke_model(
-        modelId=model,
-        body=json.dumps(body),
-        contentType="application/json",
-        accept="application/json",
-    )
-    raw = json.loads(response["body"].read())
-    text = raw["content"][0]["text"].strip()
+        client = _get_client()
+        response = client.invoke_model(
+            modelId=model,
+            body=json.dumps(body),
+            contentType="application/json",
+            accept="application/json",
+        )
+        raw = json.loads(response["body"].read())
+        text = raw["content"][0]["text"].strip()
+
     if text.startswith("```"):
         text = text.split("```")[1]
         if text.startswith("json"):
             text = text[4:]
         text = text.strip()
     result = json.loads(text)
-    usage = raw.get("usage", {})
-    langfuse_context.update_current_observation(
-        model=model,
-        input={"title": title, "servings": base_servings, "ingredients": ingredients},
-        output=result,
-        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
-    )
+    
+    if settings.llm_provider != "ollama":
+        usage = raw.get("usage", {})
+        langfuse_context.update_current_observation(
+            model=model,
+            input={"title": title, "servings": base_servings, "ingredients": ingredients},
+            output=result,
+            usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+        )
     return result
 
 
@@ -155,31 +186,36 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
     # Truncate page text to avoid exceeding token limits (~32k chars ≈ ~8k tokens)
     truncated = page_text[:32000]
 
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": cfg.get("max_tokens", 4096),
-        "temperature": cfg.get("temperature", 0.2),
-        "system": system_prompt,
-        "messages": [
-            {
-                "role": "user",
-                "content": (
-                    f"Here is the text content of a recipe page from {source_domain}:\n\n"
-                    f"{truncated}\n\n"
-                    "Extract the recipe and return valid JSON exactly matching the schema in the system prompt."
-                ),
-            }
-        ],
-    }
+    from app.config import settings
+    if settings.llm_provider == "ollama":
+        text = await _call_ollama(system_prompt, f"Here is the text content of a recipe page from {source_domain}:\n\n{truncated}\n\nExtract the recipe and return valid JSON exactly matching the schema in the system prompt.")
+        raw_response = {"content": [{"text": text}], "model": settings.ollama_model}
+    else:
+        body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": cfg.get("max_tokens", 4096),
+            "temperature": cfg.get("temperature", 0.2),
+            "system": system_prompt,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        f"Here is the text content of a recipe page from {source_domain}:\n\n"
+                        f"{truncated}\n\n"
+                        "Extract the recipe and return valid JSON exactly matching the schema in the system prompt."
+                    ),
+                }
+            ],
+        }
 
-    client = _get_client()
-    response = client.invoke_model(
-        modelId=model,
-        body=json.dumps(body),
-        contentType="application/json",
-        accept="application/json",
-    )
-    raw_response = json.loads(response["body"].read())
+        client = _get_client()
+        response = client.invoke_model(
+            modelId=model,
+            body=json.dumps(body),
+            contentType="application/json",
+            accept="application/json",
+        )
+        raw_response = json.loads(response["body"].read())
 
     text = raw_response["content"][0]["text"].strip()
     if text.startswith("```"):
@@ -190,25 +226,14 @@ async def call_url_ingestion_llm(page_text: str, source_domain: str) -> tuple[di
 
     parsed = json.loads(text)
 
-    usage = raw_response.get("usage", {})
-    langfuse_context.update_current_observation(
-        model=raw_response.get("model", model),
-        input={"source_domain": source_domain, "page_text_preview": page_text[:500]},
-        output={"title": parsed.get("title"), "ingredient_count": len(parsed.get("ingredients", [])), "step_count": len(parsed.get("steps", []))},
-        usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
-    )
-    logger.info(
-        "url ingestion LLM call",
-        extra={
-            "model": raw_response.get("model", model),
-            "source_domain": source_domain,
-            "prompt_tokens": usage.get("input_tokens"),
-            "completion_tokens": usage.get("output_tokens"),
-            "title": parsed.get("title"),
-            "ingredient_count": len(parsed.get("ingredients", [])),
-            "step_count": len(parsed.get("steps", [])),
-        },
-    )
+    if settings.llm_provider != "ollama":
+        usage = raw_response.get("usage", {})
+        langfuse_context.update_current_observation(
+            model=raw_response.get("model", model),
+            input={"source_domain": source_domain, "page_text_preview": page_text[:500]},
+            output={"title": parsed.get("title"), "ingredient_count": len(parsed.get("ingredients", [])), "step_count": len(parsed.get("steps", []))},
+            usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+        )
     return raw_response, parsed
 
 
@@ -224,23 +249,29 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
     context_hint = f"\nContext: {context}" if context else ""
     user_text = f'Transcript: "{transcript}"{context_hint}\n\nReturn JSON matching the schema.'
 
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 256,
-        "temperature": 0.1,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_text}],
-    }
-
+    from app.config import settings
     try:
-        client = _get_client()
-        response = client.invoke_model(
-            modelId=model,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        raw = json.loads(response["body"].read())
+        if settings.llm_provider == "ollama":
+            text = await _call_ollama(system_prompt, user_text)
+            raw = {"content": [{"text": text}]}
+        else:
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 256,
+                "temperature": 0.1,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": user_text}],
+            }
+
+            client = _get_client()
+            response = client.invoke_model(
+                modelId=model,
+                body=json.dumps(body),
+                contentType="application/json",
+                accept="application/json",
+            )
+            raw = json.loads(response["body"].read())
+
         text = raw["content"][0]["text"].strip()
         if text.startswith("```"):
             text = text.split("```")[1]
@@ -248,24 +279,22 @@ async def call_voice_command_llm(transcript: str, context: str | None = None) ->
                 text = text[4:]
             text = text.strip()
         parsed = json.loads(text)
-        usage = raw.get("usage", {})
-        intent = parsed.get("intent", "unknown")
-        langfuse_context.update_current_observation(
-            model=model,
-            input={"transcript": transcript, "context": context},
-            output=parsed,
-            usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
-            metadata={
-                "intent": intent,
-                "model": model,
-                "input_tokens": usage.get("input_tokens"),
-                "output_tokens": usage.get("output_tokens"),
-            },
-        )
-        logger.info(
-            "voice command LLM call",
-            extra={"transcript": transcript[:80], "intent": intent},
-        )
+        
+        if settings.llm_provider != "ollama":
+            usage = raw.get("usage", {})
+            intent = parsed.get("intent", "unknown")
+            langfuse_context.update_current_observation(
+                model=model,
+                input={"transcript": transcript, "context": context},
+                output=parsed,
+                usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+                metadata={
+                    "intent": intent,
+                    "model": model,
+                    "input_tokens": usage.get("input_tokens"),
+                    "output_tokens": usage.get("output_tokens"),
+                },
+            )
         return parsed
     except Exception as exc:
         logger.warning("voice command LLM failed", extra={"error": str(exc)})
@@ -290,23 +319,29 @@ async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
     system_prompt = parts[0].replace("## System", "").strip()
     user_prompt = ("## Task" + parts[1]).strip() if len(parts) > 1 else rendered.strip()
 
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 256,
-        "temperature": cfg.get("temperature", 0.1),
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
-    }
-
+    from app.config import settings
     try:
-        client = _get_client()
-        response = client.invoke_model(
-            modelId=model,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result_body = json.loads(response["body"].read())
+        if settings.llm_provider == "ollama":
+            text = await _call_ollama(system_prompt, user_prompt)
+            result_body = {"content": [{"text": text}]}
+        else:
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 256,
+                "temperature": cfg.get("temperature", 0.1),
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": user_prompt}],
+            }
+
+            client = _get_client()
+            response = client.invoke_model(
+                modelId=model,
+                body=json.dumps(body),
+                contentType="application/json",
+                accept="application/json",
+            )
+            result_body = json.loads(response["body"].read())
+
         text = result_body["content"][0]["text"].strip()
 
         # Strip markdown fences if present
@@ -317,24 +352,18 @@ async def call_normaliser_llm(raw_name: str, candidate: str) -> dict[str, Any]:
             text = text.strip()
 
         parsed = json.loads(text)
-        usage = result_body.get("usage", {})
-        langfuse_context.update_current_observation(
-            model=model,
-            input={"raw_name": raw_name, "candidate": candidate},
-            output=parsed,
-            usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
-        )
-        logger.info(
-            "normaliser LLM call",
-            extra={
-                "raw_name": raw_name,
-                "candidate": candidate,
-                "match": parsed.get("match"),
-                "confidence": parsed.get("confidence"),
-            },
-        )
+        
+        if settings.llm_provider != "ollama":
+            usage = result_body.get("usage", {})
+            langfuse_context.update_current_observation(
+                model=model,
+                input={"raw_name": raw_name, "candidate": candidate},
+                output=parsed,
+                usage={"input": usage.get("input_tokens"), "output": usage.get("output_tokens")},
+            )
         return parsed
     except Exception as exc:
+        print(f"DEBUG EXCEPTION in normaliser: {exc}")
         logger.warning("normaliser LLM call failed", extra={"error": str(exc)})
         return {"match": False, "confidence": 0.0, "reasoning": f"LLM error: {exc}"}
 
@@ -516,7 +545,7 @@ async def call_auto_crop_llm(image_path: Path) -> dict:
 
 
 
-async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
+async def call_ingestion_llm(image_paths: list[Path], kit_brand: str = "auto") -> tuple[dict, dict]:
     """
     Send recipe card image(s) to Claude via Bedrock for structured extraction.
 
@@ -529,7 +558,7 @@ async def call_ingestion_llm(image_paths: list[Path]) -> tuple[dict, dict]:
     cfg = _load_settings()
     model = _model_id(vision=True)
     template_src = _load_prompt("ingestion_prompt.md")
-    rendered = Template(template_src).render(num_images=len(image_paths))
+    rendered = Template(template_src).render(num_images=len(image_paths), kit_brand=kit_brand)
 
     # Extract the system prompt — everything after the "## System" heading,
     # stripping the file-header comment lines that precede it.

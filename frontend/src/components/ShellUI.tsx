@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation';
 import { Nav } from '@/components/nav';
 import { Sidebar } from '@/components/Sidebar';
 import { TeaBotPanel } from '@/components/TeaBot/TeaBotPanel';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 const SHELL_SUPPRESSED = ['/login', '/forgot-password', '/reset-password', '/change-password'];
 
@@ -17,6 +18,7 @@ export function ShellUI() {
   if (SHELL_SUPPRESSED.some((p) => pathname === p || pathname.startsWith(p + '/'))) return null;
   return (
     <>
+      <OfflineBanner />
       <Sidebar />
       <Nav />
       <TeaBotPanel />

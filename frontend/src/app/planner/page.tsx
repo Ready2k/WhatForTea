@@ -754,9 +754,11 @@ export default function PlannerPage() {
                 ))}
 
                 {Object.keys(shoppingList.zones).length === 0 && (
-                  <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-                    <ShoppingCart className="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                    <p>No items — plan your week first!</p>
+                  <div className="text-center py-12 px-6">
+                    <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-indigo-100 dark:border-indigo-900 shadow-md mx-auto mb-4">
+                      <img src="/teabot-chef.png" alt="TeaBot" className="w-full h-full object-cover opacity-60" />
+                    </div>
+                    <p className="font-medium text-gray-600 dark:text-gray-300 italic">&ldquo;I&apos;m hungry! Plan your week to generate a shopping list.&rdquo;</p>
                   </div>
                 )}
               </div>

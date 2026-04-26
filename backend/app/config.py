@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://redis:6379"
 
+    # LLM Choice
+    llm_provider: str = "bedrock"  # "bedrock" or "ollama"
+    ollama_base_url: str = "http://host.docker.internal:11434"
+    ollama_model: str = "llama3"
+
     # AWS Bedrock
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
