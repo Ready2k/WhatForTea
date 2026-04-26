@@ -11,6 +11,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.services.pantry import calculate_confidence
+import uuid
+
+@pytest.fixture
+def household_id():
+    return uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 # ── Pure function tests ───────────────────────────────────────────────────────
@@ -89,7 +94,7 @@ async def garlic_ingredient_id(db_session):
 
 
 @pytest.mark.asyncio
-async def test_upsert_creates_new_item(db_session, garlic_ingredient_id):
+async def test_upsert_creates_new_item(db_session, garlic_ingredient_id, household_id):
     from app.schemas.pantry import PantryItemCreate
     from app.services.pantry import upsert_pantry_item, delete_pantry_item
 
@@ -100,7 +105,7 @@ async def test_upsert_creates_new_item(db_session, garlic_ingredient_id):
         confidence=1.0,
         decay_rate=0.05,
     )
-    item = await upsert_pantry_item(data, db_session)
+    item = await upsert_pantry_item(data, db_session, household_id)
 
     assert item.id is not None
     assert float(item.quantity) == 10.0
@@ -111,7 +116,7 @@ async def test_upsert_creates_new_item(db_session, garlic_ingredient_id):
 
 
 @pytest.mark.asyncio
-async def test_upsert_updates_existing_item(db_session, garlic_ingredient_id):
+async def test_upsert_updates_existing_item(db_session, garlic_ingredient_id, household_id):
     from app.schemas.pantry import PantryItemCreate
     from app.services.pantry import upsert_pantry_item, delete_pantry_item
 
@@ -122,7 +127,7 @@ async def test_upsert_updates_existing_item(db_session, garlic_ingredient_id):
         confidence=0.5,
         decay_rate=0.05,
     )
-    first = await upsert_pantry_item(data, db_session)
+    first = await upsert_pantry_item(data, db_session, household_id)
 
     # Upsert again with new quantity
     data2 = PantryItemCreate(
@@ -132,7 +137,7 @@ async def test_upsert_updates_existing_item(db_session, garlic_ingredient_id):
         confidence=0.3,  # should be overridden to 1.0 on upsert
         decay_rate=0.05,
     )
-    second = await upsert_pantry_item(data2, db_session)
+    second = await upsert_pantry_item(data2, db_session, household_id)
 
     assert second.id == first.id  # same row updated
     assert float(second.quantity) == 20.0
@@ -142,7 +147,7 @@ async def test_upsert_updates_existing_item(db_session, garlic_ingredient_id):
 
 
 @pytest.mark.asyncio
-async def test_confirm_resets_confidence(db_session, garlic_ingredient_id):
+async def test_confirm_resets_confidence(db_session, garlic_ingredient_id, household_id):
     from app.schemas.pantry import PantryItemCreate, PantryItemUpdate
     from app.services.pantry import upsert_pantry_item, update_pantry_item, confirm_pantry_item, delete_pantry_item
 
@@ -153,7 +158,7 @@ async def test_confirm_resets_confidence(db_session, garlic_ingredient_id):
         confidence=1.0,
         decay_rate=0.1,
     )
-    item = await upsert_pantry_item(data, db_session)
+    item = await upsert_pantry_item(data, db_session, household_id)
 
     # Artificially lower confidence
     item = await update_pantry_item(item.id, PantryItemUpdate(confidence=0.3), db_session)
@@ -167,7 +172,7 @@ async def test_confirm_resets_confidence(db_session, garlic_ingredient_id):
 
 
 @pytest.mark.asyncio
-async def test_get_available_includes_item(db_session, garlic_ingredient_id):
+async def test_get_available_includes_item(db_session, garlic_ingredient_id, household_id):
     from app.schemas.pantry import PantryItemCreate
     from app.services.pantry import upsert_pantry_item, get_available, delete_pantry_item
 
@@ -178,9 +183,9 @@ async def test_get_available_includes_item(db_session, garlic_ingredient_id):
         confidence=1.0,
         decay_rate=0.02,
     )
-    item = await upsert_pantry_item(data, db_session)
+    item = await upsert_pantry_item(data, db_session, household_id)
 
-    availability = await get_available(db_session)
+    availability = await get_available(db_session, household_id)
     garlic_avail = next(
         (a for a in availability if a.ingredient.id == garlic_ingredient_id), None
     )
@@ -193,7 +198,7 @@ async def test_get_available_includes_item(db_session, garlic_ingredient_id):
 
 
 @pytest.mark.asyncio
-async def test_apply_decay_updates_confidence(db_session, garlic_ingredient_id):
+async def test_apply_decay_updates_confidence(db_session, garlic_ingredient_id, household_id):
     from datetime import timedelta
     from app.schemas.pantry import PantryItemCreate
     from app.services.pantry import upsert_pantry_item, apply_decay_all, delete_pantry_item
@@ -206,7 +211,7 @@ async def test_apply_decay_updates_confidence(db_session, garlic_ingredient_id):
         confidence=1.0,
         decay_rate=0.1,
     )
-    item = await upsert_pantry_item(data, db_session)
+    item = await upsert_pantry_item(data, db_session, household_id)
 
     # Wind back last_confirmed_at by 3 days to simulate staleness
     item_row = await db_session.get(PantryItem, item.id)

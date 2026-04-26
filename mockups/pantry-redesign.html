@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What's for Tea? — Pantry Redesign Mockups</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0a0c14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    .phone {
+      width: 390px;
+      height: 820px;
+      background: #13151f;
+      border-radius: 40px;
+      overflow: hidden;
+      border: 2px solid #2a2d3a;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .phone-screen {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-bottom: 80px;
+      scrollbar-width: none;
+    }
+    .phone-screen::-webkit-scrollbar { display: none; }
+
+    .nav-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: #1a1d2a;
+      border-top: 1px solid #2a2d3a;
+      display: flex;
+      padding: 10px 0 18px;
+      z-index: 10;
+    }
+    .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+    .nav-label { font-size:10px; color:#6b7280; }
+    .nav-label.active { color:#10b981; }
+
+    /* Confidence dot */
+    .conf-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .conf-high  { background:#10b981; }
+    .conf-mid   { background:#eab308; }
+    .conf-low   { background:#ef4444; }
+
+    /* Category pill */
+    .cat-pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:600; }
+    .cat-produce  { background:rgba(16,185,129,0.12); color:#10b981; }
+    .cat-dairy    { background:rgba(59,130,246,0.12); color:#60a5fa; }
+    .cat-meat     { background:rgba(239,68,68,0.12);  color:#f87171; }
+    .cat-pantry   { background:rgba(245,158,11,0.12); color:#fbbf24; }
+    .cat-spice    { background:rgba(168,85,247,0.12); color:#c084fc; }
+    .cat-bakery   { background:rgba(249,115,22,0.12); color:#fb923c; }
+
+    /* Status strip item */
+    .stat-pill {
+      display:flex; align-items:center; gap:6px;
+      background:#1e2130; border-radius:12px; padding:8px 12px;
+      border:1px solid #2a2d3a; flex:1;
+    }
+
+    /* Section header */
+    .section-hdr {
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 12px 16px 6px;
+    }
+    .section-title { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.07em; }
+
+    /* Pantry row */
+    .pantry-row {
+      display:flex; align-items:center; gap:10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #1e2130;
+      background: #13151f;
+    }
+    .pantry-row:last-child { border-bottom: none; }
+    .pantry-row:active { background: #1a1d2a; }
+
+    /* Attention card */
+    .attention-card {
+      background:#1e2130; border:1px solid #372a1e; border-radius:16px;
+      padding:12px; flex-shrink:0; width:160px;
+    }
+
+    /* Filter chip */
+    .chip { padding:5px 12px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid; cursor:pointer; white-space:nowrap; }
+    .chip-active  { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+    .chip-passive { background:transparent; color:#6b7280; border-color:#2a2d3a; }
+
+    /* Tag */
+    .tag { display:inline-block; padding:2px 7px; border-radius:999px; font-size:10px; font-weight:600; }
+    .tag-red    { background:rgba(239,68,68,0.15);  color:#f87171; }
+    .tag-amber  { background:rgba(245,158,11,0.15); color:#fbbf24; }
+    .tag-green  { background:rgba(16,185,129,0.15); color:#10b981; }
+
+    /* Confidence mini-bar */
+    .conf-bar-wrap { height:3px; background:#1e2130; border-radius:999px; overflow:hidden; }
+    .conf-bar-fill { height:100%; border-radius:999px; }
+
+    /* Collapse section */
+    .collapse-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 10px 16px; background:#1a1d2a; cursor:pointer;
+      border-bottom: 1px solid #1e2130;
+    }
+
+    /* Swipe hint overlay */
+    .swipe-hint {
+      position:absolute; right:0; top:0; bottom:0;
+      display:flex; align-items:center; gap:6px;
+      padding:0 10px;
+      background:linear-gradient(to right, transparent, #1a1d2a 30%);
+      pointer-events:none;
+    }
+
+    /* Input style */
+    .form-input {
+      width:100%; background:#1a1d2a; border:1px solid #2a2d3a; color:#e5e7eb;
+      border-radius:12px; padding:9px 12px; font-size:13px; outline:none;
+    }
+    .form-input::placeholder { color:#4b5563; }
+    .form-input:focus { border-color:#4f46e5; }
+
+    /* Bottom sheet backdrop */
+    .sheet-backdrop {
+      position:absolute; inset:0; background:rgba(0,0,0,0.6); z-index:20;
+    }
+    .sheet {
+      position:absolute; bottom:0; left:0; right:0;
+      background:#1a1d2a; border-radius:24px 24px 0 0;
+      border-top:1px solid #2a2d3a; z-index:30; padding:20px 16px 90px;
+    }
+    .sheet-handle {
+      width:40px; height:4px; background:#2a2d3a; border-radius:999px;
+      margin: 0 auto 16px;
+    }
+
+    /* Label */
+    .field-label { font-size:11px; color:#6b7280; margin-bottom:5px; font-weight:500; }
+  </style>
+</head>
+<body class="p-10">
+
+  <div class="mb-10 text-center">
+    <h1 class="text-2xl font-bold text-white mb-1">What's for Tea? — Pantry Redesign</h1>
+    <p class="text-gray-400 text-sm">Three concepts for replacing the flat list</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       ROW 1: Concept labels
+  ══════════════════════════════════════════════════════════ -->
+  <div class="flex gap-10 mb-4 items-start flex-wrap justify-center">
+    <div style="width:390px" class="text-center">
+      <div class="text-white font-bold text-sm">Concept A — Pantry Hub</div>
+      <div class="text-gray-500 text-xs mt-1">Status summary + "Use It Up" spotlight + category groups</div>
+    </div>
+    <div style="width:390px" class="text-center">
+      <div class="text-white font-bold text-sm">Concept B — Filtered List</div>
+      <div class="text-gray-500 text-xs mt-1">Compact rows, search + filter chips, no groups needed</div>
+    </div>
+    <div style="width:390px" class="text-center">
+      <div class="text-white font-bold text-sm">Concept C — Add Item Sheet</div>
+      <div class="text-gray-500 text-xs mt-1">Bottom-sheet add flow replacing the in-page form</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       ROW 1: Three phone frames
+  ══════════════════════════════════════════════════════════ -->
+  <div class="flex gap-10 mb-16 items-start flex-wrap justify-center">
+
+    <!-- ─────────────────── CONCEPT A: PANTRY HUB ─────────────────── -->
+    <div class="phone">
+      <div class="phone-screen">
+
+        <!-- Header -->
+        <div style="padding:16px 16px 0; display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:22px; font-weight:800; color:#f9fafb;">My Pantry</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:1px;">Last updated just now</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <!-- Barcode icon button -->
+            <button style="width:38px;height:38px;background:#1e2130;border:1px solid #2a2d3a;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" fill="none" stroke="#9ca3af" stroke-width="1.8" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/>
+              </svg>
+            </button>
+            <!-- Add button -->
+            <button style="height:38px;padding:0 14px;background:#4f46e5;color:#fff;border-radius:12px;font-size:13px;font-weight:700;border:none;">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Status strip -->
+        <div style="display:flex;gap:8px;padding:14px 16px 0;">
+          <div class="stat-pill">
+            <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+            <div>
+              <div style="font-size:15px;font-weight:800;color:#f9fafb;line-height:1;">24</div>
+              <div style="font-size:10px;color:#6b7280;">items</div>
+            </div>
+          </div>
+          <div class="stat-pill" style="border-color:#4b2c0a;">
+            <svg width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <div>
+              <div style="font-size:15px;font-weight:800;color:#fbbf24;line-height:1;">3</div>
+              <div style="font-size:10px;color:#6b7280;">expiring</div>
+            </div>
+          </div>
+          <div class="stat-pill" style="border-color:#3b1a1a;">
+            <svg width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+            <div>
+              <div style="font-size:15px;font-weight:800;color:#f87171;line-height:1;">5</div>
+              <div style="font-size:10px;color:#6b7280;">low stock</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- USE IT UP section -->
+        <div class="section-hdr" style="padding-top:18px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="13" height="13" fill="none" stroke="#f59e0b" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <span class="section-title" style="color:#fbbf24;">Use It Up</span>
+          </div>
+          <span style="font-size:11px;color:#4f46e5;font-weight:600;">See all</span>
+        </div>
+
+        <!-- Horizontal scroll cards -->
+        <div style="display:flex;gap:10px;padding:0 16px 14px;overflow-x:auto;scrollbar-width:none;">
+          <!-- Card 1 - expired today -->
+          <div class="attention-card" style="border-color:#4b1c1c;">
+            <div style="font-size:10px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Expires today</div>
+            <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:3px;">Fresh Cream</div>
+            <div style="font-size:12px;color:#9ca3af;margin-bottom:10px;">200 ml · dairy</div>
+            <div class="conf-bar-wrap" style="margin-bottom:10px;"><div class="conf-bar-fill" style="width:82%;background:#10b981;"></div></div>
+            <div style="display:flex;gap:6px;">
+              <button style="flex:1;padding:6px 0;background:#ef44441a;color:#f87171;border:1px solid #7f1d1d;border-radius:8px;font-size:11px;font-weight:600;">Remove</button>
+              <button style="flex:1;padding:6px 0;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;">Confirm</button>
+            </div>
+          </div>
+          <!-- Card 2 - 2 days -->
+          <div class="attention-card">
+            <div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">2 days left</div>
+            <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:3px;">Spinach</div>
+            <div style="font-size:12px;color:#9ca3af;margin-bottom:10px;">120 g · produce</div>
+            <div class="conf-bar-wrap" style="margin-bottom:10px;"><div class="conf-bar-fill" style="width:73%;background:#10b981;"></div></div>
+            <div style="display:flex;gap:6px;">
+              <button style="flex:1;padding:6px 0;background:#ef44441a;color:#f87171;border:1px solid #7f1d1d;border-radius:8px;font-size:11px;font-weight:600;">Remove</button>
+              <button style="flex:1;padding:6px 0;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;">Confirm</button>
+            </div>
+          </div>
+          <!-- Card 3 - 3 days -->
+          <div class="attention-card">
+            <div style="font-size:10px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">3 days left</div>
+            <div style="font-size:14px;font-weight:700;color:#f9fafb;margin-bottom:3px;">Chicken Breast</div>
+            <div style="font-size:12px;color:#9ca3af;margin-bottom:10px;">350 g · meat</div>
+            <div class="conf-bar-wrap" style="margin-bottom:10px;"><div class="conf-bar-fill" style="width:90%;background:#10b981;"></div></div>
+            <div style="display:flex;gap:6px;">
+              <button style="flex:1;padding:6px 0;background:#ef44441a;color:#f87171;border:1px solid #7f1d1d;border-radius:8px;font-size:11px;font-weight:600;">Remove</button>
+              <button style="flex:1;padding:6px 0;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;">Confirm</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOW CONFIDENCE section -->
+        <div class="section-hdr">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="conf-dot conf-low"></div>
+            <span class="section-title" style="color:#f87171;">Needs Confirming</span>
+          </div>
+          <span style="font-size:11px;color:#4f46e5;font-weight:600;">Confirm all</span>
+        </div>
+
+        <!-- Low confidence items (compact rows) -->
+        <div style="background:#1a1d2a;border-radius:16px;margin:0 16px 14px;overflow:hidden;border:1px solid #2a2d3a;">
+          <div class="pantry-row" style="background:transparent;">
+            <div class="conf-dot conf-low"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Olive Oil</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:1px;">500 ml · pantry · 28%</div>
+            </div>
+            <button style="padding:4px 10px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;">Confirm</button>
+          </div>
+          <div class="pantry-row" style="background:transparent;">
+            <div class="conf-dot conf-low"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Plain Flour</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:1px;">800 g · bakery · 35%</div>
+            </div>
+            <button style="padding:4px 10px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;">Confirm</button>
+          </div>
+          <div class="pantry-row" style="background:transparent;">
+            <div class="conf-dot conf-low"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Butter</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:1px;">180 g · dairy · 22%</div>
+            </div>
+            <button style="padding:4px 10px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;">Confirm</button>
+          </div>
+        </div>
+
+        <!-- PRODUCE section (collapsible) -->
+        <div class="collapse-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:15px;">🥦</span>
+            <span style="font-size:13px;font-weight:700;color:#f9fafb;">Produce</span>
+            <span style="font-size:11px;color:#6b7280;">6 items</span>
+          </div>
+          <svg width="16" height="16" fill="none" stroke="#6b7280" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+
+        <div style="background:#1a1d2a;border-radius:0 0 16px 16px;margin:0 0 2px;overflow:hidden;border:1px solid #1e2130;border-top:none;">
+          <div class="pantry-row" style="background:transparent;">
+            <div class="conf-dot conf-high"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Carrots</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:1px;">4 units · 91%</div>
+            </div>
+            <span class="tag tag-green">Good</span>
+          </div>
+          <div class="pantry-row" style="background:transparent;">
+            <div class="conf-dot conf-mid"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Cherry Tomatoes</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:1px;">200 g · 62%</div>
+            </div>
+            <span class="tag tag-amber">Medium</span>
+          </div>
+          <div class="pantry-row" style="background:transparent;">
+            <div class="conf-dot conf-high"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Garlic</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:1px;">1 bulb · 88%</div>
+            </div>
+            <span class="tag tag-green">Good</span>
+          </div>
+        </div>
+
+        <!-- DAIRY section -->
+        <div class="collapse-row" style="margin-top:2px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:15px;">🧀</span>
+            <span style="font-size:13px;font-weight:700;color:#f9fafb;">Dairy</span>
+            <span style="font-size:11px;color:#6b7280;">4 items</span>
+          </div>
+          <svg width="16" height="16" fill="none" stroke="#6b7280" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+
+        <!-- PANTRY section -->
+        <div class="collapse-row" style="margin-top:2px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:15px;">🥫</span>
+            <span style="font-size:13px;font-weight:700;color:#f9fafb;">Pantry</span>
+            <span style="font-size:11px;color:#6b7280;">7 items</span>
+          </div>
+          <svg width="16" height="16" fill="none" stroke="#6b7280" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+
+        <!-- MEAT section -->
+        <div class="collapse-row" style="margin-top:2px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:15px;">🥩</span>
+            <span style="font-size:13px;font-weight:700;color:#f9fafb;">Meat & Fish</span>
+            <span style="font-size:11px;color:#6b7280;">3 items</span>
+          </div>
+          <svg width="16" height="16" fill="none" stroke="#6b7280" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </div>
+
+      </div>
+
+      <!-- Nav bar -->
+      <div class="nav-bar">
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span class="nav-label">Home</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg><span class="nav-label">Recipes</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><span class="nav-label active">Pantry</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg><span class="nav-label">Plan</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg><span class="nav-label">Shop</span></div>
+      </div>
+    </div>
+
+    <!-- ─────────────────── CONCEPT B: FILTERED LIST ─────────────────── -->
+    <div class="phone">
+      <div class="phone-screen">
+
+        <!-- Header -->
+        <div style="padding:16px 16px 0; display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-size:22px; font-weight:800; color:#f9fafb;">My Pantry</div>
+          <div style="display:flex; gap:8px;">
+            <button style="width:38px;height:38px;background:#1e2130;border:1px solid #2a2d3a;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" fill="none" stroke="#9ca3af" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/></svg>
+            </button>
+            <button style="height:38px;padding:0 14px;background:#4f46e5;color:#fff;border-radius:12px;font-size:13px;font-weight:700;border:none;">+ Add</button>
+          </div>
+        </div>
+
+        <!-- Search bar -->
+        <div style="padding:12px 16px 0;">
+          <div style="position:relative;">
+            <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);" width="16" height="16" fill="none" stroke="#6b7280" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 0z"/></svg>
+            <div class="form-input" style="padding-left:36px;color:#4b5563;">Search pantry...</div>
+          </div>
+        </div>
+
+        <!-- Filter chips -->
+        <div style="display:flex;gap:6px;padding:10px 16px 12px;overflow-x:auto;scrollbar-width:none;">
+          <div class="chip chip-active">All 24</div>
+          <div class="chip chip-passive">🔴 Attention 5</div>
+          <div class="chip chip-passive">⏰ Expiring 3</div>
+          <div class="chip chip-passive">🥦 Produce</div>
+          <div class="chip chip-passive">🧀 Dairy</div>
+          <div class="chip chip-passive">🥫 Pantry</div>
+        </div>
+
+        <!-- Expiring soon inline alert (non-modal, dismissible) -->
+        <div style="margin:0 16px 12px;background:#1e160a;border:1px solid #4b3012;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+          <svg width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+          <div style="flex:1;font-size:12px;color:#fbbf24;font-weight:600;">3 items expiring in ≤3 days</div>
+          <button style="font-size:11px;color:#4f46e5;font-weight:700;white-space:nowrap;">Filter ↑</button>
+        </div>
+
+        <!-- List items -->
+        <div style="background:#1a1d2a;border-radius:16px;margin:0 16px;overflow:hidden;border:1px solid #2a2d3a;">
+
+          <!-- Item: expired today -->
+          <div class="pantry-row" style="background:transparent;position:relative;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#ef4444;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:13px;font-weight:600;color:#f9fafb;">Fresh Cream</div>
+                <span class="tag tag-red">Expires today</span>
+              </div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">200 ml · dairy</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#10b981;">82%</div>
+              <button style="font-size:11px;color:#4f46e5;font-weight:600;margin-top:2px;">Confirm</button>
+            </div>
+          </div>
+
+          <!-- Item: 2 days -->
+          <div class="pantry-row" style="background:transparent;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#f59e0b;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:13px;font-weight:600;color:#f9fafb;">Spinach</div>
+                <span class="tag tag-amber">2 days left</span>
+              </div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">120 g · produce</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#10b981;">73%</div>
+              <button style="font-size:11px;color:#4f46e5;font-weight:600;margin-top:2px;">Confirm</button>
+            </div>
+          </div>
+
+          <!-- Item: low confidence -->
+          <div class="pantry-row" style="background:transparent;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#ef4444;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Olive Oil</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">500 ml · pantry</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#ef4444;">28%</div>
+              <button style="font-size:11px;color:#4f46e5;font-weight:600;margin-top:2px;">Confirm</button>
+            </div>
+          </div>
+
+          <!-- Divider label -->
+          <div style="padding:8px 16px;background:#13151f;display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;height:1px;background:#1e2130;"></div>
+            <span style="font-size:10px;color:#4b5563;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Well stocked</span>
+            <div style="flex:1;height:1px;background:#1e2130;"></div>
+          </div>
+
+          <!-- Item: good -->
+          <div class="pantry-row" style="background:transparent;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#10b981;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Carrots</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">4 units · produce</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#10b981;">91%</div>
+            </div>
+          </div>
+
+          <div class="pantry-row" style="background:transparent;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#10b981;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Chicken Breast</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">350 g · meat · <span style="color:#fbbf24;">3d left</span></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#10b981;">90%</div>
+            </div>
+          </div>
+
+          <div class="pantry-row" style="background:transparent;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#10b981;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Garlic</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">1 bulb · produce</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#10b981;">88%</div>
+            </div>
+          </div>
+
+          <div class="pantry-row" style="background:transparent;">
+            <div style="width:4px;height:44px;border-radius:999px;background:#eab308;flex-shrink:0;"></div>
+            <div style="flex:1;min-width:0;margin-left:4px;">
+              <div style="font-size:13px;font-weight:600;color:#f9fafb;">Cherry Tomatoes</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px;">200 g · produce</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:700;color:#eab308;">62%</div>
+            </div>
+          </div>
+
+          <div style="padding:10px 16px;text-align:center;">
+            <span style="font-size:12px;color:#4f46e5;font-weight:600;">Show 16 more items</span>
+          </div>
+        </div>
+
+        <!-- Swipe hint caption -->
+        <div style="padding:10px 20px;text-align:center;">
+          <span style="font-size:11px;color:#4b5563;">← Swipe a row to edit quantity or remove</span>
+        </div>
+
+      </div>
+
+      <!-- Nav bar -->
+      <div class="nav-bar">
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span class="nav-label">Home</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg><span class="nav-label">Recipes</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><span class="nav-label active">Pantry</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg><span class="nav-label">Plan</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg><span class="nav-label">Shop</span></div>
+      </div>
+    </div>
+
+    <!-- ─────────────────── CONCEPT C: ADD ITEM BOTTOM SHEET ─────────────────── -->
+    <div class="phone">
+      <!-- Blurred background list (pantry behind sheet) -->
+      <div class="phone-screen" style="filter:blur(2px);pointer-events:none;">
+        <div style="padding:16px 16px 0; display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-size:22px; font-weight:800; color:#f9fafb;">My Pantry</div>
+        </div>
+        <div style="padding:12px 16px;">
+          <div style="font-size:11px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Use It Up</div>
+        </div>
+        <div style="background:#1a1d2a;border-radius:16px;margin:0 16px;overflow:hidden;">
+          <div class="pantry-row" style="background:transparent;"><div class="conf-dot conf-high"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#f9fafb;">Carrots</div><div style="font-size:11px;color:#6b7280;">4 units · 91%</div></div></div>
+          <div class="pantry-row" style="background:transparent;"><div class="conf-dot conf-mid"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#f9fafb;">Cherry Tomatoes</div><div style="font-size:11px;color:#6b7280;">200 g · 62%</div></div></div>
+          <div class="pantry-row" style="background:transparent;"><div class="conf-dot conf-high"></div><div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#f9fafb;">Garlic</div><div style="font-size:11px;color:#6b7280;">1 bulb · 88%</div></div></div>
+        </div>
+      </div>
+
+      <!-- Sheet backdrop -->
+      <div class="sheet-backdrop"></div>
+
+      <!-- Bottom sheet -->
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div style="font-size:16px;font-weight:800;color:#f9fafb;margin-bottom:16px;">Add to Pantry</div>
+
+        <!-- Quick-add toggle -->
+        <div style="display:flex;background:#13151f;border-radius:12px;padding:3px;margin-bottom:16px;border:1px solid #2a2d3a;">
+          <button style="flex:1;padding:7px;background:#1e2130;border-radius:9px;font-size:12px;font-weight:700;color:#f9fafb;border:none;">Search ingredient</button>
+          <button style="flex:1;padding:7px;background:transparent;font-size:12px;font-weight:600;color:#6b7280;border:none;">📷 Scan barcode</button>
+        </div>
+
+        <!-- Ingredient search -->
+        <div class="field-label">Ingredient</div>
+        <div style="position:relative;margin-bottom:4px;">
+          <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);" width="15" height="15" fill="none" stroke="#6b7280" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 0z"/></svg>
+          <div class="form-input" style="padding-left:34px;border-color:#4f46e5;color:#f9fafb;">Chicken Breast</div>
+          <div style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+            <svg width="10" height="10" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#10b981;margin-bottom:14px;">✓ Matched: Chicken Breast (meat)</div>
+
+        <!-- Quantity + Unit row -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div style="flex:1;">
+            <div class="field-label">Quantity</div>
+            <div class="form-input" style="color:#f9fafb;">350</div>
+          </div>
+          <div style="flex:1;">
+            <div class="field-label">Unit</div>
+            <div class="form-input" style="color:#f9fafb;">g</div>
+          </div>
+        </div>
+
+        <!-- Best before -->
+        <div class="field-label">Best before <span style="color:#4b5563;">(optional)</span></div>
+        <div class="form-input" style="color:#f9fafb;margin-bottom:6px;">30 Apr 2026</div>
+        <div style="font-size:11px;color:#fbbf24;margin-bottom:16px;">⚠ 4 days — will appear in Use It Up</div>
+
+        <!-- Confidence note -->
+        <div style="background:#1e2130;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:16px;border:1px solid #2a2d3a;">
+          <svg width="14" height="14" fill="none" stroke="#9ca3af" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+          <span style="font-size:11px;color:#9ca3af;">Confirming sets confidence to 100%. It decays daily until you confirm again.</span>
+        </div>
+
+        <button style="width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:700;">Add to Pantry</button>
+      </div>
+
+      <!-- Nav bar -->
+      <div class="nav-bar" style="z-index:40;">
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span class="nav-label">Home</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg><span class="nav-label">Recipes</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><span class="nav-label active">Pantry</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg><span class="nav-label">Plan</span></div>
+        <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#6b7280" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg><span class="nav-label">Shop</span></div>
+      </div>
+    </div>
+
+  </div><!-- end row 1 -->
+
+
+  <!-- ══════════════════════════════════════════════════════════
+       ANNOTATION SECTION
+  ══════════════════════════════════════════════════════════ -->
+  <div class="flex gap-10 mb-20 flex-wrap justify-center">
+
+    <!-- A notes -->
+    <div style="width:390px;background:#1a1d2a;border-radius:16px;padding:20px;border:1px solid #2a2d3a;">
+      <div style="font-size:13px;font-weight:800;color:#f9fafb;margin-bottom:12px;">Concept A — What's new</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Status strip</strong> — 3 at-a-glance stats replace the banner. No buried warnings.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">"Use It Up" scroll</strong> — expiring items are a swimlane, not a wall of text in a banner.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">"Needs Confirming"</strong> — low-confidence items get their own section with a "Confirm all" CTA.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Category sections</strong> — collapsible so power users can navigate quickly.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Compact rows</strong> — confidence dot replaces full-width bar. 2× more items visible without scrolling.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#f59e0b;margin-top:1px;">→</span><span style="font-size:12px;color:#9ca3af;Best for pantries with 10+ items and regular use.</span></div>
+      </div>
+    </div>
+
+    <!-- B notes -->
+    <div style="width:390px;background:#1a1d2a;border-radius:16px;padding:20px;border:1px solid #2a2d3a;">
+      <div style="font-size:13px;font-weight:800;color:#f9fafb;margin-bottom:12px;">Concept B — What's new</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Search bar</strong> — find any item instantly. No scrolling.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Filter chips</strong> — category or status filter with one tap. Works like the recipe screen.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Left accent bar</strong> — red/amber/green status stripe is scannable without reading numbers.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Auto-sorted</strong> — attention items always bubble to top, no manual hunting.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Swipe to edit</strong> — quantity/remove via swipe gesture, cleaner than in-row buttons.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#f59e0b;margin-top:1px;">→</span><span style="font-size:12px;color:#9ca3af;">Simpler to build. Best if the pantry stays under ~30 items.</span></div>
+      </div>
+    </div>
+
+    <!-- C notes -->
+    <div style="width:390px;background:#1a1d2a;border-radius:16px;padding:20px;border:1px solid #2a2d3a;">
+      <div style="font-size:13px;font-weight:800;color:#f9fafb;margin-bottom:12px;">Concept C — Add Item Sheet</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Bottom sheet</strong> — replaces the inline form that pushes everything down. More native-feeling.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Search / Scan toggle</strong> — two entry modes surfaced without a separate button in the header.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Expiry preview</strong> — tells you right away if the item will enter "Use It Up" after adding.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#10b981;margin-top:1px;">✓</span><span style="font-size:12px;color:#9ca3af;"><strong style="color:#d1d5db;">Confidence tooltip</strong> — inline note explains what confidence means without cluttering the list.</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:#f59e0b;margin-top:1px;">→</span><span style="font-size:12px;color:#9ca3af;">This is a shared improvement — works with either A or B above.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Recommendation box -->
+  <div style="max-width:820px;margin:0 auto 60px;background:linear-gradient(135deg,#1e2040,#1a1d2a);border:1px solid #3730a3;border-radius:20px;padding:24px;">
+    <div style="font-size:14px;font-weight:800;color:#a5b4fc;margin-bottom:10px;">💡 Recommendation</div>
+    <div style="font-size:13px;color:#c7d2fe;line-height:1.7;">
+      <strong style="color:#f9fafb;">Ship Concept A + C together.</strong> Concept A gives the pantry genuine structure and surfaces the right information first (expiring → low confidence → everything else). Concept C's bottom sheet makes adding items feel like a native app rather than a web form. Concept B's search bar and filter chips are worth adding as a follow-up once the list grows — they're independent of the structure changes.
+      <br><br>
+      <strong style="color:#f9fafb;">The one clarifying question:</strong> do you want "Confirm" to stay as a per-item button, or should confirming be more of a "I've restocked" bulk flow? If users mostly confirm after a grocery run, a <em>bulk "Confirm after shopping"</em> mode (mark all low-confidence items at once) might replace dozens of individual taps.
+    </div>
+  </div>
+
+</body>
+</html>

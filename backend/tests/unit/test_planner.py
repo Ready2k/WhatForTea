@@ -130,9 +130,13 @@ async def db_session():
         yield session
     await engine.dispose()
 
+@pytest.fixture
+def household_id():
+    return uuid.UUID("00000000-0000-0000-0000-000000000001")
+
 
 @pytest.mark.asyncio
-async def test_set_week_plan_empty(db_session):
+async def test_set_week_plan_empty(db_session, household_id):
     """Creating an empty plan returns a MealPlan with no entries."""
     from app.services.planner import set_week_plan
     from app.schemas.plan import MealPlanCreate
@@ -140,7 +144,7 @@ async def test_set_week_plan_empty(db_session):
 
     week = date.today() - timedelta(days=date.today().weekday()) + timedelta(weeks=52)
     data = MealPlanCreate(week_start=week, entries=[])
-    plan = await set_week_plan(data, db_session)
+    plan = await set_week_plan(data, db_session, household_id)
 
     assert plan.week_start == week
     assert plan.entries == []
@@ -152,7 +156,7 @@ async def test_set_week_plan_empty(db_session):
 
 
 @pytest.mark.asyncio
-async def test_shopping_list_empty_plan(db_session):
+async def test_shopping_list_empty_plan(db_session, household_id):
     """An empty plan produces an empty shopping list."""
     from app.services.planner import set_week_plan, generate_shopping_list
     from app.schemas.plan import MealPlanCreate
@@ -160,9 +164,9 @@ async def test_shopping_list_empty_plan(db_session):
 
     week = date.today() - timedelta(days=date.today().weekday()) + timedelta(weeks=53)
     data = MealPlanCreate(week_start=week, entries=[])
-    plan = await set_week_plan(data, db_session)
+    plan = await set_week_plan(data, db_session, household_id)
 
-    shopping = await generate_shopping_list(week, db_session)
+    shopping = await generate_shopping_list(week, db_session, household_id)
     assert shopping.zones == {}
     assert "Whats for Tea?" in shopping.text_export
 

@@ -11,6 +11,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.services.matcher import get_category, ingredient_score
+import uuid
+
+@pytest.fixture
+def household_id():
+    return uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 # ── Pure function tests ───────────────────────────────────────────────────────
@@ -74,43 +79,43 @@ async def db_session():
 
 
 @pytest.mark.asyncio
-async def test_score_all_recipes_empty_pantry(db_session):
+async def test_score_all_recipes_empty_pantry(db_session, household_id):
     """With no pantry items all recipes should score 0 (planner)."""
     from app.services.matcher import score_all_recipes
     from app.services.pantry import get_available
 
     # Verify pantry is actually empty (or skip if items exist)
-    availability = await get_available(db_session)
+    availability = await get_available(db_session, household_id)
     if availability:
         pytest.skip("Pantry has items — empty-pantry test requires a clean state")
 
-    results = await score_all_recipes(db_session)
+    results = await score_all_recipes(db_session, household_id)
     for r in results:
         assert r.score == pytest.approx(0.0), f"Expected 0 score, got {r.score} for {r.recipe.title}"
         assert r.category == "planner"
 
 
 @pytest.mark.asyncio
-async def test_score_all_recipes_returns_list(db_session):
+async def test_score_all_recipes_returns_list(db_session, household_id):
     """score_all_recipes always returns a list (even with no recipes)."""
     from app.services.matcher import score_all_recipes
 
-    results = await score_all_recipes(db_session)
+    results = await score_all_recipes(db_session, household_id)
     assert isinstance(results, list)
 
 
 @pytest.mark.asyncio
-async def test_score_all_recipes_sorted_descending(db_session):
+async def test_score_all_recipes_sorted_descending(db_session, household_id):
     """Results must be sorted by score descending."""
     from app.services.matcher import score_all_recipes
 
-    results = await score_all_recipes(db_session)
+    results = await score_all_recipes(db_session, household_id)
     scores = [r.score for r in results]
     assert scores == sorted(scores, reverse=True), "Results not sorted by score descending"
 
 
 @pytest.mark.asyncio
-async def test_full_pantry_recipe_scores_high(db_session):
+async def test_full_pantry_recipe_scores_high(db_session, household_id):
     """
     If we stock the pantry with all ingredients for a recipe,
     that recipe should score 100 (cook_now).
@@ -144,13 +149,14 @@ async def test_full_pantry_recipe_scores_high(db_session):
                 decay_rate=0.02,
             ),
             db_session,
+            household_id,
         )
         created_ids.append(item.id)
 
     if not created_ids:
         pytest.skip("Recipe has no resolvable ingredients")
 
-    results = await score_all_recipes(db_session)
+    results = await score_all_recipes(db_session, household_id)
     matched = next((r for r in results if r.recipe.id == recipe.id), None)
     assert matched is not None
     assert matched.score == pytest.approx(100.0, abs=1.0)
