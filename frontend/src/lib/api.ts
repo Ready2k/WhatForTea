@@ -197,6 +197,16 @@ export function bulkConfirmPantry(items: Array<{ ingredient_id: string; quantity
   });
 }
 
+export function receiptConfirmPantry(
+  items: Array<{ ingredient_id?: string | null; raw_name?: string | null; quantity: number; unit: string }>,
+): Promise<PantryItem[]> {
+  return request<PantryItem[]>('/api/v1/pantry/receipt-confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+}
+
 export function confirmPantryItem(id: string): Promise<PantryItem> {
   return request<PantryItem>(`/api/v1/pantry/${id}/confirm`, {
     method: 'POST',

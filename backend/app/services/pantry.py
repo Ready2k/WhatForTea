@@ -20,10 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.metrics import pantry_item_count
-from app.models.ingredient import UnitConversion
+from app.models.ingredient import Ingredient, IngredientCategory, IngredientDimension, UnitConversion
 from app.models.pantry import PantryItem, PantryReservation
 from app.models.recipe import Recipe
-from app.schemas.pantry import PantryAvailability, PantryItemCreate, PantryItemUpdate
+from app.schemas.pantry import PantryAvailability, PantryItemCreate, PantryItemUpdate, ReceiptConfirmItem
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +190,65 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
             )
             db.add(item)
             results.append(item)
+    await db.commit()
+    for item in results:
+        await db.refresh(item)
+    return results
+
+
+async def bulk_confirm_with_create(items: list[ReceiptConfirmItem], db: AsyncSession) -> list[PantryItem]:
+    """
+    Upsert pantry items from a receipt scan.
+    Items with ingredient_id proceed as normal.
+    Items with only raw_name get a minimal Ingredient auto-created (category=OTHER,
+    dimension=COUNT) before upserting, so the pantry constraint is satisfied.
+    """
+    results = []
+    for item_data in items:
+        ing_id = item_data.ingredient_id
+
+        if ing_id is None:
+            if not item_data.raw_name:
+                continue
+            canonical = item_data.raw_name.strip().lower()
+            stmt = select(Ingredient).where(Ingredient.canonical_name == canonical)
+            ingredient = (await db.execute(stmt)).scalar_one_or_none()
+            if ingredient is None:
+                ingredient = Ingredient(
+                    canonical_name=canonical,
+                    aliases=[canonical],
+                    category=IngredientCategory.OTHER,
+                    dimension=IngredientDimension.COUNT,
+                    typical_unit=item_data.unit or "count",
+                )
+                db.add(ingredient)
+                await db.flush()
+            ing_id = ingredient.id
+
+        stmt = select(PantryItem).where(PantryItem.ingredient_id == ing_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing:
+            existing.quantity = item_data.quantity
+            existing.unit = item_data.unit or "count"
+            existing.confidence = 1.0
+            existing.decay_rate = item_data.decay_rate
+            existing.last_confirmed_at = datetime.now(timezone.utc)
+            if item_data.expires_at is not None:
+                existing.expires_at = item_data.expires_at
+            results.append(existing)
+        else:
+            item = PantryItem(
+                ingredient_id=ing_id,
+                quantity=item_data.quantity,
+                unit=item_data.unit or "count",
+                confidence=1.0,
+                decay_rate=item_data.decay_rate,
+                last_confirmed_at=datetime.now(timezone.utc),
+                expires_at=item_data.expires_at,
+            )
+            db.add(item)
+            results.append(item)
+
     await db.commit()
     for item in results:
         await db.refresh(item)

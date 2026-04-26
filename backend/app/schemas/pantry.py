@@ -41,6 +41,21 @@ class BulkPantryConfirmRequest(BaseModel):
     items: list[PantryItemCreate]
 
 
+class ReceiptConfirmItem(BaseModel):
+    """One item from a receipt confirm — either already resolved (ingredient_id set)
+    or unresolved (raw_name only, ingredient will be auto-created)."""
+    ingredient_id: Optional[uuid.UUID] = None
+    raw_name: Optional[str] = None
+    quantity: float
+    unit: str = "count"
+    decay_rate: float = 0.02
+    expires_at: Optional[date] = None
+
+
+class ReceiptConfirmRequest(BaseModel):
+    items: list[ReceiptConfirmItem]
+
+
 class PantryAvailability(BaseModel):
     """Result of GET /api/v1/pantry/available"""
     pantry_item_id: uuid.UUID

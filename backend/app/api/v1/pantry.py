@@ -21,10 +21,12 @@ from app.schemas.pantry import (
     PantryItem as PantryItemSchema,
     PantryItemCreate,
     PantryItemUpdate,
+    ReceiptConfirmRequest,
     ReceiptIngestResponse,
 )
 from app.services.pantry import (
     bulk_confirm_pantry,
+    bulk_confirm_with_create,
     confirm_pantry_item,
     delete_pantry_item,
     get_available,
@@ -109,6 +111,16 @@ async def bulk_confirm(body: BulkPantryConfirmRequest, db: AsyncSession = Depend
     Items without a pantry entry are created; existing items are updated with confidence reset to 1.0.
     """
     return await bulk_confirm_pantry(body.items, db)
+
+
+@router.post("/receipt-confirm", response_model=list[PantryItemSchema], status_code=status.HTTP_200_OK)
+async def receipt_confirm(body: ReceiptConfirmRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Confirm pantry items from a receipt scan.
+    Resolved items (ingredient_id set) are upserted directly.
+    Unresolved items (raw_name only) have a minimal Ingredient auto-created first.
+    """
+    return await bulk_confirm_with_create(body.items, db)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
