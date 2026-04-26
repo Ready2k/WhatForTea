@@ -33,9 +33,14 @@ export interface NutritionEstimate {
   calories_kcal?: number | null;
   protein_g?: number | null;
   fat_g?: number | null;
+  saturates_g?: number | null;
   carbs_g?: number | null;
+  sugars_g?: number | null;
   fibre_g?: number | null;
+  salt_g?: number | null;
   per_servings?: number | null;
+  /** "card" = extracted from printed nutrition panel; "estimated" = LLM estimate from ingredients */
+  source?: 'card' | 'estimated' | null;
 }
 
 export interface Recipe {

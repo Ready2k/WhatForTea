@@ -35,7 +35,7 @@ async def pantry_node(state: PantryAgentState):
     """
     try:
         async with AsyncSessionLocal() as db:
-            available_items = await get_available(db)
+            available_items = await get_available(db, state.get("household_id"))
             
             items_data = []
             for item in available_items:

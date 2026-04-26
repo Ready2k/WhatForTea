@@ -108,8 +108,11 @@ async def _call_ollama(system_prompt: str, user_text: str) -> str:
 @observe(as_type="generation", name="nutrition_llm")
 async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings: int) -> dict:
     """
-    Estimate macro-nutrients for a recipe.
-    Returns a dict: {calories_kcal, protein_g, fat_g, carbs_g, fibre_g, per_servings}
+    Estimate macro-nutrients for a recipe using the full UK/EU nutrition label set.
+
+    Returns a dict with keys:
+      calories_kcal, protein_g, fat_g, saturates_g, carbs_g, sugars_g,
+      fibre_g, salt_g, per_servings, source (always "estimated")
     """
     model = _model_id(vision=False)
     template_src = _load_prompt("nutrition_prompt.md")
@@ -124,7 +127,7 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
         f"Recipe: {title}\n"
         f"Servings: {base_servings}\n\n"
         f"Ingredients:\n{ingredient_lines}\n\n"
-        "Estimate the nutrition per serving and return JSON matching the schema."
+        "Estimate the full nutrition per serving and return JSON matching the schema."
     )
 
     from app.config import settings
@@ -133,7 +136,7 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
     else:
         body = {
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 512,
+            "max_tokens": 768,  # increased for expanded UK/EU label schema
             "temperature": 0.1,
             "system": system_prompt,
             "messages": [{"role": "user", "content": user_text}],
@@ -155,7 +158,7 @@ async def call_nutrition_llm(title: str, ingredients: list[dict], base_servings:
             text = text[4:]
         text = text.strip()
     result = json.loads(text)
-    
+
     if settings.llm_provider != "ollama":
         usage = raw.get("usage", {})
         langfuse_context.update_current_observation(

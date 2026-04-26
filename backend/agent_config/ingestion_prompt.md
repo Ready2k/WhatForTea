@@ -64,7 +64,12 @@ You are a recipe data extraction assistant. You will be shown {{ num_images }} i
   - `2` = coloured header or branded colour band
   - `3` = illustrated / heavy graphic design
 - Generate 2 to 4 short `mood_tags` describing the dish, based on the recipe title and finished-dish image.
-- If a nutrition panel is visible on the card, extract the values for the smallest serving size shown. Set each field to `null` if the panel is absent or the value is unreadable. `per_servings` should match `base_servings`.
+- If a nutrition panel is visible on the card, extract ALL values for the smallest serving size shown.
+- HelloFresh cards show a UK/EU-style nutrition table with: Energy (kcal), Fat, of which Saturates, Carbohydrate, of which Sugars, Fibre, Protein, Salt.
+- Map these fields exactly: `calories_kcal` ← Energy (kcal), `fat_g` ← Fat, `saturates_g` ← of which Saturates, `carbs_g` ← Carbohydrate, `sugars_g` ← of which Sugars, `fibre_g` ← Fibre, `protein_g` ← Protein, `salt_g` ← Salt.
+- Set each field to `null` if the panel is absent or the value is unreadable.
+- `per_servings` should match `base_servings`.
+- Always set `source` to `"card"` when a nutrition panel is present and you extracted values from it. Set to `null` if no panel is visible.
 
 {% if num_images == 2 %}
 - Identify which image is the front cover, meaning the side that shows the finished dish photo and recipe title.
@@ -106,9 +111,13 @@ You are a recipe data extraction assistant. You will be shown {{ num_images }} i
     "calories_kcal": 0,
     "protein_g": 0,
     "fat_g": 0,
+    "saturates_g": 0,
     "carbs_g": 0,
+    "sugars_g": 0,
     "fibre_g": 0,
-    "per_servings": 2
+    "salt_g": 0,
+    "per_servings": 2,
+    "source": "card"
   }
 }
 ```

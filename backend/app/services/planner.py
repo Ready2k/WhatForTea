@@ -173,7 +173,7 @@ async def get_plan(week_start: date, db: AsyncSession) -> MealPlan:
     return plan
 
 
-async def set_week_plan(data: MealPlanCreate, db: AsyncSession) -> MealPlan:
+async def set_week_plan(data: MealPlanCreate, db: AsyncSession, household_id: uuid.UUID) -> MealPlan:
     """
     Replace the full week plan. Existing entries (and their reservations) are
     deleted and rebuilt from the submitted list.
@@ -204,7 +204,7 @@ async def set_week_plan(data: MealPlanCreate, db: AsyncSession) -> MealPlan:
         )
         db.add(entry)
         await db.flush()
-        await _create_entry_reservations(entry, db)
+        await _create_entry_reservations(entry, db, household_id)
 
     await db.commit()
 
@@ -224,7 +224,7 @@ async def delete_plan_entry(entry_id: uuid.UUID, db: AsyncSession) -> None:
 
 # ── Reservations ──────────────────────────────────────────────────────────────
 
-async def _create_entry_reservations(entry: MealPlanEntry, db: AsyncSession) -> None:
+async def _create_entry_reservations(entry: MealPlanEntry, db: AsyncSession, household_id: uuid.UUID) -> None:
     """Create pantry_reservations for each ingredient in the recipe (if in pantry)."""
     recipe = await db.get(Recipe, entry.recipe_id, options=[selectinload(Recipe.ingredients)])
     if recipe is None:
@@ -236,7 +236,10 @@ async def _create_entry_reservations(entry: MealPlanEntry, db: AsyncSession) -> 
         if ri.ingredient_id is None:
             continue
 
-        pi_stmt = select(PantryItem).where(PantryItem.ingredient_id == ri.ingredient_id)
+        pi_stmt = select(PantryItem).where(
+            PantryItem.ingredient_id == ri.ingredient_id,
+            PantryItem.household_id == household_id,
+        )
         pantry_item = (await db.execute(pi_stmt)).scalar_one_or_none()
         if pantry_item is None:
             continue  # not in pantry — will appear on shopping list
@@ -277,7 +280,7 @@ async def _delete_entry_reservations(entry_id: uuid.UUID, db: AsyncSession) -> N
 
 # ── Shopping list ─────────────────────────────────────────────────────────────
 
-async def generate_shopping_list(week_start: date, db: AsyncSession) -> ShoppingList:
+async def generate_shopping_list(week_start: date, db: AsyncSession, household_id: uuid.UUID) -> ShoppingList:
     """
     Build the shopping list for the given week:
       required − available → round up to pack size → group by zone.
@@ -317,7 +320,7 @@ async def generate_shopping_list(week_start: date, db: AsyncSession) -> Shopping
 
     # Get pantry availability
     from app.services.pantry import get_available
-    availability = await get_available(db)
+    availability = await get_available(db, household_id)
     avail_map = {a.ingredient.id: a for a in availability}
 
     # Compute shortfalls and build shopping items
@@ -412,6 +415,7 @@ def _format_text_export(zones: dict[str, list[ShoppingListItem]]) -> str:
 async def zero_waste_suggestions(
     week_start: date,
     db: AsyncSession,
+    household_id: uuid.UUID,
     limit: int = 5,
     min_coverage: float = 0.1,
 ) -> list[dict]:
@@ -433,7 +437,7 @@ async def zero_waste_suggestions(
 
     # Generate the shopping list; silently return [] if no plan exists yet
     try:
-        shopping_list = await generate_shopping_list(week_start, db)
+        shopping_list = await generate_shopping_list(week_start, db, household_id)
     except ValueError:
         return []
 
@@ -508,6 +512,7 @@ async def auto_fill_week(
     moods: list[str],
     servings: int,
     db: AsyncSession,
+    household_id: uuid.UUID,
     max_cook_time_mins: Optional[int] = None,
     avoid_recent_days: int = 14,
 ) -> list[dict]:
@@ -565,7 +570,7 @@ async def auto_fill_week(
         return []
 
     # Score against pantry
-    avail = await get_available(db)
+    avail = await get_available(db, household_id)
     avail_map = {a.ingredient.id: a for a in avail}
 
     from app.services.matcher import score_recipe

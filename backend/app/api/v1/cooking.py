@@ -81,9 +81,21 @@ async def update_cooking_session(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+def _get_household_uuid(request: Request) -> Optional[uuid.UUID]:
+    """Extract household UUID from request state, returning None if absent or invalid."""
+    hid = getattr(request.state, "household_id", None)
+    if not hid or hid == "household":
+        return None
+    try:
+        return uuid.UUID(hid)
+    except (ValueError, AttributeError):
+        return None
+
+
 @router.post("/sessions/{session_id}/end", response_model=CookingSession)
 async def finish_cooking_session(
     session_id: uuid.UUID,
+    request: Request,
     body: CookingSessionEnd = CookingSessionEnd(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -92,6 +104,6 @@ async def finish_cooking_session(
     Pass confirmed=true to consume pantry ingredients and record as a cook.
     """
     try:
-        return await end_session(session_id, body, db)
+        return await end_session(session_id, body, db, household_id=_get_household_uuid(request))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

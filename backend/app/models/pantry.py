@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Date, Enum, Float, ForeignKey, Numeric, Text, func
+from sqlalchemy import Date, Enum, Float, ForeignKey, Numeric, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,8 +17,14 @@ class ReservationType(str, enum.Enum):
 
 class PantryItem(Base):
     __tablename__ = "pantry_items"
+    __table_args__ = (
+        UniqueConstraint("ingredient_id", "household_id", name="uq_pantry_item_ingredient_household"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    household_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("households.id", ondelete="CASCADE"), nullable=False
+    )
     ingredient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ingredients.id"), nullable=False
     )

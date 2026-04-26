@@ -79,13 +79,14 @@ def test_validate_negative_quantity():
 
 
 def test_validate_zero_quantity():
+    """Zero quantity is valid — it represents garnish/optional items (e.g. 'to taste')."""
     parsed = {
         "cooking_time_mins": 30,
         "ingredients": [{"raw_name": "Salt", "quantity": 0, "unit": "g"}],
         "steps": [{"order": 1, "text": "Step 1"}],
     }
     errors = _validate_llm_result(parsed)
-    assert any("Salt" in e for e in errors)
+    assert errors == [], f"Expected no errors for zero quantity, got: {errors}"
 
 
 def test_validate_cooking_time_none_is_allowed():

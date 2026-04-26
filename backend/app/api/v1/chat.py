@@ -101,6 +101,7 @@ async def chat(body: ChatRequest, request: Request):
 
     thread_id = body.thread_id or str(uuid.uuid4())
     user_id = getattr(request.state, "user_id", None)
+    household_id = getattr(request.state, "household_id", None)
 
     redis_client = getattr(request.app.state, "redis", None)
     if redis_client is not None:
@@ -121,7 +122,7 @@ async def chat(body: ChatRequest, request: Request):
         try:
             handler = get_langfuse_handler(user_id=str(user_id) if user_id else None, session_id=thread_id)
             config = {
-                "configurable": {"thread_id": thread_id},
+                "configurable": {"thread_id": thread_id, "household_id": household_id},
                 "callbacks": [h for h in [handler] if h],
             }
             input_state = {
@@ -172,6 +173,7 @@ async def chat_resume(body: ResumeRequest, request: Request):
     """Resume a graph that is paused at a HITL interrupt."""
     graph = _get_graph(request)
     user_id = getattr(request.state, "user_id", None)
+    household_id = getattr(request.state, "household_id", None)
 
     async def generate():
         try:
@@ -180,7 +182,7 @@ async def chat_resume(body: ResumeRequest, request: Request):
                 session_id=body.thread_id,
             )
             config = {
-                "configurable": {"thread_id": body.thread_id},
+                "configurable": {"thread_id": body.thread_id, "household_id": household_id},
                 "callbacks": [h for h in [handler] if h],
             }
             resume_value: dict = {"decision": body.decision}

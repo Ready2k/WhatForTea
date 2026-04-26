@@ -243,7 +243,7 @@ async def score_recipe(
     )
 
 
-async def score_all_recipes_use_it_up(db: AsyncSession) -> list[RecipeMatchResult]:
+async def score_all_recipes_use_it_up(db: AsyncSession, household_id: uuid.UUID) -> list[RecipeMatchResult]:
     """
     Score recipes by how many at-risk (low-confidence) pantry ingredients they consume.
     Returns results sorted by urgency_score descending.
@@ -257,7 +257,7 @@ async def score_all_recipes_use_it_up(db: AsyncSession) -> list[RecipeMatchResul
     threshold = float(cfg.get("use_it_up_confidence_threshold", 0.5))
 
     from app.services.pantry import get_available
-    availability = await get_available(db)
+    availability = await get_available(db, household_id)
     avail_map: dict[uuid.UUID, PantryAvailability] = {a.ingredient.id: a for a in availability}
 
     # Identify at-risk ingredients
@@ -297,7 +297,7 @@ async def score_all_recipes_use_it_up(db: AsyncSession) -> list[RecipeMatchResul
     return results
 
 
-async def score_all_recipes(db: AsyncSession) -> list[RecipeMatchResult]:
+async def score_all_recipes(db: AsyncSession, household_id: uuid.UUID) -> list[RecipeMatchResult]:
     """
     Score every recipe in the database against the current pantry availability.
     Returns results sorted by score descending (Cook Now first).
@@ -305,7 +305,7 @@ async def score_all_recipes(db: AsyncSession) -> list[RecipeMatchResult]:
     from app.services.pantry import get_available
 
     # Build availability map keyed by ingredient_id
-    availability = await get_available(db)
+    availability = await get_available(db, household_id)
     avail_map: dict[uuid.UUID, PantryAvailability] = {
         a.ingredient.id: a for a in availability
     }

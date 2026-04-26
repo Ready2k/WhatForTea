@@ -2,12 +2,14 @@
 Planner API — weekly meal plan management and shopping list generation.
 """
 import logging
+import uuid
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.errors import AppError, ErrorCode
 from app.schemas.plan import AutoFillEntry, AutoFillRequest, MealPlan, MealPlanCreate, ShoppingList
 from app.services.planner import (
     auto_fill_week,
@@ -22,6 +24,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/planner", tags=["planner"])
 
 
+def _require_household_id(request: Request) -> uuid.UUID:
+    hid = getattr(request.state, "household_id", None)
+    if not hid or hid == "household":
+        raise AppError(ErrorCode.UNAUTHORIZED, "Household context required", status_code=401)
+    try:
+        return uuid.UUID(hid)
+    except (ValueError, AttributeError):
+        raise AppError(ErrorCode.UNAUTHORIZED, "Invalid household token", status_code=401)
+
+
 def _current_week_start() -> date:
     """Return today's ISO Monday (week_start convention)."""
     today = date.today()
@@ -31,13 +43,17 @@ def _current_week_start() -> date:
 # ── Plan endpoints ─────────────────────────────────────────────────────────────
 
 @router.post("/week", response_model=MealPlan, status_code=status.HTTP_200_OK)
-async def upsert_week_plan(body: MealPlanCreate, db: AsyncSession = Depends(get_db)):
+async def upsert_week_plan(
+    body: MealPlanCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Create or replace the meal plan for a given week.
     Existing entries and their pantry reservations are removed and rebuilt.
     """
     try:
-        return await set_week_plan(body, db)
+        return await set_week_plan(body, db, _require_household_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -77,6 +93,7 @@ async def remove_plan_entry(entry_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/shopping-list", response_model=ShoppingList)
 async def get_shopping_list(
+    request: Request,
     week_start: date = None,
     db: AsyncSession = Depends(get_db),
 ):
@@ -89,7 +106,7 @@ async def get_shopping_list(
     if week_start is None:
         week_start = _current_week_start()
     try:
-        return await generate_shopping_list(week_start, db)
+        return await generate_shopping_list(week_start, db, _require_household_id(request))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -97,6 +114,7 @@ async def get_shopping_list(
 @router.post("/auto-fill", response_model=list[AutoFillEntry])
 async def auto_fill_week_plan(
     body: AutoFillRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -108,6 +126,7 @@ async def auto_fill_week_plan(
         moods=body.moods,
         servings=body.servings,
         db=db,
+        household_id=_require_household_id(request),
         max_cook_time_mins=body.max_cook_time_mins,
         avoid_recent_days=body.avoid_recent_days,
     )
@@ -115,6 +134,7 @@ async def auto_fill_week_plan(
 
 @router.get("/zero-waste-suggestions")
 async def get_zero_waste_suggestions(
+    request: Request,
     week_start: date = None,
     db: AsyncSession = Depends(get_db),
 ):
@@ -124,4 +144,4 @@ async def get_zero_waste_suggestions(
     """
     if week_start is None:
         week_start = _current_week_start()
-    return await zero_waste_suggestions(week_start, db)
+    return await zero_waste_suggestions(week_start, db, _require_household_id(request))

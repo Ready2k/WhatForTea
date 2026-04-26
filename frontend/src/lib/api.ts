@@ -571,6 +571,33 @@ export function joinHousehold(data: {
   });
 }
 
+export function registerHousehold(data: {
+  household_name: string;
+  username: string;
+  display_name: string;
+  password: string;
+  email?: string;
+}): Promise<UserProfile> {
+  return request<UserProfile>('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function completeGoogleSetup(data: {
+  google_token: string;
+  mode: 'create' | 'join';
+  household_name?: string;
+  invite_code?: string;
+}): Promise<{ ok: boolean; user_id: string }> {
+  return request<{ ok: boolean; user_id: string }>('/api/auth/google/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
 // ── Shopping List ─────────────────────────────────────────────────────────────
 
 export interface ShoppingItem {

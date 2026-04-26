@@ -7,12 +7,14 @@ IMPORTANT: This router uses prefix="/api/v1/recipes" and must be registered
 in main.py BEFORE the recipes router, so "match" is not parsed as a UUID.
 """
 import logging
+import uuid
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.errors import AppError, ErrorCode
 from app.schemas.matcher import RecipeMatchResult
 from app.services.matcher import score_all_recipes, score_all_recipes_use_it_up
 
@@ -20,8 +22,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/recipes", tags=["matcher"])
 
 
+def _require_household_id(request: Request) -> uuid.UUID:
+    hid = getattr(request.state, "household_id", None)
+    if not hid or hid == "household":
+        raise AppError(ErrorCode.UNAUTHORIZED, "Household context required", status_code=401)
+    try:
+        return uuid.UUID(hid)
+    except (ValueError, AttributeError):
+        raise AppError(ErrorCode.UNAUTHORIZED, "Invalid household token", status_code=401)
+
+
 @router.get("/match", response_model=list[RecipeMatchResult])
 async def match_recipes(
+    request: Request,
     category: Optional[Literal["cook_now", "almost_there", "planner"]] = Query(
         default=None,
         description="Filter to a specific category. Omit to return all.",
@@ -38,10 +51,11 @@ async def match_recipes(
     Returns recipes sorted by score descending (Cook Now first) unless sort=use_it_up,
     which re-sorts by urgency to prioritise items going off.
     """
+    hid = _require_household_id(request)
     if sort == "use_it_up":
-        results = await score_all_recipes_use_it_up(db)
+        results = await score_all_recipes_use_it_up(db, hid)
     else:
-        results = await score_all_recipes(db)
+        results = await score_all_recipes(db, hid)
 
     if category:
         results = [r for r in results if r.category == category]

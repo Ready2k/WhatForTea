@@ -8,12 +8,13 @@ import uuid
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
+from app.errors import AppError, ErrorCode
 from app.models.pantry import PantryItem
 from app.schemas.pantry import (
     BulkPantryConfirmRequest,
@@ -39,18 +40,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/pantry", tags=["pantry"])
 
 
+def _require_household_id(request: Request) -> uuid.UUID:
+    hid = getattr(request.state, "household_id", None)
+    if not hid or hid == "household":
+        raise AppError(ErrorCode.UNAUTHORIZED, "Household context required", status_code=401)
+    try:
+        return uuid.UUID(hid)
+    except (ValueError, AttributeError):
+        raise AppError(ErrorCode.UNAUTHORIZED, "Invalid household token", status_code=401)
+
+
 @router.get("/available", response_model=list[PantryAvailability])
-async def list_available(db: AsyncSession = Depends(get_db)):
+async def list_available(request: Request, db: AsyncSession = Depends(get_db)):
     """
     Return effective availability for every pantry item.
     Accounts for live confidence decay and active reservations.
     Use this endpoint — never read pantry_items.quantity directly.
     """
-    return await get_available(db)
+    return await get_available(db, _require_household_id(request))
 
 
 @router.get("/expiring", response_model=list[PantryItemSchema])
 async def list_expiring(
+    request: Request,
     days: int = 3,
     db: AsyncSession = Depends(get_db),
 ):
@@ -58,24 +70,25 @@ async def list_expiring(
     Return pantry items with an expiry date within the next `days` days (default 3).
     Items already expired are also included. Ordered by expiry date ascending.
     """
-    return await get_expiring_soon(db, days=days)
+    return await get_expiring_soon(db, _require_household_id(request), days=days)
 
 
 @router.get("", response_model=list[PantryItemSchema])
-async def list_pantry(db: AsyncSession = Depends(get_db)):
+async def list_pantry(request: Request, db: AsyncSession = Depends(get_db)):
     """List all pantry items (raw quantities, without availability calculation)."""
-    stmt = select(PantryItem).order_by(PantryItem.ingredient_id)
+    hid = _require_household_id(request)
+    stmt = select(PantryItem).where(PantryItem.household_id == hid).order_by(PantryItem.ingredient_id)
     rows = (await db.execute(stmt)).scalars().all()
     return rows
 
 
 @router.post("", response_model=PantryItemSchema, status_code=status.HTTP_201_CREATED)
-async def add_pantry_item(body: PantryItemCreate, db: AsyncSession = Depends(get_db)):
+async def add_pantry_item(request: Request, body: PantryItemCreate, db: AsyncSession = Depends(get_db)):
     """
     Add a new pantry item or update the quantity for an existing ingredient.
     Upserting resets confidence to 1.0 (implies physical confirmation).
     """
-    return await upsert_pantry_item(body, db)
+    return await upsert_pantry_item(body, db, _require_household_id(request))
 
 
 @router.patch("/{item_id}", response_model=PantryItemSchema)
@@ -104,23 +117,23 @@ async def confirm_item(item_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/bulk-confirm", response_model=list[PantryItemSchema], status_code=status.HTTP_200_OK)
-async def bulk_confirm(body: BulkPantryConfirmRequest, db: AsyncSession = Depends(get_db)):
+async def bulk_confirm(request: Request, body: BulkPantryConfirmRequest, db: AsyncSession = Depends(get_db)):
     """
     Upsert multiple pantry items in a single call.
     Used by the shopping list batch "Mark as bought" action.
     Items without a pantry entry are created; existing items are updated with confidence reset to 1.0.
     """
-    return await bulk_confirm_pantry(body.items, db)
+    return await bulk_confirm_pantry(body.items, db, _require_household_id(request))
 
 
 @router.post("/receipt-confirm", response_model=list[PantryItemSchema], status_code=status.HTTP_200_OK)
-async def receipt_confirm(body: ReceiptConfirmRequest, db: AsyncSession = Depends(get_db)):
+async def receipt_confirm(request: Request, body: ReceiptConfirmRequest, db: AsyncSession = Depends(get_db)):
     """
     Confirm pantry items from a receipt scan.
     Resolved items (ingredient_id set) are upserted directly.
     Unresolved items (raw_name only) have a minimal Ingredient auto-created first.
     """
-    return await bulk_confirm_with_create(body.items, db)
+    return await bulk_confirm_with_create(body.items, db, _require_household_id(request))
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

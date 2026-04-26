@@ -180,7 +180,11 @@ async def get_ingest_review(
     nutrition = None
     if raw_nutrition and any(raw_nutrition.get(k) is not None for k in ("calories_kcal", "protein_g", "fat_g", "carbs_g")):
         from app.schemas.recipe import NutritionEstimate
-        nutrition = NutritionEstimate(**{k: raw_nutrition.get(k) for k in NutritionEstimate.model_fields})
+        nutrition_data = {k: raw_nutrition.get(k) for k in NutritionEstimate.model_fields}
+        # Ensure source is set to "card" for LLM-extracted card nutrition
+        if not nutrition_data.get("source"):
+            nutrition_data["source"] = "card"
+        nutrition = NutritionEstimate(**nutrition_data)
 
     recipe_create = RecipeCreate(
         title=parsed.get("title", ""),
@@ -254,7 +258,9 @@ async def confirm_ingest(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    # Queue nutrition estimation only if the card didn't already provide it
+    # Queue nutrition estimation only if the card didn't already provide it.
+    # Card-extracted nutrition (source="card") is always preferred; estimation
+    # (source="estimated") is a best-effort fallback using the ingredient list.
     if recipe.nutrition_estimate is None:
         try:
             arq_pool = await create_pool(_redis_settings())

@@ -48,11 +48,14 @@ async def planner_node(state: PlannerAgentState):
                 
             # Attempt to generate shopping list
             shopping_list_data = None
+            hid = state.get("household_id")
             try:
-                sl = await generate_shopping_list(week_start, db)
-                shopping_list_data = sl.model_dump()
+                if hid:
+                    import uuid as _uuid
+                    sl = await generate_shopping_list(week_start, db, _uuid.UUID(hid) if isinstance(hid, str) else hid)
+                    shopping_list_data = sl.model_dump()
             except ValueError:
-                pass # Emty plan usually
+                pass # Empty plan usually
 
             # Build A2UI
             a2ui = []

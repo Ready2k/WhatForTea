@@ -46,6 +46,9 @@ async def estimate_nutrition(recipe_id: uuid.UUID, db: AsyncSession) -> dict | N
             ingredients=ingredients,
             base_servings=recipe.base_servings or 2,
         )
+        # Guarantee source provenance even if the prompt response omits it
+        if not nutrition.get("source"):
+            nutrition["source"] = "estimated"
         recipe.nutrition_estimate = nutrition
         recipe.nutrition_estimated_at = datetime.now(timezone.utc)
         await db.commit()

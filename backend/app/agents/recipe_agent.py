@@ -21,7 +21,11 @@ async def recipe_discovery_node(state: RecipeAgentState):
     """
     try:
         async with AsyncSessionLocal() as db:
-            results = await score_all_recipes(db)
+            hid = state.get("household_id")
+            if not hid:
+                return {"recipes": [], "a2ui": [], "hitl_status": "idle", "error": "No household context"}
+            import uuid as _uuid
+            results = await score_all_recipes(db, _uuid.UUID(hid) if isinstance(hid, str) else hid)
             
             # Format top 4 recipes for the grid (like specified in v2 UX section)
             top_matches = results[:4]

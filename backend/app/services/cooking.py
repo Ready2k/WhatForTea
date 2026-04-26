@@ -99,6 +99,7 @@ async def end_session(
     session_id: uuid.UUID,
     data: CookingSessionEnd,
     db: AsyncSession,
+    household_id: Optional[uuid.UUID] = None,
 ) -> CookingSession:
     """
     End a cooking session. If confirmed=True, consume pantry ingredients
@@ -113,9 +114,9 @@ async def end_session(
     if data.servings_cooked is not None:
         session.servings_cooked = data.servings_cooked
 
-    if data.confirmed:
+    if data.confirmed and household_id is not None:
         from app.services.pantry import consume_from_pantry
-        await consume_from_pantry(session.recipe_id, db)
+        await consume_from_pantry(session.recipe_id, db, household_id)
 
     await db.commit()
     await db.refresh(session)

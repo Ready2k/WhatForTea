@@ -60,6 +60,13 @@ jobs:
           cd backend
           poetry run bandit -ll -r app
 
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://whatsfortea:password@localhost:5432/whatsfortea_test
+        run: |
+          cd backend
+          poetry run alembic upgrade head
+
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://whatsfortea:password@localhost:5432/whatsfortea_test

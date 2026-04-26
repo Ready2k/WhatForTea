@@ -147,8 +147,10 @@ async def apply_override(
 
 async def _lookup(normalised_raw: str, db: AsyncSession) -> Optional[Ingredient]:
     """Case-insensitive exact match against canonical_name and all aliases."""
-    stmt = select(Ingredient).where(
-        Ingredient.canonical_name.ilike(normalised_raw)
+    stmt = (
+        select(Ingredient)
+        .where(Ingredient.canonical_name.ilike(normalised_raw))
+        .limit(1)
     )
     row = (await db.execute(stmt)).scalar_one_or_none()
     if row:

@@ -5,10 +5,12 @@ POST /api/auth/login              — verify credentials against users table, se
 POST /api/auth/refresh            — rotate access token using refresh cookie
 POST /api/auth/logout             — clear cookies
 GET  /api/auth/me                 — current user profile (requires valid access token)
+POST /api/auth/register           — create a new household + admin user (username/password)
 POST /api/auth/forgot-password    — send one-time reset link to user's email
 POST /api/auth/reset-password     — consume reset token and set new password
 GET  /api/auth/google             — redirect to Google OAuth consent screen
 GET  /api/auth/google/callback    — handle Google OAuth callback, set cookies
+POST /api/auth/google/complete    — finalise Google signup after household setup choice
 """
 import hashlib
 import secrets
@@ -31,7 +33,7 @@ from app.config import settings
 from app.database import get_db
 from app.errors import AppError, ErrorCode
 
-from app.schemas.user import ForgotPasswordRequest, ResetPasswordRequest, UserProfile
+from app.schemas.user import ForgotPasswordRequest, GoogleCompleteRequest, RegisterRequest, ResetPasswordRequest, UserProfile
 from app.services.email import send_password_reset
 
 logger = logging.getLogger("whatsfortea.audit")
@@ -203,6 +205,45 @@ async def logout(request: Request, response: Response):
     return {"ok": True}
 
 
+@router.post("/register", response_model=UserProfile, status_code=201)
+async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    from app.models.user import Household, User
+
+    if len(body.password) < 8:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Password must be at least 8 characters", status_code=422)
+
+    existing = (await db.execute(select(User).where(User.username == body.username))).scalar_one_or_none()
+    if existing:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Username already taken", status_code=409)
+
+    email = body.email.strip().lower() if body.email else None
+    if email:
+        taken = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        if taken:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Email already in use", status_code=409)
+
+    household = Household(
+        name=body.household_name.strip(),
+        invite_code=secrets.token_urlsafe(12),
+    )
+    db.add(household)
+    await db.flush()
+
+    user = User(
+        household_id=household.id,
+        username=body.username.strip(),
+        display_name=body.display_name.strip(),
+        email=email,
+        password_hash=_ph.hash(body.password),
+        is_admin=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    logger.info("auth.register", extra={"user_id": str(user.id), "household_id": str(household.id)})
+    return UserProfile.model_validate(user)
+
+
 @router.post("/forgot-password", status_code=200)
 async def forgot_password(
     body: ForgotPasswordRequest,
@@ -371,7 +412,24 @@ async def google_callback(
             await db.commit()
 
     if user is None:
-        # First Google login — create a household and admin user
+        # First Google login — send to household setup page
+        import json
+        import uuid as _uuid
+        redis = getattr(request.app.state, "redis", None)
+        if redis:
+            token = str(_uuid.uuid4())
+            await redis.setex(
+                f"google_pending:{token}",
+                300,
+                json.dumps({"sub": google_sub, "email": google_email, "name": google_name}),
+            )
+            logger.info("auth.google_pending_setup", extra={"email": google_email})
+            return RedirectResponse(
+                f"{frontend_url}/login?mode=google_setup&token={token}",
+                status_code=302,
+            )
+
+        # Redis unavailable — fall back to auto-creating a household
         import re
         base_username = re.sub(r"[^a-z0-9._-]", "", google_email.split("@")[0].lower()) or "user"
         username = base_username
@@ -422,6 +480,83 @@ async def google_callback(
         max_age=REFRESH_TTL_DAYS * 86400, path="/api/auth/refresh",
     )
     return redirect
+
+
+@router.post("/google/complete")
+async def google_complete(
+    body: GoogleCompleteRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    import json
+    from app.models.user import Household, User
+
+    redis = getattr(request.app.state, "redis", None)
+    if not redis:
+        raise AppError(ErrorCode.INTERNAL_ERROR, "Setup flow unavailable", status_code=503)
+
+    pending_json = await redis.getdel(f"google_pending:{body.google_token}")
+    if not pending_json:
+        raise AppError(ErrorCode.UNAUTHORIZED, "Setup token expired or invalid", status_code=401)
+
+    pending = json.loads(pending_json)
+    google_sub: str = pending["sub"]
+    google_email: str = pending["email"]
+    google_name: str = pending["name"]
+
+    if body.mode == "create":
+        if not body.household_name or not body.household_name.strip():
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Household name is required", status_code=422)
+        household = Household(
+            name=body.household_name.strip(),
+            invite_code=secrets.token_urlsafe(12),
+        )
+        db.add(household)
+        await db.flush()
+        is_admin = True
+    elif body.mode == "join":
+        if not body.invite_code or not body.invite_code.strip():
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Invite code is required", status_code=422)
+        household = (await db.execute(
+            select(Household).where(Household.invite_code == body.invite_code.strip())
+        )).scalar_one_or_none()
+        if household is None:
+            raise AppError(ErrorCode.NOT_FOUND, "Invalid invite code", status_code=404)
+        is_admin = False
+    else:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "mode must be 'create' or 'join'", status_code=422)
+
+    import re
+    base_username = re.sub(r"[^a-z0-9._-]", "", google_email.split("@")[0].lower()) or "user"
+    username = base_username
+    suffix = 1
+    while (await db.execute(select(User).where(User.username == username))).scalar_one_or_none():
+        username = f"{base_username}{suffix}"
+        suffix += 1
+
+    user = User(
+        household_id=household.id,
+        username=username,
+        display_name=google_name,
+        email=google_email,
+        password_hash=None,
+        oauth_provider="google",
+        oauth_sub=google_sub,
+        is_admin=is_admin,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    logger.info("auth.google_new_user", extra={"user_id": str(user.id), "email": google_email})
+
+    user_id = str(user.id)
+    household_id = str(user.household_id)
+    access = _make_token(user_id, household_id, timedelta(minutes=ACCESS_TTL_MINUTES))
+    refresh_tok = _make_token(user_id, household_id, timedelta(days=REFRESH_TTL_DAYS))
+    _set_access_cookie(response, access)
+    _set_refresh_cookie(response, refresh_tok)
+    return {"ok": True, "user_id": user_id}
 
 
 @router.get("/me", response_model=UserProfile)

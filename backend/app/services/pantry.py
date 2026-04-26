@@ -81,13 +81,15 @@ def calculate_confidence(
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 
-async def upsert_pantry_item(data: PantryItemCreate, db: AsyncSession) -> PantryItem:
+async def upsert_pantry_item(data: PantryItemCreate, db: AsyncSession, household_id: uuid.UUID) -> PantryItem:
     """
-    Add a new pantry item or update an existing one for the same ingredient.
-    When updating, quantity and unit are replaced; confidence resets to 1.0
-    (the user is implicitly confirming by setting a new quantity).
+    Add a new pantry item or update an existing one for the same ingredient + household.
+    When updating, quantity and unit are replaced; confidence resets to 1.0.
     """
-    stmt = select(PantryItem).where(PantryItem.ingredient_id == data.ingredient_id)
+    stmt = select(PantryItem).where(
+        PantryItem.ingredient_id == data.ingredient_id,
+        PantryItem.household_id == household_id,
+    )
     existing = (await db.execute(stmt)).scalar_one_or_none()
 
     if existing:
@@ -102,6 +104,7 @@ async def upsert_pantry_item(data: PantryItemCreate, db: AsyncSession) -> Pantry
         return existing
 
     item = PantryItem(
+        household_id=household_id,
         ingredient_id=data.ingredient_id,
         quantity=data.quantity,
         unit=data.unit,
@@ -159,7 +162,7 @@ async def confirm_pantry_item(item_id: uuid.UUID, db: AsyncSession) -> PantryIte
     return item
 
 
-async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -> list[PantryItem]:
+async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession, household_id: uuid.UUID) -> list[PantryItem]:
     """
     Upsert multiple pantry items in a single transaction.
     Used by the shopping list "Mark as bought" batch action.
@@ -167,7 +170,10 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
     """
     results = []
     for item_data in items:
-        stmt = select(PantryItem).where(PantryItem.ingredient_id == item_data.ingredient_id)
+        stmt = select(PantryItem).where(
+            PantryItem.ingredient_id == item_data.ingredient_id,
+            PantryItem.household_id == household_id,
+        )
         existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing:
             existing.quantity = item_data.quantity
@@ -180,6 +186,7 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
             results.append(existing)
         else:
             item = PantryItem(
+                household_id=household_id,
                 ingredient_id=item_data.ingredient_id,
                 quantity=item_data.quantity,
                 unit=item_data.unit,
@@ -196,7 +203,7 @@ async def bulk_confirm_pantry(items: list[PantryItemCreate], db: AsyncSession) -
     return results
 
 
-async def bulk_confirm_with_create(items: list[ReceiptConfirmItem], db: AsyncSession) -> list[PantryItem]:
+async def bulk_confirm_with_create(items: list[ReceiptConfirmItem], db: AsyncSession, household_id: uuid.UUID) -> list[PantryItem]:
     """
     Upsert pantry items from a receipt scan.
     Items with ingredient_id proceed as normal.
@@ -225,7 +232,10 @@ async def bulk_confirm_with_create(items: list[ReceiptConfirmItem], db: AsyncSes
                 await db.flush()
             ing_id = ingredient.id
 
-        stmt = select(PantryItem).where(PantryItem.ingredient_id == ing_id)
+        stmt = select(PantryItem).where(
+            PantryItem.ingredient_id == ing_id,
+            PantryItem.household_id == household_id,
+        )
         existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing:
             existing.quantity = item_data.quantity
@@ -238,6 +248,7 @@ async def bulk_confirm_with_create(items: list[ReceiptConfirmItem], db: AsyncSes
             results.append(existing)
         else:
             item = PantryItem(
+                household_id=household_id,
                 ingredient_id=ing_id,
                 quantity=item_data.quantity,
                 unit=item_data.unit or "count",
@@ -255,7 +266,7 @@ async def bulk_confirm_with_create(items: list[ReceiptConfirmItem], db: AsyncSes
     return results
 
 
-async def get_expiring_soon(db: AsyncSession, days: int = 3) -> list[PantryItem]:
+async def get_expiring_soon(db: AsyncSession, household_id: uuid.UUID, days: int = 3) -> list[PantryItem]:
     """
     Return pantry items with expires_at within the next `days` days (inclusive).
     Items already expired (expires_at < today) are also included (days_remaining <= 0).
@@ -271,6 +282,7 @@ async def get_expiring_soon(db: AsyncSession, days: int = 3) -> list[PantryItem]
         .options(selectinload(PantryItem.ingredient))
         .where(
             and_(
+                PantryItem.household_id == household_id,
                 PantryItem.expires_at.is_not(None),
                 PantryItem.expires_at <= cutoff,
             )
@@ -291,9 +303,9 @@ async def delete_pantry_item(item_id: uuid.UUID, db: AsyncSession) -> None:
 
 # ── Availability ──────────────────────────────────────────────────────────────
 
-async def get_available(db: AsyncSession) -> list[PantryAvailability]:
+async def get_available(db: AsyncSession, household_id: uuid.UUID) -> list[PantryAvailability]:
     """
-    Compute availability for every pantry item:
+    Compute availability for every pantry item in the household:
       available = max(0, quantity × confidence − sum(reservations))
 
     This is the canonical view for the matcher, planner, and shopping list.
@@ -304,6 +316,7 @@ async def get_available(db: AsyncSession) -> list[PantryAvailability]:
             selectinload(PantryItem.ingredient),
             selectinload(PantryItem.reservations),
         )
+        .where(PantryItem.household_id == household_id)
     )
     items = (await db.execute(stmt)).scalars().all()
     pantry_item_count.set(len(items))
@@ -385,7 +398,7 @@ async def _get_conversion_factor(
     return float(row.factor) if row else None
 
 
-async def consume_from_pantry(recipe_id: uuid.UUID, db: AsyncSession) -> dict:
+async def consume_from_pantry(recipe_id: uuid.UUID, db: AsyncSession, household_id: uuid.UUID) -> dict:
     """
     Deduct recipe ingredient quantities from pantry after a cooking session.
 
@@ -413,7 +426,10 @@ async def consume_from_pantry(recipe_id: uuid.UUID, db: AsyncSession) -> dict:
 
     for ri in recipe_ingredients:
         # Find matching pantry item
-        pi_stmt = select(PantryItem).where(PantryItem.ingredient_id == ri.ingredient_id)
+        pi_stmt = select(PantryItem).where(
+            PantryItem.ingredient_id == ri.ingredient_id,
+            PantryItem.household_id == household_id,
+        )
         pantry_item = (await db.execute(pi_stmt)).scalar_one_or_none()
 
         if pantry_item is None:

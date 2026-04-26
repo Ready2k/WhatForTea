@@ -14,6 +14,7 @@ from typing import Annotated, List, Literal, Optional, TypedDict
 
 from langchain_aws import ChatBedrock
 from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
@@ -135,7 +136,7 @@ async def _build_recipe_library() -> str:
     return "\n".join(lines)
 
 
-async def _build_dynamic_context() -> str:
+async def _build_dynamic_context(household_id: Optional[uuid.UUID] = None) -> str:
     """
     Build the live kitchen state — changes every turn (pantry, plan, sessions,
     shopping lists, match scores). Never cached.
@@ -169,7 +170,7 @@ async def _build_dynamic_context() -> str:
                     f"[session_id:{active.id}] step {active.current_step}"
                 )
 
-            available = await get_available(db)
+            available = await get_available(db, household_id) if household_id else []
             if available:
                 items = [
                     f"{_sanitise(a.ingredient.canonical_name)} ({a.total_quantity:.0f} {a.unit or ''})"
@@ -228,8 +229,8 @@ async def _build_dynamic_context() -> str:
             # Meal plan shopping list
             try:
                 from app.services.planner import generate_shopping_list
-                shopping = await generate_shopping_list(date.fromisoformat(week_start), db)
-                all_shop_items = [item for zone_items in shopping.zones.values() for item in zone_items]
+                shopping = await generate_shopping_list(date.fromisoformat(week_start), db, household_id) if household_id else None
+                all_shop_items = [item for zone_items in shopping.zones.values() for item in zone_items] if shopping else []
                 if all_shop_items:
                     shop_parts = [
                         f"{_sanitise(i.canonical_name)} ({i.rounded_quantity} {i.rounded_unit})"
@@ -244,7 +245,7 @@ async def _build_dynamic_context() -> str:
             # Top pantry matches — full ingredient detail only for recipes with score > 0.
             # Zero-score recipes (empty pantry) get name + missing only; ingredient lists
             # add ~120 tokens each and are worthless when nothing is in stock.
-            matches = await score_all_recipes(db)
+            matches = await score_all_recipes(db, household_id) if household_id else []
             if matches:
                 top_matches = matches[:5]
                 has_scored = any(m.score > 0 for m in top_matches)
@@ -305,12 +306,15 @@ def _parse_pantry_confirm(text: str) -> Optional[dict]:
     return None
 
 
-async def _do_pantry_upsert(widget: dict, quantity: float) -> None:
+async def _do_pantry_upsert(widget: dict, quantity: float, household_id: Optional[uuid.UUID]) -> None:
     """Execute the pantry upsert after HITL confirmation.
 
     Raises RuntimeError if the ingredient cannot be resolved, so callers
     receive a real failure rather than a silent no-op.
     """
+    if household_id is None:
+        raise RuntimeError("Cannot update pantry — no household context in this session.")
+
     from app.database import AsyncSessionLocal
     from app.schemas.pantry import PantryItemCreate
     from app.services.pantry import upsert_pantry_item
@@ -338,6 +342,7 @@ async def _do_pantry_upsert(widget: dict, quantity: float) -> None:
                 confidence=1.0,
             ),
             db,
+            household_id,
         )
         await db.commit()
 
@@ -353,7 +358,7 @@ def _build_llm():
 
 # ── Node ──────────────────────────────────────────────────────────────────────
 
-async def teabot_node(state: TeaBotAgentState) -> dict:
+async def teabot_node(state: TeaBotAgentState, config: RunnableConfig) -> dict:
     """
     Main TeaBot node.
 
@@ -362,11 +367,20 @@ async def teabot_node(state: TeaBotAgentState) -> dict:
     and returns a confirmation message — the graph never relies on the frontend
     to mutate data.
     """
+    # Extract household_id from graph config (injected by the chat endpoint)
+    hid_str = (config.get("configurable") or {}).get("household_id")
+    household_id: Optional[uuid.UUID] = None
+    if hid_str:
+        try:
+            household_id = uuid.UUID(hid_str)
+        except (ValueError, AttributeError):
+            pass
+
     # Build context in two parts:
     #   1. Recipe library — stable, marked for prompt caching (5-min TTL on Bedrock)
     #   2. Dynamic kitchen state — pantry, plan, sessions, shopping, match scores
     recipe_library = await _build_recipe_library()
-    dynamic_context = await _build_dynamic_context()
+    dynamic_context = await _build_dynamic_context(household_id)
 
     # Build the system prompt: stable part (SYSTEM_PROMPT + recipe library)
     # followed by the dynamic kitchen state (pantry, plan, shopping list, matches).
@@ -396,7 +410,7 @@ async def teabot_node(state: TeaBotAgentState) -> dict:
 
         if dec == "confirm":
             try:
-                await _do_pantry_upsert(pantry_widget, qty)
+                await _do_pantry_upsert(pantry_widget, qty, household_id)
             except RuntimeError as exc:
                 return {
                     "messages": [AIMessage(content=f"Sorry, I couldn't save that — {exc}")],

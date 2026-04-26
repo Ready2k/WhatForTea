@@ -34,6 +34,18 @@ You are a recipe data extraction assistant. You will be given the text content o
 - `hello_fresh_style`: set to null (not applicable for URL imports).
 - Generate 2 to 4 short `mood_tags` describing the dish character (e.g. "Comfort", "Quick", "Vegetarian", "Spicy").
 - `source_type`: always set to `"imported"`.
+- If the page includes a nutrition table, extract it following UK/EU label conventions:
+  - `calories_kcal` ← Energy (kcal / Calories)
+  - `fat_g` ← Fat / Total Fat
+  - `saturates_g` ← Saturated fat / of which Saturates (null if absent)
+  - `carbs_g` ← Carbohydrates / Total Carbohydrate
+  - `sugars_g` ← Sugars / of which Sugars (null if absent)
+  - `fibre_g` ← Fibre / Dietary Fiber (null if absent)
+  - `protein_g` ← Protein
+  - `salt_g` ← Salt (if only Sodium is shown, multiply by 2.5; null if absent)
+  - `per_servings` ← the serving count the values relate to (use `base_servings` if unclear)
+  - `source` ← always `"card"` when extracted from the page
+- If no nutrition information is found on the page, set the entire `nutrition` object to `null`.
 
 ## Output schema
 
@@ -60,6 +72,19 @@ You are a recipe data extraction assistant. You will be given the text content o
       "timer_seconds": null,
       "image_description": null
     }
-  ]
+  ],
+  "nutrition": {
+    "calories_kcal": 0,
+    "protein_g": 0,
+    "fat_g": 0,
+    "saturates_g": 0,
+    "carbs_g": 0,
+    "sugars_g": 0,
+    "fibre_g": 0,
+    "salt_g": 0,
+    "per_servings": 2,
+    "source": "card"
+  }
 }
 ```
+

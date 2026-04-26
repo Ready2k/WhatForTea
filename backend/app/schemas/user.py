@@ -43,6 +43,21 @@ class JoinRequest(BaseModel):
     email: Optional[str] = None
 
 
+class RegisterRequest(BaseModel):
+    household_name: str
+    username: str
+    display_name: str
+    password: str
+    email: Optional[str] = None
+
+
+class GoogleCompleteRequest(BaseModel):
+    google_token: str
+    mode: str  # 'create' | 'join'
+    household_name: Optional[str] = None
+    invite_code: Optional[str] = None
+
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 

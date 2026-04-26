@@ -96,14 +96,17 @@ async def create_ingredient(
     from sqlalchemy import select
     from app.models.ingredient import Ingredient
 
-    # Reject duplicates
+    # Reject duplicates (case-insensitive — canonical names are always stored lowercase)
+    canonical = body.canonical_name.strip().lower()
     existing = (
-        await db.execute(select(Ingredient).where(Ingredient.canonical_name == body.canonical_name))
+        await db.execute(select(Ingredient).where(Ingredient.canonical_name == canonical))
     ).scalar_one_or_none()
     if existing:
         return IngredientSchema.model_validate(existing)
 
-    ingredient = Ingredient(**body.model_dump())
+    data = body.model_dump()
+    data["canonical_name"] = canonical
+    ingredient = Ingredient(**data)
     db.add(ingredient)
     await db.commit()
     await db.refresh(ingredient)
