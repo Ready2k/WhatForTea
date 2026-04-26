@@ -131,8 +131,17 @@ async def db_session():
     await engine.dispose()
 
 @pytest.fixture
-def household_id():
-    return uuid.UUID("00000000-0000-0000-0000-000000000001")
+async def household_id(db_session):
+    from app.models.user import Household
+    from sqlalchemy import select
+    hid = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    stmt = select(Household).where(Household.id == hid)
+    existing = (await db_session.execute(stmt)).scalar_one_or_none()
+    if not existing:
+        h = Household(id=hid, name="Test Household", invite_code="test-invite-planner")
+        db_session.add(h)
+        await db_session.commit()
+    return hid
 
 
 @pytest.mark.asyncio
