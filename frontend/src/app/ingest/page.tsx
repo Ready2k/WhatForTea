@@ -6,7 +6,7 @@ import { useIngestRecipe, usePendingIngestJobs, useCurrentUser, useDismissIngest
 import { getIngestStatus, getIngestReview, confirmIngest, importRecipeFromUrl, ingestReceipt } from '@/lib/api';
 import { ReceiptReview } from '@/components/ReceiptReview';
 import type { IngestReviewPayload, ReceiptItem } from '@/lib/types';
-import { ScanLine, FolderOpen, FileText, Upload, Bot, Loader2, Clock, Users, AlertTriangle, Wand2, Check, CheckCircle, X } from 'lucide-react';
+import { ScanLine, FolderOpen, FileText, Upload, Bot, Loader2, Clock, Users, AlertTriangle, Wand2, CheckCircle, X } from 'lucide-react';
 import React from 'react';
 
 const JPEG_QUALITY = 0.85;

@@ -6,7 +6,7 @@ import { ConfidenceBar } from '@/components/ConfidenceBar';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import type { Ingredient } from '@/lib/types';
 import type { BarcodeLookupResponse } from '@/lib/api';
-import { AlertTriangle, ShoppingBasket } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 interface AddItemForm {
   search: string;
@@ -464,7 +464,7 @@ export default function PantryPage() {
           </div>
           <p className="font-semibold text-gray-700 dark:text-gray-200">Your pantry is empty</p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-[240px] mx-auto">
-            I can't suggest recipes if I don't know what you have! Add some items to get started.
+            {"I can't suggest recipes if I don't know what you have! Add some items to get started."}
           </p>
         </div>
       )}

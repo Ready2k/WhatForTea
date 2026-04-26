@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { RecipeList } from '@/components/RecipeList';
-import { UtensilsCrossed } from 'lucide-react';
 
 export default function RecipesLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

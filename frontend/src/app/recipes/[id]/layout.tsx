@@ -7,10 +7,8 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  
-  // Note: This might need a server-side fetcher if getRecipeSummary is client-only
-  // For now, let's assume we can fetch it or just use a generic title
+  // params resolved for future dynamic title; using generic title until server-side fetch is wired
+  void params;
   return {
     title: `Recipe | WhatsForTea`,
     openGraph: {

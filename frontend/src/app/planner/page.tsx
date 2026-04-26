@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { useWeekPlan, useRecipes, useSetWeekPlan, useShoppingList, useBulkConfirmPantry } from '@/lib/hooks';
-import { Wand2, Users, ShoppingCart, Clock, GripVertical } from 'lucide-react';
+import { Wand2, Users, Clock, GripVertical } from 'lucide-react';
 import { autoFillWeek, type AutoFillEntry, fetchShoppingItems, addShoppingItem, patchShoppingItem, deleteShoppingItem, clearDoneShoppingItems, type ShoppingItem } from '@/lib/api';
 import type { RecipeSummary, ShoppingListItem } from '@/lib/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
