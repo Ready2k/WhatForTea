@@ -7,6 +7,7 @@ Ingest flow:
   GET  /ingest/{id}/review  → fetch parsed recipe draft for user confirmation
   POST /ingest/confirm/{id} → submit confirmed (possibly edited) recipe → insert to DB
 """
+import json
 import logging
 import urllib.parse
 import uuid
@@ -213,7 +214,7 @@ async def get_ingest_review(
         from app.models.user import User
         caller = await db.get(User, user_id)
         if caller and caller.is_admin:
-            raw_llm_response = llm_out.raw_llm_response
+            raw_llm_response = json.dumps(llm_out.raw_llm_response, indent=2)
 
     return IngestReviewPayload(
         job_id=job_id,
