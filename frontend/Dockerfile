@@ -7,6 +7,8 @@
 #   production   — `next build` with output:standalone; built as linux/amd64 for NAS
 
 FROM node:24-alpine AS base
+# Upgrade busybox to patch CVE-2025-60876 regardless of base image tag age
+RUN apk upgrade --no-cache busybox
 WORKDIR /app
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
