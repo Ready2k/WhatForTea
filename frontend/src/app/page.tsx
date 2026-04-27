@@ -34,17 +34,17 @@ function RecipeCard({ match }: { match: RecipeMatchResult }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <UtensilsCrossed className="w-10 h-10 text-emerald-400/60" />
+          <UtensilsCrossed className="w-10 h-10 text-brand-herb/40" />
         )}
       </div>
       <div className="p-3 space-y-1.5">
         <p className="text-sm font-semibold text-brand-ink dark:text-brand-background leading-tight line-clamp-2">{match.recipe.title}</p>
         {recentlyCooked ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-xs text-brand-muted dark:text-brand-secondary">
             Cooked {cookedDaysAgo === 0 ? 'today' : cookedDaysAgo === 1 ? 'yesterday' : `${cookedDaysAgo}d ago`}
           </p>
         ) : match.recipe.cooking_time_mins ? (
-          <p className="text-xs text-gray-500 dark:text-gray-400">{match.recipe.cooking_time_mins} min</p>
+          <p className="text-xs text-brand-muted dark:text-brand-secondary">{match.recipe.cooking_time_mins} min</p>
         ) : null}
         <MatchBadge score={match.score} category={match.category} />
       </div>
@@ -101,14 +101,14 @@ export default function Dashboard() {
                 {activeSession.recipe_title ?? 'Continue where you left off'} — step {activeSession.current_step}
               </p>
             </div>
-            <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-brand-herb dark:text-brand-accent flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </Link>
           <button
             onClick={() => cancelSession.mutate()}
             disabled={cancelSession.isPending}
-            className="flex-shrink-0 p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50 disabled:opacity-40 transition-colors"
+            className="flex-shrink-0 p-1.5 rounded-lg text-brand-herb dark:text-brand-accent hover:bg-brand-herb/10 dark:hover:bg-brand-accent/20 disabled:opacity-40 transition-colors"
             title="Dismiss session"
           >
             <X className="w-4 h-4" />
@@ -142,7 +142,7 @@ export default function Dashboard() {
           <div className="absolute top-0 right-0 w-32 h-full opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIHRpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0iI2ZmZiIvPgo8L3N2Zz4=')] bg-repeat" />
           <div className="text-[10px] font-bold text-brand-accent-soft tracking-[0.1em] uppercase mb-1.5 z-10 relative">Tonight&apos;s Plan</div>
           <div className="text-xl md:text-2xl font-extrabold text-white leading-tight mb-2 z-10 relative">{tonightPlan.recipe.title}</div>
-          <div className="flex gap-2 items-center text-emerald-100/90 text-xs font-medium z-10 relative">
+          <div className="flex gap-2 items-center text-brand-background/90 text-xs font-medium z-10 relative">
             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{tonightPlan.recipe.cooking_time_mins || '?'} min</span>
             <span className="opacity-50">·</span>
             <span className="flex items-center gap-1"><Users className="w-3 h-3" />{tonightPlan.servings || 2} servings</span>
@@ -162,7 +162,7 @@ export default function Dashboard() {
             <div>
               <div className="text-[11px] text-brand-accent-soft font-bold uppercase tracking-wider">Cook Now</div>
               <div className="text-4xl font-extrabold leading-none mt-1 mb-1.5 group-hover:scale-105 transition-transform origin-left">{isLoading ? '-' : cookNowCount}</div>
-              <div className="text-[11px] text-emerald-100 font-medium">recipes ready to make</div>
+              <div className="text-[11px] text-brand-background font-medium">recipes ready to make</div>
             </div>
             <div className="text-right hidden sm:block flex-shrink-0 max-w-[220px]">
               {cookNowCount > 0 ? (
@@ -198,15 +198,15 @@ export default function Dashboard() {
               <div className="text-xs font-bold text-brand-ink dark:text-brand-background">My Pantry</div>
               <div className="text-[10px] text-gray-500 mt-0.5 font-medium">{count} ingredients</div>
               {count === 0 ? (
-                <div className="mt-2.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <div className="mt-2.5 text-[9px] font-semibold text-brand-herb">
                   Add items →
                 </div>
               ) : (
                 <>
-                  <div className="mt-2.5 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${stockedPct}%` }}></div>
+                  <div className="mt-2.5 h-1.5 bg-brand-linen dark:bg-brand-primary/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-herb rounded-full transition-all" style={{ width: `${stockedPct}%` }}></div>
                   </div>
-                  <div className="text-[9px] text-gray-400 mt-1.5 font-medium">{stockedPct}% stocked</div>
+                  <div className="text-[9px] text-brand-muted mt-1.5 font-medium">{stockedPct}% stocked</div>
                 </>
               )}
             </Link>
@@ -255,11 +255,11 @@ export default function Dashboard() {
               </div>
             </Link>
           ) : (
-            <div className="bg-white/50 dark:bg-gray-800/30 border border-transparent dark:border-gray-700/30 rounded-[16px] p-3 pl-4 flex items-center gap-3 col-span-2 lg:col-span-1 border-dashed">
-              <Sparkles className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" />
+            <div className="bg-brand-card/50 dark:bg-brand-primary-hover/30 border border-transparent dark:border-brand-primary-hover/30 rounded-[16px] p-3 pl-4 flex items-center gap-3 col-span-2 lg:col-span-1 border-dashed">
+              <Sparkles className="w-5 h-5 text-brand-linen dark:text-brand-primary-hover flex-shrink-0" />
               <div>
-                <div className="text-[11px] font-bold text-gray-400 dark:text-gray-500">Pantry clear</div>
-                <div className="text-[9px] text-gray-400 dark:text-gray-500 font-medium mt-0.5">Nothing going off</div>
+                <div className="text-[11px] font-bold text-brand-muted dark:text-brand-secondary">Pantry clear</div>
+                <div className="text-[9px] text-brand-muted dark:text-brand-secondary font-medium mt-0.5">Nothing going off</div>
               </div>
             </div>
           )}
@@ -290,17 +290,17 @@ export default function Dashboard() {
         {isLoading ? (
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse">
-                <div className="w-full h-28 bg-gray-200 dark:bg-gray-700" />
+              <div key={i} className="flex-shrink-0 w-48 rounded-2xl overflow-hidden bg-brand-card dark:bg-brand-primary-hover/30 shadow-sm border border-brand-linen dark:border-brand-primary-hover/50 animate-pulse">
+                <div className="w-full h-28 bg-brand-linen/50 dark:bg-brand-primary-hover/50" />
                 <div className="p-3 space-y-2">
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                  <div className="h-3 bg-brand-linen/50 dark:bg-brand-primary-hover/50 rounded w-3/4" />
+                  <div className="h-3 bg-brand-linen/50 dark:bg-brand-primary-hover/50 rounded w-1/2" />
                 </div>
               </div>
             ))}
           </div>
         ) : topMatches.length === 0 ? (
-          <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center gap-3">
+          <div className="text-center py-10 bg-brand-card/50 dark:bg-brand-primary-hover/30 rounded-3xl border border-dashed border-brand-linen dark:border-brand-primary-hover/50 flex flex-col items-center gap-3">
             {allMatches && allMatches.length === 0 ? (
               // No recipes at all — first run
               <>
@@ -317,14 +317,14 @@ export default function Dashboard() {
             ) : (
               // Has recipes but nothing matches current pantry / mode
               <>
-                <PackageSearch className="w-10 h-10 text-gray-300 dark:text-gray-600" />
-                <p className="text-sm text-gray-500 dark:text-gray-400 px-8">
+                <PackageSearch className="w-10 h-10 text-brand-linen dark:text-brand-primary-hover" />
+                <p className="text-sm text-brand-muted dark:text-brand-secondary px-8">
                   {mode === 'hangry'
                     ? "Nothing ready to cook right now. Try updating your pantry!"
                     : "No recipes match the current filter."}
                 </p>
                 {mode === 'hangry' && (
-                  <Link href="/pantry" className="text-xs font-bold text-orange-600 hover:text-orange-500 uppercase tracking-wider">
+                  <Link href="/pantry" className="text-xs font-bold text-brand-accent hover:text-brand-accent-soft uppercase tracking-wider">
                     Update Pantry →
                   </Link>
                 )}

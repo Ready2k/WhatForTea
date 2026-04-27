@@ -59,18 +59,18 @@ function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
 
 function ConfidenceDot({ confidence }: { confidence: number }) {
   const pct = confidence * 100;
-  if (pct >= 70) return <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />;
-  if (pct >= 40) return <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-yellow-400 shadow-[0_0_6px_rgba(251,191,36,0.5)]" />;
-  return <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-red-500 shadow-[0_0_6px_rgba(248,113,113,0.6)]" />;
+  if (pct >= 70) return <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-brand-herb shadow-[0_0_6px_rgba(63,143,93,0.6)]" />;
+  if (pct >= 40) return <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-brand-accent shadow-[0_0_6px_rgba(216,166,58,0.5)]" />;
+  return <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 bg-brand-tomato shadow-[0_0_6px_rgba(198,83,58,0.6)]" />;
 }
 
 function AccentStripe({ confidence, expiresAt }: { confidence: number; expiresAt?: string | null }) {
   const expiring = expiresAt && daysUntil(expiresAt) <= 3;
   if (expiring || confidence < 0.4)
-    return <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-red-500 shadow-[0_0_8px_rgba(248,113,113,0.45)]" />;
+    return <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-brand-tomato shadow-[0_0_8px_rgba(198,83,58,0.45)]" />;
   if (confidence < 0.7)
-    return <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-yellow-400 shadow-[0_0_8px_rgba(251,191,36,0.35)]" />;
-  return <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.35)]" />;
+    return <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-brand-accent shadow-[0_0_8px_rgba(216,166,58,0.35)]" />;
+  return <div className="w-1 self-stretch rounded-full flex-shrink-0 bg-brand-herb shadow-[0_0_6px_rgba(63,143,93,0.35)]" />;
 }
 
 // ─── UseItUpCard ──────────────────────────────────────────────────────────────
@@ -105,7 +105,7 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
     }`}>
       <div className="flex items-start justify-between mb-2">
         <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
-          isUrgent ? 'text-red-500 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'
+          isUrgent ? 'text-brand-tomato' : 'text-brand-accent'
         }`}>{urgencyLabel}</span>
         <span className="text-lg leading-none">{catEmoji(item.ingredient.category)}</span>
       </div>
@@ -119,7 +119,7 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
 
       <div className="h-[3px] bg-brand-linen/30 dark:bg-brand-primary-hover/50 rounded-full overflow-hidden mb-3">
         <div
-          className={`h-full rounded-full ${confPct >= 70 ? 'bg-green-500' : confPct >= 40 ? 'bg-yellow-400' : 'bg-red-500'}`}
+          className={`h-full rounded-full ${confPct >= 70 ? 'bg-brand-herb' : confPct >= 40 ? 'bg-brand-accent' : 'bg-brand-tomato'}`}
           style={{ width: `${confPct}%` }}
         />
       </div>
@@ -136,7 +136,7 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
             <button
               onClick={del.confirm}
               disabled={deletePending}
-              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-extrabold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-all active:scale-95"
+              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-extrabold bg-brand-tomato text-brand-background hover:opacity-90 disabled:opacity-50 transition-all active:scale-95"
             >
               Sure?
             </button>
@@ -270,7 +270,7 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
   const transition = isDragging.current ? 'none' : 'transform 0.2s ease';
 
   return (
-    <div className="relative overflow-hidden border-b border-gray-100 last:border-b-0 dark:border-zinc-800">
+    <div className="relative overflow-hidden border-b border-brand-linen/10 last:border-b-0 dark:border-brand-primary-hover/30">
       {/* Action strip — revealed behind the row on swipe */}
       <div
         className="absolute right-0 top-0 bottom-0 flex"
@@ -282,14 +282,14 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
           <>
             <button
               onClick={del.cancel}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-gray-500 hover:bg-gray-600 text-white text-[10px] font-bold transition-colors"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-brand-muted hover:bg-brand-muted/80 text-brand-background text-[10px] font-bold transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={del.confirm}
               disabled={deletePending}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-extrabold transition-colors disabled:opacity-50"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-brand-tomato hover:opacity-90 text-brand-background text-[10px] font-extrabold transition-colors disabled:opacity-50"
             >
               Sure?
             </button>
@@ -309,7 +309,7 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
             <button
               onClick={del.request}
               disabled={deletePending}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold transition-colors disabled:opacity-50"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-brand-tomato/20 hover:bg-brand-tomato/30 text-brand-tomato text-[10px] font-bold transition-colors disabled:opacity-50"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
@@ -358,8 +358,8 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
               >
                 {CATEGORY_ORDER.map(c => <option key={c} value={c}>{catEmoji(c)} {c}</option>)}
               </select>
-               <button onClick={handleSave} className="text-xs px-2 py-1 bg-brand-primary text-brand-background rounded-lg hover:bg-brand-primary-hover">Save</button>
-              <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-zinc-100">×</button>
+              <button onClick={handleSave} className="text-xs px-2 py-1 bg-brand-primary text-brand-background rounded-lg hover:bg-brand-primary-hover">Save</button>
+              <button onClick={() => setEditingId(null)} className="text-xs text-brand-muted hover:text-brand-ink dark:hover:text-brand-background">×</button>
             </div>
           ) : (
             <button
@@ -389,14 +389,14 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
             <span className="hidden md:flex items-center gap-1">
               <button
                 onClick={e => { e.stopPropagation(); del.cancel(); }}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-gray-100 dark:bg-zinc-700 text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-brand-linen/20 dark:bg-brand-primary-hover/50 text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={e => { e.stopPropagation(); del.confirm(); }}
                 disabled={deletePending}
-                className="text-[10px] font-extrabold px-2 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                className="text-[10px] font-extrabold px-2 py-1 rounded-lg bg-brand-tomato text-brand-background hover:opacity-90 disabled:opacity-50 transition-colors"
               >
                 Remove
               </button>
@@ -405,7 +405,7 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
             <button
               onClick={e => { e.stopPropagation(); del.request(); }}
               disabled={deletePending}
-              className="hidden md:block text-[11px] text-gray-400 hover:text-red-500 dark:hover:text-red-400 disabled:opacity-40 px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="hidden md:block text-[11px] text-brand-muted hover:text-brand-tomato dark:hover:text-brand-tomato disabled:opacity-40 px-1 opacity-0 group-hover:opacity-100 transition-opacity"
               title="Remove item"
             >
               ✕
@@ -536,7 +536,7 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
       >
         {/* Handle */}
         <div className="flex justify-center pt-3.5 pb-1">
-          <div className={`w-10 h-[5px] rounded-full bg-gray-300 dark:bg-zinc-700`} />
+          <div className="w-10 h-[5px] rounded-full bg-brand-linen dark:bg-brand-primary-hover/50" />
         </div>
 
         <div className="px-5 pb-4 overflow-y-auto max-h-[85vh]">
@@ -577,7 +577,7 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
                   } focus:border-brand-accent dark:focus:border-brand-accent`}
                 />
                 {form.ingredient && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-brand-herb flex items-center justify-center">
                     <svg width="8" height="8" fill="none" stroke="white" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                   </div>
                 )}
@@ -900,7 +900,7 @@ export default function PantryPage() {
           </button>
           <button
             onClick={() => setShowAddSheet(true)}
-            className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[13px] text-sm font-extrabold transition-all active:scale-95 shadow-md shadow-indigo-600/25"
+            className="h-10 px-4 bg-brand-primary hover:bg-brand-primary-hover text-brand-background rounded-[13px] text-sm font-extrabold transition-all active:scale-95 shadow-md shadow-brand-primary/25"
           >
             + Add
           </button>
@@ -919,8 +919,8 @@ export default function PantryPage() {
       {/* ── Error ── */}
       {isError && (
         <div className="text-center py-12">
-          <p className={`text-gray-500 ${W.txSecond} mb-3`}>Failed to load pantry</p>
-          <button onClick={() => refetch()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">Retry</button>
+          <p className={`text-brand-muted ${W.txSecond} mb-3`}>Failed to load pantry</p>
+          <button onClick={() => refetch()} className="px-4 py-2 bg-brand-primary text-brand-background rounded-xl text-sm font-medium hover:bg-brand-primary-hover">Retry</button>
         </div>
       )}
 
@@ -938,7 +938,7 @@ export default function PantryPage() {
               </p>
               <button
                 onClick={() => setShowAddSheet(true)}
-                className="mt-5 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-2xl transition-colors"
+                className="mt-5 px-6 py-2.5 bg-brand-primary hover:bg-brand-primary-hover text-brand-background text-sm font-bold rounded-2xl transition-colors"
               >
                 Add first item
               </button>
@@ -1032,8 +1032,8 @@ export default function PantryPage() {
                       onClick={() => { setActiveFilter(cat); setSearchQuery(''); }}
                       className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors capitalize ${
                         activeFilter === cat
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : `bg-transparent text-gray-500 ${W.txSecond} border-gray-200 ${W.border} hover:border-indigo-400/60 dark:hover:border-indigo-700/60`
+                          ? 'bg-brand-primary text-brand-background border-brand-primary'
+                          : `bg-transparent text-brand-muted ${W.txSecond} border-brand-linen ${W.border} hover:border-brand-primary/60 dark:hover:border-brand-accent/60`
                       }`}
                     >
                       {catEmoji(cat)} {cat}
@@ -1145,7 +1145,7 @@ export default function PantryPage() {
                             </div>
                             <button
                               onClick={() => setActiveFilter('expiring')}
-                              className={`text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline`}
+                              className="text-xs font-semibold text-brand-primary dark:text-brand-accent hover:underline"
                             >
                               See all
                             </button>
@@ -1176,7 +1176,7 @@ export default function PantryPage() {
                             <button
                               onClick={handleBulkConfirm}
                               disabled={bulkConfirmMutation.isPending}
-                              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
+                              className="text-xs font-bold text-brand-primary dark:text-brand-accent hover:underline disabled:opacity-50"
                             >
                               {bulkConfirmMutation.isPending ? 'Confirming…' : 'Confirm all'}
                             </button>

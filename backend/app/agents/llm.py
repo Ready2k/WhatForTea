@@ -1,7 +1,7 @@
 """
 Shared LLM factory for all agents.
 
-Uses Claude Haiku 4.5 for all agent routing, intent classification, and
+Uses Claude Haiku for all agent routing, intent classification, and
 conversational responses. Sonnet stays reserved for heavy tasks (ingest,
 normalisation, nutrition) via the existing bedrock.py service.
 """
@@ -12,15 +12,13 @@ from langchain_aws import ChatBedrock
 
 from app.config import settings
 
-# Haiku 4.5 — replaces the deprecated 3.0 used in the Phase 1 stub
-HAIKU_MODEL_ID = "anthropic.claude-haiku-4-5-20251001-v1:0"
-
 
 @lru_cache(maxsize=1)
 def get_haiku():
     """
     Cached model for agent use.
-    Returns ChatBedrock (Haiku 4.5) by default, or ChatOllama if configured.
+    Returns ChatBedrock by default, or ChatOllama if configured.
+    Model ID sourced from agent_settings.yaml / BEDROCK_TEXT_MODEL_ID env var.
     """
     if settings.llm_provider == "ollama":
         try:
@@ -31,9 +29,9 @@ def get_haiku():
                 temperature=0.1,
             )
         except ImportError:
-            # Fallback to Bedrock if package missing
             pass
 
+    from app.services.bedrock import _model_id
     client = boto3.client(
         service_name="bedrock-runtime",
         aws_access_key_id=settings.aws_access_key_id or None,
@@ -41,4 +39,4 @@ def get_haiku():
         region_name=settings.aws_region,
         endpoint_url=settings.aws_endpoint_url or None,
     )
-    return ChatBedrock(client=client, model_id=HAIKU_MODEL_ID)
+    return ChatBedrock(client=client, model_id=_model_id(vision=False))

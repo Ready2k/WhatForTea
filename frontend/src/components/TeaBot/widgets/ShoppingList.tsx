@@ -6,17 +6,17 @@ export function ShoppingList({ zones = {}, className = '' }: any) {
   
   if (zoneNames.length === 0) {
     return (
-      <div className={`p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-sm text-gray-500 shadow-sm ${className}`}>
+      <div className={`p-4 rounded-xl border border-brand-linen dark:border-brand-primary-hover/50 bg-brand-card dark:bg-brand-primary text-center text-sm text-brand-muted dark:text-brand-secondary shadow-sm ${className}`}>
         Your shopping list is empty.
       </div>
     );
   }
 
   return (
-    <div className={`p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm ${className}`}>
-      <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
-        <ShoppingCart size={18} className="text-emerald-500" />
-        <h3 className="font-bold text-gray-900 dark:text-white leading-tight">
+    <div className={`p-4 rounded-xl border border-brand-linen dark:border-brand-primary-hover/50 bg-brand-card dark:bg-brand-primary shadow-sm ${className}`}>
+      <div className="flex items-center gap-2 mb-4 border-b border-brand-linen/20 dark:border-brand-primary-hover/30 pb-3">
+        <ShoppingCart size={18} className="text-brand-herb" />
+        <h3 className="font-bold text-brand-ink dark:text-brand-background leading-tight">
           Shopping List
         </h3>
       </div>
@@ -24,12 +24,12 @@ export function ShoppingList({ zones = {}, className = '' }: any) {
       <div className="space-y-4">
         {zoneNames.map(zone => (
           <div key={zone}>
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{zone}</h4>
+            <h4 className="text-xs font-bold text-brand-muted dark:text-brand-secondary uppercase tracking-wider mb-2">{zone}</h4>
             <div className="space-y-1">
               {zones[zone].map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
-                  <span className="font-mono text-gray-900 dark:text-gray-100 font-medium">
+                <div key={idx} className="flex items-center gap-2 text-sm text-brand-muted dark:text-brand-secondary">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-linen dark:bg-brand-primary-hover/50 shrink-0" />
+                  <span className="font-mono text-brand-ink dark:text-brand-background font-medium">
                     {item.rounded_quantity === Math.floor(item.rounded_quantity) ? item.rounded_quantity : item.rounded_quantity.toFixed(1)}
                     {item.rounded_unit !== 'count' && item.rounded_unit}
                   </span>

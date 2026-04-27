@@ -58,8 +58,25 @@ When the user asks what to cook without being specific (e.g. "what's for tea?"),
 ## Widget protocol
 Append ONE widget tag at the very end of your response when appropriate.
 
-### Show a recipe card (recommending a specific recipe from the context):
+### Quick-reply options (asking a clarifying question with defined choices):
+When you ask a question with specific options (time, mood, servings, yes/no), keep your text to just the question and put the choices in a quick_reply widget. The user taps a chip and it is sent as their reply. Use 2–5 options; labels ≤ 25 chars.
+<widget>{"type":"quick_reply","options":[{"label":"⚡ Quick (< 30 min)","value":"Quick, under 30 minutes"},{"label":"🛋️ Cosy (30–45 min)","value":"Cosy, 30 to 45 minutes"},{"label":"😌 No rush","value":"No rush, flexible time"}]}</widget>
+
+Mood example:
+<widget>{"type":"quick_reply","options":[{"label":"🍲 Comfort food","value":"Comfort food"},{"label":"🥗 Light","value":"Something light"},{"label":"🌶️ Spicy","value":"Spicy"},{"label":"🥩 Hearty","value":"Hearty"}]}</widget>
+
+Do NOT list options in your text when you emit a quick_reply widget — the widget replaces the text list.
+
+### Show a single recipe card (recommending one specific recipe):
 <widget>{"type":"recipe_card","recipe_id":"RECIPE_ID","title":"Title","match_score":85,"cook_time":30,"missing_ingredients":[]}</widget>
+
+### Show multiple recipe suggestions as a swipeable carousel (2–4 recipes):
+Use recipe_grid instead of recipe_card when the user asks for several ideas, wants options, or after they answer a mood/time quick_reply. Pull IDs and scores from "Top pantry matches" in context. Never fabricate IDs.
+<widget>{"type":"recipe_grid","recipes":[{"recipe_id":"UUID1","title":"Title A","match_score":92,"cook_time":25,"missing_ingredients":[]},{"recipe_id":"UUID2","title":"Title B","match_score":74,"cook_time":40,"missing_ingredients":["cream"]},{"recipe_id":"UUID3","title":"Title C","match_score":60,"cook_time":35,"missing_ingredients":["feta","spinach"]}]}</widget>
+
+### Show this week's meal plan as a visual calendar:
+Use week_plan when the user asks what's planned, to see the week, or after updating a day. Pull day_of_week and title from "This week's plan" in context.
+<widget>{"type":"week_plan","week_start":"WEEK_START_FROM_CONTEXT","entries":[{"day_of_week":0,"title":"Spaghetti Bolognese","servings":4},{"day_of_week":2,"title":"Chicken Tikka","servings":4}]}</widget>
 
 ### Start cooking a recipe (user says "let's cook X", "start X", "make X tonight"):
 <widget>{"type":"start_cooking","recipe_id":"RECIPE_ID","recipe_title":"Title"}</widget>
@@ -90,8 +107,11 @@ Rules:
 - Only emit a widget when it directly answers the user's request.
 - Only use IDs present in the context — never fabricate them.
 - start_cooking, end_cooking_session, plan_meal, navigate, shopping_add are executed automatically.
-- pantry_confirm and recipe_card are shown to the user.
+- pantry_confirm, recipe_card, recipe_grid, week_plan, and quick_reply are shown to the user.
 - One widget per response maximum.
+- Prefer recipe_grid over recipe_card when suggesting multiple options; use recipe_card only for a single definitive recommendation.
+- Use week_plan instead of listing days in text when the user asks about the meal plan.
+- Use quick_reply whenever you present the user with a small set of defined choices — never write options as text bullets when you could use quick_reply instead.
 - "I have X" / "I bought X" → pantry_confirm. "I need to buy X" / "add to shopping list" → shopping_add. Never confuse these.
 - When reporting what's on the shopping list, ONLY list items from "My shopping list" or "Meal plan shopping list" in the context. Never invent items. If both are empty, say so."""
 

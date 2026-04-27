@@ -77,39 +77,39 @@ export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingr
   };
 
   const borderColor =
-    status === 'waiting' || status === 'saving' ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/10' :
-    status === 'applied' ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10 opacity-70' :
-    'border-gray-200 bg-gray-50 dark:bg-gray-800 opacity-50 grayscale';
+    status === 'waiting' || status === 'saving' ? 'border-brand-accent/50 bg-brand-accent/10 dark:bg-brand-accent/20' :
+    status === 'applied' ? 'border-brand-herb/30 bg-brand-herb/10 dark:bg-brand-herb/20 opacity-70' :
+    'border-brand-linen bg-brand-linen/10 dark:bg-brand-primary opacity-50 grayscale';
 
   return (
     <div className={`p-4 rounded-xl border ${borderColor} shadow-sm transition-all relative ${className}`}>
-      {status === 'waiting' && <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />}
-      {status === 'applied' && <Check className="absolute top-2 right-2 text-emerald-500" size={20} />}
-      {(status === 'rejected' || status === 'error') && <X className="absolute top-2 right-2 text-gray-400" size={20} />}
+      {status === 'waiting' && <span className="absolute -top-1 -right-1 w-3 h-3 bg-brand-accent rounded-full animate-ping" />}
+      {status === 'applied' && <Check className="absolute top-2 right-2 text-brand-herb" size={20} />}
+      {(status === 'rejected' || status === 'error') && <X className="absolute top-2 right-2 text-brand-muted/40" size={20} />}
 
       <div className="flex items-center gap-2 mb-3">
-        {(status === 'waiting' || status === 'saving') && <AlertTriangle size={16} className="text-amber-500" />}
-        <h3 className="font-bold text-gray-900 dark:text-white leading-tight text-sm">
+        {(status === 'waiting' || status === 'saving') && <AlertTriangle size={16} className="text-brand-accent" />}
+        <h3 className="font-bold text-brand-ink dark:text-brand-background leading-tight text-sm">
           Add to Pantry
         </h3>
       </div>
 
-      <div className="flex justify-between items-center bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
-        <span className="font-medium text-sm">{raw_name}</span>
+      <div className="flex justify-between items-center bg-brand-card dark:bg-brand-primary p-3 rounded-lg border border-brand-linen/20 dark:border-brand-primary-hover/30">
+        <span className="font-medium text-sm text-brand-ink dark:text-brand-background">{raw_name}</span>
         <div className="flex items-center gap-2">
           <input
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(Number(e.target.value))}
             disabled={status !== 'waiting'}
-            className="w-16 text-right font-mono bg-transparent border-b border-gray-300 dark:border-gray-700 focus:border-indigo-500 p-0 text-sm focus:ring-0"
+            className="w-16 text-right font-mono bg-transparent border-b border-brand-linen dark:border-brand-primary-hover/50 focus:border-brand-accent p-0 text-sm focus:ring-0 text-brand-ink dark:text-brand-background"
           />
-          <span className="text-sm text-gray-500">{unit}</span>
+          <span className="text-sm text-brand-muted dark:text-brand-secondary">{unit}</span>
         </div>
       </div>
 
       {status === 'error' && (
-        <p className="mt-2 text-xs text-red-500">{errorMsg}</p>
+        <p className="mt-2 text-xs text-brand-tomato">{errorMsg}</p>
       )}
 
       {(status === 'waiting' || status === 'saving') && (
@@ -117,7 +117,7 @@ export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingr
           <button
             onClick={handleConfirm}
             disabled={status === 'saving'}
-            className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+            className="flex-1 py-2 bg-brand-herb hover:bg-brand-herb/90 disabled:opacity-60 text-brand-background font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
           >
             {status === 'saving' ? <Loader2 size={14} className="animate-spin" /> : <Check size={16} />}
             {status === 'saving' ? 'Saving…' : 'Confirm'}
@@ -125,7 +125,7 @@ export function PantryConfirm({ raw_name, quantity: default_quantity, unit, ingr
           <button
             onClick={handleReject}
             disabled={status === 'saving'}
-            className="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-700 dark:text-gray-300 hover:text-red-600 font-medium text-sm rounded-lg border border-gray-200 dark:border-gray-700 transition-colors"
+            className="px-4 py-2 bg-brand-card dark:bg-brand-primary hover:bg-brand-tomato/10 text-brand-muted dark:text-brand-secondary hover:text-brand-tomato font-medium text-sm rounded-lg border border-brand-linen dark:border-brand-primary-hover/50 transition-colors"
           >
             Cancel
           </button>

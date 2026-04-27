@@ -16,7 +16,7 @@ export function TeaBotTrigger({ className = "" }: { className?: string }) {
   return (
     <button
       onClick={toggleTeaBot}
-      className={`p-3 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-500 transition-all active:scale-95 group relative ${className}`}
+      className={`p-3 bg-brand-primary text-brand-background rounded-full shadow-lg hover:bg-brand-primary-hover transition-all active:scale-95 group relative border border-brand-accent/30 ${className}`}
       aria-label="Open TeaBot"
     >
       <Image
@@ -27,8 +27,8 @@ export function TeaBotTrigger({ className = "" }: { className?: string }) {
         className="rounded-full group-hover:scale-110 transition-transform"
       />
       <span className="absolute -top-1 -right-1 flex h-3 w-3">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-accent shadow-[0_0_8px_rgba(216,166,58,0.5)]"></span>
       </span>
     </button>
   );

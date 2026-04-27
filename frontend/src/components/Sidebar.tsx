@@ -33,7 +33,7 @@ export function Sidebar() {
     <aside className="hidden md:flex flex-col w-[220px] fixed top-0 left-0 h-full border-r border-brand-linen dark:border-brand-primary/50 bg-brand-card dark:bg-brand-primary z-40 py-6">
       
       {/* App Branding */}
-      <div className="px-6 mb-8 relative">
+      <div className={`px-6 mb-8 relative ${showVersion ? 'z-50' : 'z-10'}`}>
         <button
           onClick={() => setShowVersion((v) => !v)}
           className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
@@ -46,10 +46,10 @@ export function Sidebar() {
           </div>
         </button>
         {showVersion && (
-          <div className="absolute left-4 right-4 top-full mt-2 z-50 bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 rounded-xl shadow-lg p-3">
+          <div className="absolute left-4 right-4 top-full mt-2 bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 rounded-xl shadow-xl p-3 ring-1 ring-black/5 dark:ring-white/5 animate-in">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-brand-ink dark:text-brand-background">App Info</span>
-              <button onClick={() => setShowVersion(false)} className="text-brand-muted hover:text-brand-ink dark:hover:text-brand-background">
+              <button onClick={() => setShowVersion(false)} className="text-brand-muted hover:text-brand-ink dark:hover:text-brand-background p-1">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>

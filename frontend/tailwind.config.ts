@@ -12,10 +12,12 @@ const config: Config = {
       colors: {
         brand: {
           primary: '#12382B',   // Forest Green
+          'primary-hover': '#1E5A43',
           secondary: '#6F9F7B', // Sage Green
           accent: '#D8A63A',    // Warm Gold
           'accent-soft': '#F3D98B',
           background: '#F7F1E6', // Oat Cream
+          deep: '#0B1F18',      // Deep Dark Green
           card: '#FFFDF7',      // Warm White
           ink: '#18231D',       // Deep Ink
           muted: '#6F766F',     // Muted Green-Gray

@@ -54,7 +54,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-brand-background dark:bg-[#0B1F18] text-brand-ink dark:text-brand-background antialiased font-sans">
+      <body className="bg-brand-background dark:bg-brand-deep text-brand-ink dark:text-brand-background antialiased font-sans">
         <Providers>
           <div className="min-h-screen pb-16 md:pb-0 md:pl-[220px]">
             {children}

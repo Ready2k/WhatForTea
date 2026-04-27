@@ -19,6 +19,7 @@ export type A2UIType =
   | 'ingest_review'
   | 'action_button'
   | 'confirm_dialog'
+  | 'quick_reply'
   | 'text'
   | 'heading';
 
@@ -35,6 +36,7 @@ import { ShoppingList } from '@/components/TeaBot/widgets/ShoppingList';
 import { ActionButton } from '@/components/TeaBot/widgets/ActionButton';
 import { CookingStep } from '@/components/TeaBot/widgets/CookingStep';
 import { IngestReview } from '@/components/TeaBot/widgets/IngestReview';
+import { QuickReply } from '@/components/TeaBot/widgets/QuickReply';
 
 // Registry of validated widgets
 const REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -46,6 +48,7 @@ const REGISTRY: Record<string, React.ComponentType<any>> = {
   'action_button': ActionButton,
   'cooking_step': CookingStep,
   'ingest_review': IngestReview,
+  'quick_reply': QuickReply,
   'text': ({ text }: { text: string }) => <p className="text-sm text-gray-700 dark:text-gray-300 my-2">{text}</p>,
   'heading': ({ text, level = 2 }: { text: string; level?: number }) => {
     const Tag = `h${level}` as any;
@@ -55,13 +58,15 @@ const REGISTRY: Record<string, React.ComponentType<any>> = {
 
 
 export type OnResumeFn = (decision: 'confirm' | 'reject', quantity?: number) => Promise<void>;
+export type OnQuickReplyFn = (value: string) => void;
 
 /**
  * Maps A2UI JSON to React widgets safely.
  * Section 11.3: Render nothing in prod for unknown types; warning in dev.
- * onResume is forwarded to any widget that supports HITL (e.g. PantryConfirm).
+ * onResume is forwarded to HITL widgets (PantryConfirm).
+ * onQuickReply is forwarded to QuickReply so tapped options submit as user messages.
  */
-export function RenderA2UI(descriptor: A2UIDescriptor, onResume?: OnResumeFn): React.ReactNode {
+export function RenderA2UI(descriptor: A2UIDescriptor, onResume?: OnResumeFn, onQuickReply?: OnQuickReplyFn): React.ReactNode {
   const Widget = REGISTRY[descriptor.type as string];
 
   if (!Widget) {
@@ -75,5 +80,5 @@ export function RenderA2UI(descriptor: A2UIDescriptor, onResume?: OnResumeFn): R
     return null;
   }
 
-  return <Widget {...descriptor} onResume={onResume} />;
+  return <Widget {...descriptor} onResume={onResume} onQuickReply={onQuickReply} />;
 }

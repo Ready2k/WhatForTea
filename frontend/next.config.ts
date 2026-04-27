@@ -17,15 +17,15 @@ const nextConfig: NextConfig = {
 
   async rewrites() {
     const apiUrl = process.env.API_URL ?? "http://api:8000";
+    const useAimock = process.env.USE_AIMOCK === "true";
+    const aimockUrl = process.env.AIMOCK_URL ?? "http://aimock:5001";
     return [
-      {
-        source: "/api/v1/chat",
-        destination: "http://aimock:5001/api/v1/chat",
-      },
-      {
-        source: "/api/v1/chat/resume",
-        destination: "http://aimock:5001/api/v1/chat", // Mock resume on the same aimock path
-      },
+      ...(useAimock
+        ? [
+            { source: "/api/v1/chat", destination: `${aimockUrl}/api/v1/chat` },
+            { source: "/api/v1/chat/resume", destination: `${aimockUrl}/api/v1/chat` },
+          ]
+        : []),
       {
         source: "/api/:path*",
         destination: `${apiUrl}/api/:path*`,

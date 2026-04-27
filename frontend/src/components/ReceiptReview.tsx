@@ -68,13 +68,13 @@ export function ReceiptReview({ items, onDone }: Props) {
   if (done) {
     return (
       <div className="text-center py-10 space-y-3">
-        <ShoppingBasket className="w-12 h-12 mx-auto text-emerald-500" />
+        <ShoppingBasket className="w-12 h-12 mx-auto text-brand-herb" />
         <p className="text-base font-semibold text-gray-900 dark:text-white">
           {selected.size} item{selected.size !== 1 ? 's' : ''} added to your pantry
         </p>
         <button
           onClick={onDone}
-          className="mt-2 px-6 py-2 bg-indigo-500 text-white text-sm font-medium rounded-xl hover:bg-indigo-600 transition-colors"
+          className="mt-2 px-6 py-2 bg-brand-primary text-brand-background text-sm font-medium rounded-xl hover:bg-brand-primary-hover transition-colors"
         >
           Done
         </button>
@@ -87,15 +87,15 @@ export function ReceiptReview({ items, onDone }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Found <span className="font-semibold text-gray-800 dark:text-white">{items.length}</span> items
+        <p className="text-sm text-brand-muted dark:text-brand-secondary">
+          Found <span className="font-semibold text-brand-ink dark:text-brand-background">{items.length}</span> items
           {unresolved.length > 0 && (
-            <span className="text-amber-600 dark:text-amber-400"> · {unresolved.length} new ingredients</span>
+            <span className="text-brand-accent"> · {unresolved.length} new ingredients</span>
           )}
         </p>
         <button
           onClick={toggleAll}
-          className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
+          className="text-xs text-brand-herb font-medium hover:underline"
         >
           {allSelected ? 'Deselect all' : 'Select all'}
         </button>
@@ -112,9 +112,9 @@ export function ReceiptReview({ items, onDone }: Props) {
               className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
                 isSelected
                   ? isResolved
-                    ? 'border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20'
-                    : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20'
-                  : 'border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-700'
+                    ? 'border-brand-herb/30 dark:border-brand-herb/40 bg-brand-herb/5 dark:bg-brand-herb/10'
+                    : 'border-brand-accent/30 dark:border-brand-accent/40 bg-brand-accent/5 dark:bg-brand-accent/10'
+                  : 'border-brand-linen/10 dark:border-brand-primary-hover/30 bg-brand-card dark:bg-brand-primary/40 hover:border-brand-linen/30 dark:hover:border-brand-primary-hover/50'
               }`}
             >
               {/* Checkbox */}
@@ -122,9 +122,9 @@ export function ReceiptReview({ items, onDone }: Props) {
                 className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                   isSelected
                     ? isResolved
-                      ? 'border-emerald-500 bg-emerald-500'
-                      : 'border-amber-500 bg-amber-500'
-                    : 'border-gray-300 dark:border-gray-600'
+                      ? 'border-brand-herb bg-brand-herb'
+                      : 'border-brand-accent bg-brand-accent'
+                    : 'border-brand-linen/30 dark:border-brand-primary-hover/50'
                 }`}
               >
                 {isSelected && <Check size={12} className="text-white" strokeWidth={3} />}
@@ -142,14 +142,14 @@ export function ReceiptReview({ items, onDone }: Props) {
                   value={quantities[i] ?? item.quantity}
                   onChange={(e) => setQuantities((q) => ({ ...q, [i]: Number(e.target.value) }))}
                   disabled={!isSelected}
-                  className="w-14 text-right text-sm font-mono bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-emerald-500 focus:outline-none disabled:opacity-40 py-0"
+                  className="w-14 text-right text-sm font-mono bg-transparent border-b border-brand-linen/30 dark:border-brand-primary-hover/50 focus:border-brand-herb focus:outline-none disabled:opacity-40 py-0 text-brand-ink dark:text-brand-background"
                   min={0}
                 />
                 {item.unit && (
                   <span className="text-xs text-gray-500 dark:text-gray-400 w-8">{item.unit}</span>
                 )}
                 {!isResolved && (
-                  <span className="text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">new</span>
+                  <span className="text-xs text-brand-accent whitespace-nowrap">new</span>
                 )}
               </div>
             </div>
@@ -158,19 +158,19 @@ export function ReceiptReview({ items, onDone }: Props) {
       </div>
 
       {unresolved.length > 0 && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">
+        <p className="text-xs text-brand-accent">
           Items marked <span className="font-semibold">new</span> will be added to the ingredient database automatically when confirmed.
         </p>
       )}
 
       {error && (
-        <p className="text-sm text-red-500">{error}</p>
+        <p className="text-sm text-brand-tomato">{error}</p>
       )}
 
       <button
         onClick={handleConfirm}
         disabled={selected.size === 0 || saving}
-        className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-2xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-40 disabled:cursor-not-allowed text-brand-background font-semibold text-sm rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20"
       >
         {saving ? (
           <><Loader2 size={16} className="animate-spin" /> Saving…</>

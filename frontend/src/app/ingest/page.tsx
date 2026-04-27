@@ -380,22 +380,22 @@ export default function IngestPage() {
     return (
       <main className="max-w-lg mx-auto px-4 pt-6 pb-4 space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{uploadTab === 'receipt' ? 'Add Receipt' : 'Add Recipe'}</h1>
+          <h1 className="text-xl font-bold text-brand-ink dark:text-brand-background">{uploadTab === 'receipt' ? 'Add Receipt' : 'Add Recipe'}</h1>
         </div>
 
         {/* Pending review banner — resume or dismiss abandoned ingest jobs */}
         {pendingJobs && pendingJobs.length > 0 && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-2xl overflow-hidden">
+          <div className="bg-brand-accent/10 dark:bg-brand-accent/20 border border-brand-accent/20 dark:border-brand-accent/30 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-brand-accent flex-shrink-0" />
+              <p className="text-sm font-semibold text-brand-ink dark:text-brand-accent">
                 {pendingJobs.length} recipe{pendingJobs.length > 1 ? 's' : ''} waiting to be confirmed
               </p>
             </div>
-            <div className="divide-y divide-amber-100 dark:divide-amber-800/30">
+            <div className="divide-y divide-brand-accent/20 dark:divide-brand-accent/10">
               {pendingJobs.map((job, i) => (
                 <div key={job.job_id} className="flex items-center gap-2 px-3 py-2">
-                  <span className="flex-1 text-xs text-amber-700 dark:text-amber-400 truncate">
+                  <span className="flex-1 text-xs text-brand-muted dark:text-brand-secondary truncate">
                     Scan {i + 1}
                   </span>
                   <button
@@ -410,14 +410,14 @@ export default function IngestPage() {
                         setProcessingError('Failed to load saved recipe — it may have expired.');
                       }
                     }}
-                    className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/40 px-2.5 py-1 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors whitespace-nowrap"
+                    className="text-xs font-bold text-brand-ink dark:text-brand-background bg-brand-accent/20 dark:bg-brand-accent/30 px-2.5 py-1 rounded-lg hover:bg-brand-accent/40 transition-colors whitespace-nowrap"
                   >
                     Resume →
                   </button>
                   <button
                     onClick={() => dismissMutation.mutate(job.job_id)}
                     disabled={dismissMutation.isPending}
-                    className="w-6 h-6 flex items-center justify-center rounded-md text-amber-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-40"
+                    className="w-6 h-6 flex items-center justify-center rounded-md text-brand-muted hover:text-brand-tomato hover:bg-brand-tomato/10 transition-colors disabled:opacity-40"
                     aria-label="Dismiss"
                   >
                     <X size={14} />
@@ -429,13 +429,13 @@ export default function IngestPage() {
         )}
 
         {/* Tab switcher */}
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+        <div className="flex gap-1 bg-brand-linen/20 dark:bg-brand-primary-hover/50 p-1 rounded-xl">
           <button
             onClick={() => setUploadTab('scan')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
               uploadTab === 'scan'
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-brand-card dark:bg-brand-primary text-brand-ink dark:text-brand-background shadow-sm'
+                : 'text-brand-muted dark:text-brand-secondary hover:text-brand-ink dark:hover:text-brand-background'
             }`}
           >
             Scanner
@@ -471,7 +471,7 @@ export default function IngestPage() {
         {/* URL import panel */}
         {uploadTab === 'url' && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-brand-muted dark:text-brand-secondary">
               Paste a recipe URL from BBC Good Food, AllRecipes, or any recipe site.
             </p>
             <input
@@ -480,16 +480,16 @@ export default function IngestPage() {
               onChange={(e) => setUrlInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUrlImport()}
               placeholder="https://www.bbcgoodfood.com/recipes/..."
-              className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="w-full px-4 py-3 rounded-xl bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-sm text-brand-ink dark:text-brand-background placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition"
             />
             <button
               onClick={handleUrlImport}
               disabled={!urlInput.trim() || urlLoading}
-              className="w-full py-4 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-4 bg-brand-primary text-brand-background font-semibold rounded-2xl hover:bg-brand-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {urlLoading ? 'Fetching recipe…' : 'Fetch Recipe'}
             </button>
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            <p className="text-xs text-brand-muted dark:text-brand-secondary text-center">
               Works best with structured recipe pages. JavaScript-heavy sites may not work.
             </p>
           </div>
@@ -527,7 +527,7 @@ export default function IngestPage() {
                 </div>
 
                 {receiptError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+                  <div className="p-3 bg-brand-tomato/10 dark:bg-brand-tomato/20 border border-brand-tomato/20 dark:border-brand-tomato/30 rounded-xl text-sm text-brand-tomato">
                     {receiptError}
                   </div>
                 )}
@@ -540,14 +540,14 @@ export default function IngestPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => receiptCameraRef.current?.click()}
-                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
+                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-brand-linen dark:border-brand-primary-hover rounded-2xl text-brand-muted dark:text-brand-secondary hover:border-brand-accent/50 dark:hover:border-brand-accent hover:text-brand-primary dark:hover:text-brand-background transition-colors bg-brand-card dark:bg-brand-primary"
                       >
                         <ScanLine className="w-8 h-8" />
                         <span className="text-sm font-medium">Camera</span>
                       </button>
                       <button
                         onClick={() => receiptFileRef.current?.click()}
-                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
+                        className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-brand-linen dark:border-brand-primary-hover rounded-2xl text-brand-muted dark:text-brand-secondary hover:border-brand-accent/50 dark:hover:border-brand-accent hover:text-brand-primary dark:hover:text-brand-background transition-colors bg-brand-card dark:bg-brand-primary"
                       >
                         <FolderOpen className="w-8 h-8" />
                         <span className="text-sm font-medium">Choose File</span>
@@ -571,8 +571,8 @@ export default function IngestPage() {
                     />
                     {receiptFlowState === 'extracting' && (
                       <div className="text-center py-6 space-y-2">
-                        <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Reading your receipt…</p>
+                        <div className="w-8 h-8 border-2 border-brand-linen dark:border-brand-primary-hover border-t-brand-primary rounded-full animate-spin mx-auto" />
+                        <p className="text-sm text-brand-muted dark:text-brand-secondary">Reading your receipt…</p>
                       </div>
                     )}
                   </div>
@@ -586,7 +586,7 @@ export default function IngestPage() {
                     <button
                       onClick={() => receiptPdfRef.current?.click()}
                       disabled={receiptFlowState === 'extracting'}
-                      className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800 disabled:opacity-50"
+                      className="w-full flex flex-col items-center gap-2 p-6 border-2 border-dashed border-brand-linen dark:border-brand-primary-hover rounded-2xl text-brand-muted dark:text-brand-secondary hover:border-brand-accent/50 dark:hover:border-brand-accent hover:text-brand-primary dark:hover:text-brand-background transition-colors bg-brand-card dark:bg-brand-primary disabled:opacity-50"
                     >
                       <FileText className="w-8 h-8" />
                       <span className="text-sm font-medium">
@@ -602,8 +602,8 @@ export default function IngestPage() {
                     />
                     {receiptFlowState === 'extracting' && (
                       <div className="text-center py-4 space-y-2">
-                        <div className="w-8 h-8 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mx-auto" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Extracting items from PDF…</p>
+                        <div className="w-8 h-8 border-2 border-brand-linen dark:border-brand-primary-hover border-t-brand-primary rounded-full animate-spin mx-auto" />
+                        <p className="text-sm text-brand-muted dark:text-brand-secondary">Extracting items from PDF…</p>
                       </div>
                     )}
                   </div>
@@ -619,12 +619,12 @@ export default function IngestPage() {
                       onChange={(e) => setReceiptText(e.target.value)}
                       placeholder="Paste your order items here…"
                       rows={8}
-                      className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-sm text-brand-ink dark:text-brand-background placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent resize-none"
                     />
                     <button
                       onClick={() => receiptText.trim() && handleReceiptSubmit(receiptText.trim())}
                       disabled={!receiptText.trim() || receiptFlowState === 'extracting'}
-                      className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="w-full py-3 bg-brand-primary text-brand-background font-semibold rounded-2xl hover:bg-brand-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       {receiptFlowState === 'extracting' ? 'Processing…' : 'Extract Items'}
                     </button>
@@ -639,7 +639,7 @@ export default function IngestPage() {
         {uploadTab === 'scan' && <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
+            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-brand-linen dark:border-brand-primary-hover rounded-2xl text-brand-muted dark:text-brand-secondary hover:border-brand-accent/50 dark:hover:border-brand-accent hover:text-brand-primary dark:hover:text-brand-background transition-colors bg-brand-card dark:bg-brand-primary"
           >
             <ScanLine className="w-8 h-8" />
             <span className="text-sm font-medium">
@@ -648,7 +648,7 @@ export default function IngestPage() {
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl text-gray-600 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-700 transition-colors bg-white dark:bg-gray-800"
+            className="flex flex-col items-center gap-2 p-5 border-2 border-dashed border-brand-linen dark:border-brand-primary-hover rounded-2xl text-brand-muted dark:text-brand-secondary hover:border-brand-accent/50 dark:hover:border-brand-accent hover:text-brand-primary dark:hover:text-brand-background transition-colors bg-brand-card dark:bg-brand-primary"
           >
             <FolderOpen className="w-8 h-8" />
             <span className="text-sm font-medium">Choose File</span>
@@ -677,7 +677,7 @@ export default function IngestPage() {
           {capturedPhotos.length > 0 && (
             <div className="flex gap-3">
               {capturedPhotos.map((p, i) => (
-                <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                <div key={i} className="relative flex-1 aspect-video rounded-xl overflow-hidden bg-brand-linen/20 dark:bg-brand-primary-hover/50 border border-brand-linen dark:border-brand-primary/60">
                   <img
                     src={p.url}
                     alt={`Preview ${i + 1}`}
@@ -713,14 +713,14 @@ export default function IngestPage() {
           )}
 
           {capturedPhotos.length === 1 && (
-            <p className="text-sm text-center text-amber-600 dark:text-amber-400 font-medium">
+            <p className="text-sm text-center text-brand-accent font-medium">
               Add the other side of the card to continue
             </p>
           )}
 
           {/* Brand selector */}
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Meal kit brand</p>
+            <p className="text-xs font-medium text-brand-muted dark:text-brand-secondary mb-2">Meal kit brand</p>
             <div className="flex flex-wrap gap-2">
               {[
                 { value: 'auto', label: 'Auto-detect' },
@@ -736,8 +736,8 @@ export default function IngestPage() {
                   onClick={() => setKitBrand(value)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                     kitBrand === value
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-brand-primary text-brand-background'
+                      : 'bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 dark:hover:bg-brand-primary'
                   }`}
                 >
                   {label}
@@ -749,7 +749,7 @@ export default function IngestPage() {
           <button
             onClick={handleUpload}
             disabled={capturedPhotos.length !== 2 || ingestMutation.isPending}
-            className="w-full py-4 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-4 bg-brand-primary text-brand-background font-semibold rounded-2xl hover:bg-brand-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {ingestMutation.isPending ? 'Uploading...' : capturedPhotos.length === 2 ? 'Upload & Process' : `${capturedPhotos.length}/2 photos — add ${2 - capturedPhotos.length} more`}
           </button>
@@ -776,25 +776,25 @@ export default function IngestPage() {
                 key={stage.key}
                 className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
                   active
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700 shadow-sm'
+                    ? 'bg-brand-herb/10 dark:bg-brand-herb/20 border-brand-herb/20 dark:border-brand-herb/30 shadow-sm'
                     : done
-                    ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-50'
-                    : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-30'
+                    ? 'bg-brand-card dark:bg-brand-primary border-brand-linen/20 dark:border-brand-primary-hover/30 opacity-50'
+                    : 'bg-brand-card dark:bg-brand-primary border-brand-linen/20 dark:border-brand-primary-hover/30 opacity-30'
                 }`}
               >
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${
-                  active ? 'bg-emerald-100 dark:bg-emerald-900/40' : done ? 'bg-gray-100 dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'
+                  active ? 'bg-brand-herb/20 dark:bg-brand-herb/30' : done ? 'bg-brand-linen/20 dark:bg-brand-primary-hover/20' : 'bg-brand-linen/10 dark:bg-brand-primary-hover/10'
                 }`}>
-                  {done ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : active ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                  {done ? <CheckCircle className="w-5 h-5 text-brand-herb" /> : active ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-brand-herb" />
                   ) : STAGE_ICONS[stage.key]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${active ? 'text-emerald-800 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                  <p className={`text-sm font-semibold ${active ? 'text-brand-herb' : 'text-brand-muted dark:text-brand-secondary'}`}>
                     {stage.label}
                   </p>
                   {active && (
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">{funMessage}</p>
+                    <p className="text-xs text-brand-herb/80 dark:text-brand-herb mt-0.5 truncate">{funMessage}</p>
                   )}
                 </div>
                 {active && (

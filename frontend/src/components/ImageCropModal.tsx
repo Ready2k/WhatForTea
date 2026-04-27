@@ -133,7 +133,7 @@ export function ImageCropModal({
         <button
           onClick={handleAutoCrop}
           disabled={busy}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors shadow-lg"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-brand-background font-semibold text-sm rounded-xl transition-colors shadow-lg shadow-brand-primary/20"
         >
           {isAutoCropping ? (
             <>
@@ -157,7 +157,7 @@ export function ImageCropModal({
         <button
           onClick={handleApply}
           disabled={busy || !completedCrop}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors shadow-lg"
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-50 text-brand-background font-semibold text-sm rounded-xl transition-colors shadow-lg shadow-brand-primary/20"
         >
           {isSaving ? (
             <>

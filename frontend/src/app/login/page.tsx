@@ -160,28 +160,28 @@ function LoginPageInner() {
   const tabClass = (m: 'login' | 'create' | 'join') =>
     `flex-1 py-2 text-sm font-medium transition-colors ${
       mode === m
-        ? 'bg-indigo-600 text-white'
-        : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+        ? 'bg-brand-primary text-brand-background'
+        : 'bg-brand-card dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:text-brand-ink dark:hover:text-brand-background'
     }`;
 
   const inputClass =
-    'w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400';
+    'w-full px-3.5 py-2.5 border border-brand-linen dark:border-brand-primary-hover/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent dark:bg-brand-primary dark:text-brand-background dark:placeholder-brand-secondary/50';
 
   return (
     <main className="md:-ml-[220px] md:w-[calc(100%+220px)] bg-white dark:bg-gray-950">
 
       {/* ── Hero ── */}
-      <section className="relative pt-20 pb-32 overflow-hidden bg-gradient-to-b from-indigo-950 via-indigo-900 to-indigo-800">
+      <section className="relative pt-20 pb-32 overflow-hidden bg-gradient-to-b from-brand-primary via-brand-primary-hover to-brand-secondary">
         <div
           className="absolute inset-0 pointer-events-none opacity-30"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 15% 85%, #6366f1 0%, transparent 45%), radial-gradient(circle at 85% 15%, #818cf8 0%, transparent 45%)',
+              'radial-gradient(circle at 15% 85%, var(--color-brand-secondary) 0%, transparent 45%), radial-gradient(circle at 85% 15%, var(--color-brand-accent) 0%, transparent 45%)',
           }}
         />
 
         <div className="relative max-w-5xl mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-indigo-200 text-sm font-medium mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-brand-accent-soft text-sm font-medium mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
@@ -191,17 +191,17 @@ function LoginPageInner() {
 
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-white">
             Know what&apos;s for tea,<br />
-            <span className="text-indigo-300">before you even ask.</span>
+            <span className="text-brand-accent-soft">before you even ask.</span>
           </h1>
 
-          <p className="text-xl text-indigo-200 mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-brand-background/80 mb-10 max-w-2xl mx-auto leading-relaxed">
             Scan your HelloFresh cards, track what&apos;s in the fridge, and let TeaBot plan the week — all from your kitchen.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
             <a
               href="#signin"
-              className="w-full sm:w-auto px-8 py-4 bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-900/40 hover:bg-indigo-400 hover:-translate-y-0.5 transition-all duration-200"
+              className="w-full sm:w-auto px-8 py-4 bg-brand-accent text-brand-ink rounded-xl font-bold shadow-lg shadow-brand-primary/40 hover:bg-brand-accent-soft hover:-translate-y-0.5 transition-all duration-200"
             >
               Sign In
             </a>
@@ -217,19 +217,19 @@ function LoginPageInner() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto border-t border-white/10 pt-12">
             <div>
               <div className="text-3xl mb-1">📸</div>
-              <div className="text-sm text-indigo-300 font-medium">Scan any card</div>
+              <div className="text-sm text-brand-background/70 font-medium">Scan any card</div>
             </div>
             <div>
               <div className="text-3xl mb-1">🧮</div>
-              <div className="text-sm text-indigo-300 font-medium">Smart pantry</div>
+              <div className="text-sm text-brand-background/70 font-medium">Smart pantry</div>
             </div>
             <div>
               <div className="text-3xl mb-1">📅</div>
-              <div className="text-sm text-indigo-300 font-medium">Plan the week</div>
+              <div className="text-sm text-brand-background/70 font-medium">Plan the week</div>
             </div>
             <div>
               <div className="text-3xl mb-1">🤖</div>
-              <div className="text-sm text-indigo-300 font-medium">TeaBot AI</div>
+              <div className="text-sm text-brand-background/70 font-medium">TeaBot AI</div>
             </div>
           </div>
         </div>
@@ -246,26 +246,26 @@ function LoginPageInner() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors">
-              <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-xl flex items-center justify-center text-2xl mb-6">📸</div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Scan Recipe Cards</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div className="p-8 rounded-2xl bg-brand-card dark:bg-brand-primary-hover/30 border border-brand-linen dark:border-brand-primary-hover/50 hover:border-brand-accent transition-colors">
+              <div className="w-12 h-12 bg-brand-linen dark:bg-brand-primary-hover rounded-xl flex items-center justify-center text-2xl mb-6">📸</div>
+              <h3 className="text-xl font-bold mb-3 text-brand-ink dark:text-brand-background">Scan Recipe Cards</h3>
+              <p className="text-brand-muted dark:text-brand-secondary leading-relaxed">
                 Photograph your HelloFresh cards or paste a URL — Claude extracts every ingredient, quantity, and step in seconds.
               </p>
             </div>
 
-            <div className="p-8 rounded-2xl bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/40 hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/40 rounded-xl flex items-center justify-center text-2xl mb-6">🍽️</div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">Hangry Matcher</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div className="p-8 rounded-2xl bg-brand-accent/5 dark:bg-brand-accent/10 border border-brand-accent/20 hover:border-brand-accent transition-colors">
+              <div className="w-12 h-12 bg-brand-accent/20 rounded-xl flex items-center justify-center text-2xl mb-6">🍽️</div>
+              <h3 className="text-xl font-bold mb-3 text-brand-ink dark:text-brand-background">Hangry Matcher</h3>
+              <p className="text-brand-muted dark:text-brand-secondary leading-relaxed">
                 See exactly which recipes you can cook right now based on what&apos;s actually in your fridge and pantry, scored in real time.
               </p>
             </div>
 
-            <div className="p-8 rounded-2xl bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/40 hover:border-purple-300 dark:hover:border-purple-700 transition-colors">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center text-2xl mb-6">🤖</div>
-              <h3 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">TeaBot</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div className="p-8 rounded-2xl bg-brand-herb/5 dark:bg-brand-herb/10 border border-brand-herb/20 hover:border-brand-herb transition-colors">
+              <div className="w-12 h-12 bg-brand-herb/20 rounded-xl flex items-center justify-center text-2xl mb-6">🤖</div>
+              <h3 className="text-xl font-bold mb-3 text-brand-ink dark:text-brand-background">TeaBot</h3>
+              <p className="text-brand-muted dark:text-brand-secondary leading-relaxed">
                 Ask your AI kitchen assistant to plan the week, suggest substitutes, or check what&apos;s about to expire before it&apos;s too late.
               </p>
             </div>
@@ -282,34 +282,34 @@ function LoginPageInner() {
                 <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">How it works</h2>
                 <div className="space-y-8">
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm">1</div>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-linen dark:bg-brand-primary-hover text-brand-primary dark:text-brand-accent flex items-center justify-center font-bold text-sm">1</div>
                     <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white mb-1">Scan your recipe cards</h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">Take a photo of any HelloFresh card or paste a URL — Claude reads it for you.</p>
+                      <h4 className="font-bold text-brand-ink dark:text-brand-background mb-1">Scan your recipe cards</h4>
+                      <p className="text-brand-muted dark:text-brand-secondary text-sm">Take a photo of any HelloFresh card or paste a URL — Claude reads it for you.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm">2</div>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-linen dark:bg-brand-primary-hover text-brand-primary dark:text-brand-accent flex items-center justify-center font-bold text-sm">2</div>
                     <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white mb-1">Keep your pantry fresh</h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">Scan receipts, track expiry dates, and the Hangry Matcher scores what you can cook tonight.</p>
+                      <h4 className="font-bold text-brand-ink dark:text-brand-background mb-1">Keep your pantry fresh</h4>
+                      <p className="text-brand-muted dark:text-brand-secondary text-sm">Scan receipts, track expiry dates, and the Hangry Matcher scores what you can cook tonight.</p>
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm">3</div>
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-linen dark:bg-brand-primary-hover text-brand-primary dark:text-brand-accent flex items-center justify-center font-bold text-sm">3</div>
                     <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white mb-1">Ask TeaBot</h4>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">Plan the week, generate a shopping list, or just ask &quot;what&apos;s for tea?&quot; — TeaBot has the answer.</p>
+                      <h4 className="font-bold text-brand-ink dark:text-brand-background mb-1">Ask TeaBot</h4>
+                      <p className="text-brand-muted dark:text-brand-secondary text-sm">Plan the week, generate a shopping list, or just ask &quot;what&apos;s for tea?&quot; — TeaBot has the answer.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="relative h-64 md:h-full min-h-[280px] bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-10" />
+              <div className="relative h-64 md:h-full min-h-[280px] bg-brand-card dark:bg-brand-primary rounded-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-brand-primary to-brand-accent opacity-10" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
                   <span className="text-6xl mb-2 block">🍵</span>
-                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Your kitchen, sorted</span>
+                  <span className="text-sm font-medium text-brand-muted dark:text-brand-secondary">Your kitchen, sorted</span>
                 </div>
               </div>
             </div>
@@ -399,7 +399,7 @@ function LoginPageInner() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                      className="flex-1 py-2.5 bg-brand-primary text-brand-background text-sm font-semibold rounded-xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors"
                     >
                       {loading ? 'Setting up...' : googleSetupChoice === 'create' ? 'Create' : 'Join'}
                     </button>
@@ -464,7 +464,7 @@ function LoginPageInner() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor="password">Password</label>
                     <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required className={inputClass} />
                   </div>
-                  <button type="submit" disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                  <button type="submit" disabled={loading} className="w-full py-3 bg-brand-primary text-brand-background font-semibold rounded-2xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors">
                     {loading ? 'Signing in...' : 'Sign In'}
                   </button>
                   <div className="text-center">
@@ -520,7 +520,7 @@ function LoginPageInner() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor="create_confirm">Confirm Password</label>
                     <input id="create_confirm" type="password" autoComplete="new-password" value={createConfirm} onChange={(e) => setCreateConfirm(e.target.value)} required className={inputClass} />
                   </div>
-                  <button type="submit" disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                  <button type="submit" disabled={loading} className="w-full py-3 bg-brand-primary text-brand-background font-semibold rounded-2xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors">
                     {loading ? 'Creating household...' : 'Create Household'}
                   </button>
                 </form>
@@ -554,7 +554,7 @@ function LoginPageInner() {
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-200" htmlFor="join_confirm">Confirm Password</label>
                     <input id="join_confirm" type="password" autoComplete="new-password" value={joinConfirm} onChange={(e) => setJoinConfirm(e.target.value)} required className={inputClass} />
                   </div>
-                  <button type="submit" disabled={loading} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                  <button type="submit" disabled={loading} className="w-full py-3 bg-brand-primary text-brand-background font-semibold rounded-2xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors">
                     {loading ? 'Joining...' : 'Join Household'}
                   </button>
                 </form>
