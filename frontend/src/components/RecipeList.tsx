@@ -246,7 +246,10 @@ function RecipesContent() {
               </button>
             ))}
             {allMoodTags.length > TAG_VISIBLE_COUNT && (
+              <button
+                onClick={() => setTagsExpanded(!tagsExpanded)}
                 className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 dark:hover:bg-brand-primary transition-all"
+              >
                 {tagsExpanded ? 'Show less' : `+${allMoodTags.length - TAG_VISIBLE_COUNT} more`}
               </button>
             )}
@@ -263,6 +266,7 @@ function RecipesContent() {
               key={col.id}
               onClick={() => setSelectedCollectionId(selectedCollectionId === col.id ? null : col.id)}
               className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border ${
+                selectedCollectionId === col.id
                   ? 'text-brand-background shadow-sm'
                   : 'bg-brand-card dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/10 dark:hover:bg-brand-primary border-brand-linen dark:border-brand-primary/60'
               }`}
@@ -276,7 +280,7 @@ function RecipesContent() {
           ))}
           <Link
             href="/collections"
-            className="text-xs text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 ml-1"
+            className="text-xs text-brand-muted hover:text-brand-primary dark:text-brand-secondary dark:hover:text-brand-background ml-1"
           >
             Manage
           </Link>
@@ -289,12 +293,12 @@ function RecipesContent() {
           <span>
             Showing {filtered.length} of {matches?.length ?? 0} recipes
           </span>
-            <button
-              onClick={clearFilters}
-              className="text-brand-herb hover:underline font-medium"
-            >
-              Clear all filters
-            </button>
+          <button
+            onClick={clearFilters}
+            className="text-brand-herb hover:underline font-medium"
+          >
+            Clear all filters
+          </button>
         </div>
       )}
 
@@ -325,11 +329,11 @@ function RecipesContent() {
         <div className="text-center py-16 text-gray-400 dark:text-gray-500">
           {hasActiveFilters ? (
             <>
-              <Search className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <p className="font-medium text-gray-600 dark:text-gray-300">No recipes match your search</p>
+              <Search className="w-10 h-10 mx-auto mb-3 text-brand-linen dark:text-brand-primary-hover" />
+              <p className="font-medium text-brand-ink dark:text-brand-background">No recipes match your search</p>
               <button
                 onClick={clearFilters}
-                className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                className="mt-3 text-sm text-brand-herb hover:underline font-medium"
               >
                 Clear filters
               </button>
@@ -337,12 +341,12 @@ function RecipesContent() {
           ) : (matches?.length ?? 0) === 0 ? (
             // True first-run: no recipes at all
             <div className="flex flex-col items-center gap-4 px-6">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-100 dark:border-indigo-900 shadow-lg">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-brand-linen/30 dark:border-brand-primary-hover shadow-lg">
                 <Image src="/teabot-chef.png" alt="TeaBot" width={96} height={96} className="object-cover" />
               </div>
               <div>
-                <p className="font-semibold text-gray-700 dark:text-gray-200">Hi, I&apos;m TeaBot!</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <p className="font-semibold text-brand-ink dark:text-brand-background">Hi, I&apos;m TeaBot!</p>
+                <p className="text-sm text-brand-muted dark:text-brand-secondary mt-1">
                   Your kitchen is empty. Scan your first recipe card to get started.
                 </p>
               </div>
@@ -356,8 +360,8 @@ function RecipesContent() {
           ) : (
             // Has recipes but current filter shows nothing
             <>
-              <p className="font-medium text-gray-600 dark:text-gray-300">No recipes in this category</p>
-              <p className="text-sm mt-1">Try a different filter</p>
+              <p className="font-medium text-brand-ink dark:text-brand-background">No recipes in this category</p>
+              <p className="text-sm text-brand-muted mt-1">Try a different filter</p>
             </>
           )}
         </div>
@@ -377,7 +381,7 @@ function RecipesContent() {
 
 export function RecipeList() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-gray-500">Loading recipe library...</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-brand-muted">Loading recipe library...</div>}>
       <RecipesContent />
     </Suspense>
   );

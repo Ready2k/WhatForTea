@@ -154,10 +154,10 @@ function IngredientFixRow({
             className="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-brand-ink dark:text-brand-background placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent"
           />
           {searchQ && (
-            <button onClick={() => { setSearchQ(''); setDropdownOpen(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+            <button onClick={() => { setSearchQ(''); setDropdownOpen(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-brand-muted/40 hover:text-brand-ink text-xs">✕</button>
           )}
           {dropdownOpen && suggestions.length > 0 && (
-            <ul className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+            <ul className="absolute z-20 left-0 right-0 mt-1 bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 rounded-xl shadow-lg max-h-48 overflow-y-auto">
               {suggestions.slice(0, 10).map((ig) => (
                 <li key={ig.id}>
                   <button
@@ -173,7 +173,7 @@ function IngredientFixRow({
             </ul>
           )}
           {dropdownOpen && suggestions.length === 0 && debouncedQ.trim().length >= 2 && (
-            <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 rounded-xl shadow-lg px-3 py-2 text-sm text-brand-muted">
               No matches — try &quot;Add as new&quot;
             </div>
           )}
@@ -193,21 +193,21 @@ function IngredientFixRow({
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="px-2 py-1.5 text-xs rounded-lg bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 text-brand-ink dark:text-brand-background focus:outline-none focus:ring-2 focus:ring-brand-accent"
             >
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               value={newDimension}
               onChange={(e) => { setNewDimension(e.target.value); setNewUnit(COMMON_UNITS[e.target.value]?.[0] ?? 'g'); }}
-              className="px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="px-2 py-1.5 text-xs rounded-lg bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 text-brand-ink dark:text-brand-background focus:outline-none focus:ring-2 focus:ring-brand-accent"
             >
               {DIMENSIONS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
             <select
               value={newUnit}
               onChange={(e) => setNewUnit(e.target.value)}
-              className="px-2 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="px-2 py-1.5 text-xs rounded-lg bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 text-brand-ink dark:text-brand-background focus:outline-none focus:ring-2 focus:ring-brand-accent"
             >
               {(COMMON_UNITS[newDimension] ?? ['g']).map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
@@ -222,7 +222,7 @@ function IngredientFixRow({
         </div>
       )}
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-brand-tomato">{error}</p>}
     </div>
   );
 }
@@ -264,7 +264,7 @@ export function FixIngredients({
       </button>
 
       {open && (
-        <div className="border-t border-orange-200 dark:border-orange-800/60">
+        <div className="border-t border-brand-accent/20 dark:border-brand-accent/30">
           {unresolved.map((ri) => (
             <IngredientFixRow
               key={ri.id}

@@ -129,7 +129,7 @@ function DaySlot({
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing touch-none flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-gray-400 dark:hover:text-gray-500 p-0.5"
+            className="cursor-grab active:cursor-grabbing touch-none flex-shrink-0 text-brand-linen dark:text-brand-primary-hover hover:text-brand-muted/40 dark:hover:text-brand-secondary/40 p-0.5"
             aria-label="Drag to reschedule"
           >
             <GripVertical className="w-4 h-4" />
@@ -165,12 +165,12 @@ function DaySlot({
               <p className="text-sm font-semibold text-brand-ink dark:text-brand-background truncate">{recipeSummary.title}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {recipeSummary.cooking_time_mins && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
+                  <p className="text-xs text-brand-muted/60 dark:text-brand-secondary/60 flex items-center gap-0.5">
                     <Clock className="w-3 h-3" />
                     {recipeSummary.cooking_time_mins} min
                   </p>
                 )}
-                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <span className="text-brand-linen dark:text-brand-primary-hover">•</span>
                 <button
                   onClick={() => onShowServingPicker(showServingPickerFor === dayIdx ? null : dayIdx)}
                   className="text-xs font-medium text-brand-herb hover:text-brand-herb/80 bg-brand-herb/10 dark:bg-brand-herb/20 px-1.5 py-0.5 rounded flex items-center gap-1"
@@ -187,8 +187,10 @@ function DaySlot({
               >
                 Change
               </button>
+              <button
                 onClick={() => { onSetDay(null); onSetServings(null); }}
                 className="text-xs text-brand-tomato/60 hover:text-brand-tomato transition-colors"
+              >
                 Clear
               </button>
             </div>
@@ -205,8 +207,8 @@ function DaySlot({
 
       {/* Serving picker */}
       {showServingPickerFor === dayIdx && (
-        <div className="mt-3 flex items-center gap-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
-          <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Servings:</span>
+        <div className="mt-3 flex items-center gap-1.5 border-t border-brand-linen/30 dark:border-brand-primary-hover/30 pt-3">
+          <span className="text-xs text-brand-muted/60 dark:text-brand-secondary/60 mr-1">Servings:</span>
           {[1, 2, 3, 4, 6, 8].map((n) => (
             <button
               key={n}
@@ -222,7 +224,7 @@ function DaySlot({
           ))}
           <button
             onClick={() => { onSetServings(null); onShowServingPicker(null); }}
-            className="ml-auto text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            className="ml-auto text-xs text-brand-muted/40 hover:text-brand-ink dark:text-brand-secondary/40 dark:hover:text-brand-background transition-colors"
           >
             Default
           </button>
@@ -231,7 +233,7 @@ function DaySlot({
 
       {/* Recipe picker */}
       {showPickerFor === dayIdx && (
-        <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+        <div className="mt-3 border-t border-brand-linen/30 dark:border-brand-primary-hover/30 pt-3">
           <div className="max-h-40 overflow-y-auto space-y-1">
             {recipes?.map((r) => (
               <button
@@ -241,17 +243,17 @@ function DaySlot({
               >
                 {r.title}
                 {r.cooking_time_mins && (
-                  <span className="text-gray-400 dark:text-gray-500 ml-2">({r.cooking_time_mins} min)</span>
+                  <span className="text-brand-muted/60 dark:text-brand-secondary/60 ml-2">({r.cooking_time_mins} min)</span>
                 )}
               </button>
             ))}
             {(!recipes || recipes.length === 0) && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 px-2">No recipes available</p>
+              <p className="text-xs text-brand-muted/40 dark:text-brand-secondary/40 px-2">No recipes available</p>
             )}
           </div>
           <button
             onClick={() => onShowPicker(null)}
-            className="mt-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+            className="mt-2 text-xs text-brand-muted/40 hover:text-brand-ink dark:text-brand-secondary/40 dark:hover:text-brand-background transition-colors"
           >
             Cancel
           </button>
@@ -529,7 +531,7 @@ export default function PlannerPage() {
           {planLoading && (
             <div className="space-y-2">
               {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+                <div key={i} className="h-16 bg-brand-linen/10 dark:bg-brand-primary-hover/20 rounded-2xl animate-pulse" />
               ))}
             </div>
           )}
@@ -573,7 +575,7 @@ export default function PlannerPage() {
                     <div className="bg-brand-card dark:bg-brand-primary-hover rounded-2xl border-2 border-brand-accent shadow-2xl px-4 py-3 opacity-95 pointer-events-none">
                       <p className="text-sm font-semibold text-brand-ink dark:text-brand-background">{r.title}</p>
                       {r.cooking_time_mins && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                        <p className="text-xs text-brand-muted/60 dark:text-brand-secondary/60 mt-0.5 flex items-center gap-1">
                           <Clock className="w-3 h-3" />{r.cooking_time_mins} min
                         </p>
                       )}
