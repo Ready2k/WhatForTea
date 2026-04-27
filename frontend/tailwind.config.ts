@@ -9,7 +9,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Design tokens will be added here as the UI is built out
+      fontFamily: {
+        sans: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
+      },
+      animation: {
+        'bounce-slow': 'bounce 2s infinite',
+      },
     },
   },
   plugins: [],

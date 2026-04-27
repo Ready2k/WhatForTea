@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What's for Tea? — Pantry Redesign v2</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── Reset ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+    /* ─── Warm dark palette ───────────────────────────────────── */
+    :root {
+      --page-bg:        #080604;
+      --phone-chrome:   #161008;
+      --surface:        #1e1710;
+      --surface-raised: #271f14;
+      --surface-hi:     #302618;
+      --border:         #3a2e20;
+      --border-lo:      #2a2115;
+      --tx-primary:     #f4ede4;
+      --tx-secondary:   #8a7d6e;
+      --tx-muted:       #524842;
+      --accent-warm:    #e07040;   /* terracotta — pantry CTAs */
+      --accent-warm-hv: #c85f32;
+      --accent-brand:   #10b981;   /* emerald — nav active */
+      --accent-link:    #a78bfa;   /* violet — links / secondary */
+      --ok:             #4ade80;
+      --warn:           #fbbf24;
+      --danger:         #f87171;
+      --callout-1:      #e07040;
+      --callout-2:      #a78bfa;
+      --callout-3:      #34d399;
+      --callout-4:      #fbbf24;
+      --callout-5:      #f87171;
+    }
+
+    /* ─── Page background with grain ─────────────────────────── */
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background-color: var(--page-bg);
+      background-image:
+        radial-gradient(ellipse 80% 60% at 15% 10%, rgba(50,28,8,0.7) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 85% 80%, rgba(20,10,40,0.5) 0%, transparent 55%);
+      color: var(--tx-primary);
+      min-height: 100vh;
+      padding: 48px 32px 80px;
+      position: relative;
+    }
+    /* Grain overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.028;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ─── Page header ─────────────────────────────────────────── */
+    .page-title {
+      font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #f4ede4 0%, #a08060 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-sub { font-size: 14px; color: var(--tx-secondary); margin-top: 4px; font-weight: 400; }
+
+    /* ─── Section label ───────────────────────────────────────── */
+    .row-label {
+      font-size: 11px; font-weight: 700; color: var(--tx-muted);
+      text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 16px;
+    }
+
+    /* ─── Phone frame ─────────────────────────────────────────── */
+    .phone {
+      width: 393px;
+      background: var(--phone-chrome);
+      border-radius: 52px;
+      overflow: hidden;
+      border: 1.5px solid #2a2015;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 40px 80px rgba(0,0,0,0.8),
+        0 8px 20px rgba(0,0,0,0.5);
+      position: relative;
+      flex-shrink: 0;
+    }
+    /* Subtle bezel sheen */
+    .phone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 52px;
+      background: linear-gradient(160deg, rgba(255,255,255,0.06) 0%, transparent 40%);
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 14px; left: 50%; transform: translateX(-50%);
+      width: 126px; height: 36px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 40;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset;
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 18px 24px 0;
+      z-index: 30;
+    }
+    .status-time { font-size: 15px; font-weight: 700; color: var(--tx-primary); letter-spacing: -0.2px; }
+    .status-icons { display: flex; align-items: center; gap: 6px; }
+
+    /* Scrollable content area */
+    .phone-screen {
+      position: relative;
+      height: 852px;
+      overflow-y: auto; overflow-x: hidden;
+      padding-top: 62px;
+      padding-bottom: 88px;
+      scrollbar-width: none;
+    }
+    .phone-screen::-webkit-scrollbar { display: none; }
+
+    /* Nav bar */
+    .nav-bar {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: color-mix(in srgb, var(--surface) 95%, transparent);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border-lo);
+      display: flex;
+      padding: 10px 0 28px;
+      z-index: 20;
+    }
+    .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+    .nav-label { font-size: 10px; font-weight: 600; color: var(--tx-muted); letter-spacing: 0.02em; }
+    .nav-label.active { color: var(--accent-brand); }
+
+    /* ─── In-phone components ─────────────────────────────────── */
+
+    /* Screen section header */
+    .sec-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 8px;
+    }
+    .sec-title {
+      font-size: 11px; font-weight: 700; color: var(--tx-muted);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .sec-action { font-size: 12px; font-weight: 700; color: var(--accent-link); }
+
+    /* Stat pill */
+    .stat-pill {
+      flex: 1;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .stat-val { font-size: 20px; font-weight: 800; line-height: 1; color: var(--tx-primary); }
+    .stat-lbl { font-size: 10px; color: var(--tx-secondary); margin-top: 1px; font-weight: 500; }
+
+    /* Use-It-Up card */
+    .uiu-card {
+      width: 196px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 14px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .uiu-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      border-color: rgba(224,112,64,0.3);
+    }
+    .uiu-card.urgent { border-color: rgba(248,113,113,0.25); background: color-mix(in srgb, var(--surface-raised) 90%, rgba(248,113,113,0.1)); }
+    .uiu-card.warn   { border-color: rgba(251,191,36,0.2); }
+
+    .uiu-dot-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .uiu-name { font-size: 15px; font-weight: 700; color: var(--tx-primary); margin-bottom: 2px; line-height: 1.2; }
+    .uiu-meta { font-size: 11px; color: var(--tx-secondary); margin-bottom: 10px; }
+
+    .conf-bar-wrap { height: 3px; background: var(--border-lo); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
+    .conf-bar { height: 100%; border-radius: 999px; }
+
+    .uiu-actions { display: flex; gap: 6px; }
+    .btn-ghost-danger {
+      flex: 1; padding: 7px 0; border-radius: 10px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(248,113,113,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(248,113,113,0.2);
+      transition: background 0.15s;
+    }
+    .btn-ghost-danger:hover { background: rgba(248,113,113,0.2); }
+    .btn-confirm {
+      flex: 1; padding: 7px 0; border-radius: 10px;
+      font-size: 11px; font-weight: 700;
+      background: var(--accent-warm);
+      color: #fff;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-confirm:hover { background: var(--accent-warm-hv); transform: scale(1.02); }
+
+    /* Confidence dot */
+    .conf-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .conf-hi  { background: var(--ok); box-shadow: 0 0 6px rgba(74,222,128,0.5); }
+    .conf-mid { background: var(--warn); box-shadow: 0 0 6px rgba(251,191,36,0.4); }
+    .conf-lo  { background: var(--danger); box-shadow: 0 0 6px rgba(248,113,113,0.5); }
+
+    /* Compact row */
+    .p-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px;
+      border-bottom: 1px solid var(--border-lo);
+      background: transparent;
+      transition: background 0.15s;
+    }
+    .p-row:last-child { border-bottom: none; }
+    .p-row:hover { background: var(--surface-hi); }
+    .p-row:active { background: var(--surface-hi); }
+
+    .row-name { font-size: 13px; font-weight: 600; color: var(--tx-primary); }
+    .row-meta { font-size: 11px; color: var(--tx-secondary); margin-top: 1px; }
+
+    /* Tag badge */
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; }
+    .tag-danger { background: rgba(248,113,113,0.12); color: var(--danger); }
+    .tag-warn   { background: rgba(251,191,36,0.12);  color: var(--warn); }
+    .tag-ok     { background: rgba(74,222,128,0.12);  color: var(--ok); }
+
+    /* Collapse section header */
+    .collapse-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-lo);
+      border-top: 1px solid var(--border-lo);
+      transition: background 0.15s;
+    }
+    .collapse-hdr:hover { background: var(--surface-raised); }
+    .collapse-left { display: flex; align-items: center; gap: 10px; }
+    .collapse-emoji { font-size: 16px; }
+    .collapse-name { font-size: 13px; font-weight: 700; color: var(--tx-primary); }
+    .collapse-count { font-size: 11px; color: var(--tx-muted); }
+
+    /* Inline confirm button (small) */
+    .btn-confirm-sm {
+      padding: 5px 12px; border-radius: 8px;
+      font-size: 11px; font-weight: 700;
+      background: var(--accent-warm);
+      color: #fff;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-confirm-sm:hover { background: var(--accent-warm-hv); transform: scale(1.03); }
+
+    /* Left accent stripe */
+    .stripe { width: 4px; height: 42px; border-radius: 999px; flex-shrink: 0; }
+    .stripe-danger { background: var(--danger); box-shadow: 0 0 8px rgba(248,113,113,0.4); }
+    .stripe-warn   { background: var(--warn); box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+    .stripe-ok     { background: var(--ok); box-shadow: 0 0 6px rgba(74,222,128,0.3); }
+
+    /* Filter chip */
+    .chip { padding: 6px 13px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid; white-space: nowrap; transition: all 0.15s; }
+    .chip-on  { background: var(--accent-warm); color: #fff; border-color: var(--accent-warm); }
+    .chip-off { background: transparent; color: var(--tx-secondary); border-color: var(--border); }
+    .chip-off:hover { border-color: var(--accent-warm); color: var(--accent-warm); }
+
+    /* Search input */
+    .search-wrap {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-raised); border: 1px solid var(--border);
+      border-radius: 14px; padding: 10px 14px;
+      transition: border-color 0.2s;
+    }
+    .search-wrap:focus-within { border-color: var(--accent-warm); }
+
+    /* Sheet form input */
+    .sheet-input {
+      width: 100%;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 13px; font-weight: 500;
+      color: var(--tx-primary);
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .sheet-input:focus { border-color: var(--accent-warm); }
+    .sheet-input.matched { border-color: var(--ok); background: color-mix(in srgb, var(--surface-raised) 85%, rgba(74,222,128,0.1)); }
+
+    .field-lbl { font-size: 11px; font-weight: 600; color: var(--tx-secondary); margin-bottom: 5px; }
+
+    /* Bottom sheet */
+    .sheet-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(3px);
+      z-index: 20;
+    }
+    .sheet {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-radius: 28px 28px 0 0;
+      border-top: 1px solid var(--border);
+      z-index: 30;
+      padding: 0 20px 92px;
+    }
+    .sheet-handle { width: 40px; height: 5px; background: var(--border); border-radius: 999px; margin: 14px auto 18px; }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex;
+      background: var(--surface-raised); border: 1px solid var(--border);
+      border-radius: 14px; padding: 3px;
+      margin-bottom: 18px;
+    }
+    .mode-btn {
+      flex: 1; padding: 8px; border-radius: 11px;
+      font-size: 12px; font-weight: 700;
+      transition: background 0.15s, color 0.15s;
+    }
+    .mode-btn.active { background: var(--surface-hi); color: var(--tx-primary); }
+    .mode-btn.inactive { color: var(--tx-muted); }
+
+    /* Primary CTA button */
+    .btn-primary {
+      width: 100%; padding: 15px;
+      background: var(--accent-warm);
+      color: #fff; border-radius: 16px;
+      font-size: 15px; font-weight: 800;
+      letter-spacing: -0.1px;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.2s;
+    }
+    .btn-primary:hover {
+      background: var(--accent-warm-hv);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(224,112,64,0.45);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ─── Callout badge (numbered annotation) ─────────────────── */
+    .callout {
+      position: absolute;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800;
+      z-index: 60;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      border: 1.5px solid rgba(255,255,255,0.15);
+    }
+    .c1 { background: var(--callout-1); }
+    .c2 { background: var(--callout-2); }
+    .c3 { background: var(--callout-3); color: #000; }
+    .c4 { background: var(--callout-4); color: #000; }
+    .c5 { background: var(--callout-5); }
+
+    /* ─── Annotation grid (below each frame) ─────────────────── */
+    .annot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .annot-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .annot-badge {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .annot-title { font-size: 12px; font-weight: 700; color: var(--tx-primary); margin-bottom: 3px; }
+    .annot-desc  { font-size: 11px; color: var(--tx-secondary); line-height: 1.55; }
+
+    /* concept label above phone */
+    .concept-label { font-size: 14px; font-weight: 800; color: var(--tx-primary); margin-bottom: 4px; }
+    .concept-sub   { font-size: 12px; color: var(--tx-secondary); margin-bottom: 16px; }
+
+    /* ─── Recommendation card ─────────────────────────────────── */
+    .rec-card {
+      background: linear-gradient(135deg, var(--surface-raised) 0%, color-mix(in srgb, var(--surface-raised) 70%, rgba(160,80,20,0.2)) 100%);
+      border: 1px solid color-mix(in srgb, var(--border) 60%, rgba(224,112,64,0.4));
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 1260px;
+      margin: 0 auto;
+    }
+    .rec-title { font-size: 16px; font-weight: 800; color: var(--tx-primary); margin-bottom: 12px; }
+    .rec-body  { font-size: 13px; color: var(--tx-secondary); line-height: 1.75; }
+  </style>
+</head>
+<body>
+
+  <!-- Page header -->
+  <div style="text-align:center; margin-bottom: 52px;">
+    <div class="page-title">Pantry Redesign — v2</div>
+    <div class="page-sub">Plus Jakarta Sans · Warm dark palette · Dynamic Island frames · Integrated annotations</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       THREE PHONES ROW
+  ═══════════════════════════════════════════════════════════════ -->
+  <div style="display:flex; gap:32px; justify-content:center; align-items:flex-start; flex-wrap:wrap;">
+
+    <!-- ══════════════════════════════════════════
+         PHONE A — Pantry Hub
+    ══════════════════════════════════════════ -->
+    <div>
+      <div class="concept-label">A — Pantry Hub</div>
+      <div class="concept-sub">Status summary · "Use It Up" · Category groups</div>
+
+      <div class="phone" style="position:relative;">
+        <div class="dynamic-island"></div>
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <!-- Signal -->
+            <svg width="17" height="12" viewBox="0 0 17 12" fill="var(--tx-primary)">
+              <rect x="0"  y="8" width="3" height="4" rx="1"/>
+              <rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/>
+              <rect x="9"  y="3" width="3" height="9" rx="1"/>
+              <rect x="13.5" y="0" width="3" height="12" rx="1" opacity="0.3"/>
+            </svg>
+            <!-- WiFi -->
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+              <path d="M8 9.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" fill="var(--tx-primary)"/>
+              <path d="M4.5 7C5.6 5.9 6.7 5.3 8 5.3s2.4.6 3.5 1.7" stroke="var(--tx-primary)" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+              <path d="M2 4.5C3.8 2.7 5.8 1.8 8 1.8s4.2.9 6 2.7" stroke="var(--tx-primary)" stroke-width="1.3" stroke-linecap="round" opacity="0.5" fill="none"/>
+            </svg>
+            <!-- Battery -->
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none">
+              <rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="var(--tx-primary)" stroke-opacity="0.35"/>
+              <rect x="2" y="2" width="17" height="8" rx="2" fill="var(--tx-primary)"/>
+              <path d="M22.5 4v4a2 2 0 0 0 0-4z" fill="var(--tx-primary)" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Callout badges -->
+        <div class="callout c1" style="top:68px; right:20px;">1</div>
+        <div class="callout c2" style="top:132px; left:20px;">2</div>
+        <div class="callout c3" style="top:218px; right:20px;">3</div>
+        <div class="callout c4" style="top:382px; left:20px;">4</div>
+        <div class="callout c5" style="top:462px; left:20px;">5</div>
+
+        <div class="phone-screen">
+
+          <!-- Header -->
+          <div style="padding: 6px 20px 0; display:flex; align-items:center; justify-content:space-between;">
+            <div>
+              <div style="font-size:24px; font-weight:800; letter-spacing:-0.5px; color:var(--tx-primary);">My Pantry</div>
+              <div style="font-size:11px; color:var(--tx-muted); margin-top:2px;">Updated just now</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <!-- Scan icon button -->
+              <button style="width:40px;height:40px;background:var(--surface-raised);border:1px solid var(--border);border-radius:13px;display:flex;align-items:center;justify-content:center;transition:background 0.15s;" onmouseenter="this.style.background='var(--surface-hi)'" onmouseleave="this.style.background='var(--surface-raised)'">
+                <svg width="18" height="18" fill="none" stroke="var(--tx-secondary)" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/>
+                </svg>
+              </button>
+              <!-- Add button -->
+              <button style="height:40px;padding:0 16px;background:var(--accent-warm);color:#fff;border-radius:13px;font-size:13px;font-weight:800;font-family:inherit;transition:background 0.15s,transform 0.1s,box-shadow 0.2s;" onmouseenter="this.style.background='var(--accent-warm-hv)';this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(224,112,64,0.4)'" onmouseleave="this.style.background='var(--accent-warm)';this.style.transform='';this.style.boxShadow=''">
+                + Add
+              </button>
+            </div>
+          </div>
+
+          <!-- Stat strip -->
+          <div style="display:flex;gap:8px;padding:14px 20px 0;">
+            <div class="stat-pill">
+              <div>
+                <div class="stat-val">24</div>
+                <div class="stat-lbl">items</div>
+              </div>
+            </div>
+            <div class="stat-pill" style="border-color:rgba(251,191,36,0.2);">
+              <div>
+                <div class="stat-val" style="color:var(--warn);">3</div>
+                <div class="stat-lbl">expiring</div>
+              </div>
+            </div>
+            <div class="stat-pill" style="border-color:rgba(248,113,113,0.2);">
+              <div>
+                <div class="stat-val" style="color:var(--danger);">5</div>
+                <div class="stat-lbl">low stock</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- USE IT UP section -->
+          <div class="sec-hdr">
+            <div class="sec-title">
+              <svg width="12" height="12" fill="none" stroke="var(--warn)" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+              <span style="color:var(--warn);">Use It Up</span>
+            </div>
+            <span class="sec-action">See all</span>
+          </div>
+
+          <!-- Horizontal scroll -->
+          <div style="display:flex;gap:10px;padding:0 20px 16px;overflow-x:auto;scrollbar-width:none;">
+
+            <!-- Card 1 — expires today (urgent) -->
+            <div class="uiu-card urgent">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+                <div class="uiu-dot-label" style="color:var(--danger);">Expires today</div>
+                <span style="font-size:18px;line-height:1;">🥛</span>
+              </div>
+              <div class="uiu-name">Fresh Cream</div>
+              <div class="uiu-meta">200 ml · dairy</div>
+              <div class="conf-bar-wrap"><div class="conf-bar" style="width:82%;background:var(--ok);"></div></div>
+              <div class="uiu-actions">
+                <button class="btn-ghost-danger">Remove</button>
+                <button class="btn-confirm">Confirm</button>
+              </div>
+            </div>
+
+            <!-- Card 2 — 2 days -->
+            <div class="uiu-card warn">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+                <div class="uiu-dot-label" style="color:var(--warn);">2 days left</div>
+                <span style="font-size:18px;line-height:1;">🥬</span>
+              </div>
+              <div class="uiu-name">Spinach</div>
+              <div class="uiu-meta">120 g · produce</div>
+              <div class="conf-bar-wrap"><div class="conf-bar" style="width:73%;background:var(--ok);"></div></div>
+              <div class="uiu-actions">
+                <button class="btn-ghost-danger">Remove</button>
+                <button class="btn-confirm">Confirm</button>
+              </div>
+            </div>
+
+            <!-- Card 3 — 3 days -->
+            <div class="uiu-card">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+                <div class="uiu-dot-label" style="color:var(--tx-secondary);">3 days left</div>
+                <span style="font-size:18px;line-height:1;">🍗</span>
+              </div>
+              <div class="uiu-name">Chicken Breast</div>
+              <div class="uiu-meta">350 g · meat</div>
+              <div class="conf-bar-wrap"><div class="conf-bar" style="width:90%;background:var(--ok);"></div></div>
+              <div class="uiu-actions">
+                <button class="btn-ghost-danger">Remove</button>
+                <button class="btn-confirm">Confirm</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- NEEDS CONFIRMING section -->
+          <div class="sec-hdr">
+            <div class="sec-title">
+              <div class="conf-dot conf-lo"></div>
+              <span style="color:var(--danger);">Needs Confirming</span>
+            </div>
+            <button class="sec-action" style="font-family:inherit;font-size:12px;font-weight:700;color:var(--accent-warm);">Confirm all</button>
+          </div>
+
+          <div style="background:var(--surface-raised);border-radius:18px;margin:0 20px 14px;overflow:hidden;border:1px solid var(--border);">
+            <div class="p-row">
+              <div class="conf-dot conf-lo"></div>
+              <div style="flex:1;min-width:0;">
+                <div class="row-name">Olive Oil</div>
+                <div class="row-meta">500 ml · pantry · <span style="color:var(--danger);font-weight:700;">28%</span></div>
+              </div>
+              <button class="btn-confirm-sm" style="font-family:inherit;">Confirm</button>
+            </div>
+            <div class="p-row">
+              <div class="conf-dot conf-lo"></div>
+              <div style="flex:1;min-width:0;">
+                <div class="row-name">Plain Flour</div>
+                <div class="row-meta">800 g · bakery · <span style="color:var(--danger);font-weight:700;">35%</span></div>
+              </div>
+              <button class="btn-confirm-sm" style="font-family:inherit;">Confirm</button>
+            </div>
+            <div class="p-row">
+              <div class="conf-dot conf-lo"></div>
+              <div style="flex:1;min-width:0;">
+                <div class="row-name">Butter</div>
+                <div class="row-meta">180 g · dairy · <span style="color:var(--danger);font-weight:700;">22%</span></div>
+              </div>
+              <button class="btn-confirm-sm" style="font-family:inherit;">Confirm</button>
+            </div>
+          </div>
+
+          <!-- PRODUCE section -->
+          <div class="collapse-hdr">
+            <div class="collapse-left">
+              <span class="collapse-emoji">🥦</span>
+              <span class="collapse-name">Produce</span>
+              <span class="collapse-count">6 items</span>
+            </div>
+            <svg width="16" height="16" fill="none" stroke="var(--tx-muted)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+          </div>
+          <div style="background:var(--surface-raised);border-bottom:1px solid var(--border-lo);margin-bottom:2px;">
+            <div class="p-row">
+              <div class="conf-dot conf-hi"></div>
+              <div style="flex:1;min-width:0;"><div class="row-name">Carrots</div><div class="row-meta">4 units · <span style="color:var(--ok);">91%</span></div></div>
+              <span class="tag tag-ok">Good</span>
+            </div>
+            <div class="p-row">
+              <div class="conf-dot conf-mid"></div>
+              <div style="flex:1;min-width:0;"><div class="row-name">Cherry Tomatoes</div><div class="row-meta">200 g · <span style="color:var(--warn);">62%</span></div></div>
+              <span class="tag tag-warn">Medium</span>
+            </div>
+            <div class="p-row">
+              <div class="conf-dot conf-hi"></div>
+              <div style="flex:1;min-width:0;"><div class="row-name">Garlic</div><div class="row-meta">1 bulb · <span style="color:var(--ok);">88%</span></div></div>
+              <span class="tag tag-ok">Good</span>
+            </div>
+          </div>
+
+          <!-- DAIRY -->
+          <div class="collapse-hdr">
+            <div class="collapse-left">
+              <span class="collapse-emoji">🧀</span>
+              <span class="collapse-name">Dairy</span>
+              <span class="collapse-count">4 items</span>
+            </div>
+            <svg width="16" height="16" fill="none" stroke="var(--tx-muted)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </div>
+
+          <!-- PANTRY -->
+          <div class="collapse-hdr" style="margin-top:2px;">
+            <div class="collapse-left">
+              <span class="collapse-emoji">🥫</span>
+              <span class="collapse-name">Pantry</span>
+              <span class="collapse-count">7 items</span>
+            </div>
+            <svg width="16" height="16" fill="none" stroke="var(--tx-muted)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </div>
+
+          <!-- MEAT -->
+          <div class="collapse-hdr" style="margin-top:2px;">
+            <div class="collapse-left">
+              <span class="collapse-emoji">🥩</span>
+              <span class="collapse-name">Meat &amp; Fish</span>
+              <span class="collapse-count">3 items</span>
+            </div>
+            <svg width="16" height="16" fill="none" stroke="var(--tx-muted)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+          </div>
+
+        </div><!-- /phone-screen -->
+
+        <!-- Nav bar -->
+        <div class="nav-bar">
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span class="nav-label">Home</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg><span class="nav-label">Recipes</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><span class="nav-label active">Pantry</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg><span class="nav-label">Plan</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg><span class="nav-label">Shop</span></div>
+        </div>
+      </div><!-- /phone A -->
+
+      <!-- Annotations A -->
+      <div class="annot-grid">
+        <div class="annot-card">
+          <div class="annot-badge c1">1</div>
+          <div>
+            <div class="annot-title">Warm CTA · terracotta</div>
+            <div class="annot-desc">Pantry actions use #e07040, not indigo. Food-first feel, separate from nav brand.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c2">2</div>
+          <div>
+            <div class="annot-title">3-stat strip</div>
+            <div class="annot-desc">Items / expiring / low stock at a glance. Coloured values signal urgency without a modal.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c3" style="color:#000;">3</div>
+          <div>
+            <div class="annot-title">"Use It Up" swimlane</div>
+            <div class="annot-desc">196px cards with emoji, confidence bar, and both actions — no cramping. Horizontally scrollable.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c4" style="color:#000;">4</div>
+          <div>
+            <div class="annot-title">Confidence dot → glow</div>
+            <div class="annot-desc">Replaces the full-width bar. Green/amber/red with a soft box-shadow glow. Twice as many rows visible.</div>
+          </div>
+        </div>
+        <div class="annot-card" style="grid-column:span 2;">
+          <div class="annot-badge c5">5</div>
+          <div>
+            <div class="annot-title">Collapsible category sections · hover states on every row</div>
+            <div class="annot-desc">Emoji + name + count. Each row has a :hover background transition. Collapsed sections show an arrow caret. The eye travels: stats → Use It Up → Needs Confirming → categories.</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /phone A column -->
+
+
+    <!-- ══════════════════════════════════════════
+         PHONE B — Filtered List
+    ══════════════════════════════════════════ -->
+    <div>
+      <div class="concept-label">B — Filtered List</div>
+      <div class="concept-sub">Search · filter chips · accent stripes · swipe-to-edit</div>
+
+      <div class="phone" style="position:relative;">
+        <div class="dynamic-island"></div>
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <svg width="17" height="12" viewBox="0 0 17 12" fill="var(--tx-primary)"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/><rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity="0.3"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" fill="var(--tx-primary)"/><path d="M4.5 7C5.6 5.9 6.7 5.3 8 5.3s2.4.6 3.5 1.7" stroke="var(--tx-primary)" stroke-width="1.3" stroke-linecap="round" fill="none"/><path d="M2 4.5C3.8 2.7 5.8 1.8 8 1.8s4.2.9 6 2.7" stroke="var(--tx-primary)" stroke-width="1.3" stroke-linecap="round" opacity="0.5" fill="none"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="var(--tx-primary)" stroke-opacity="0.35"/><rect x="2" y="2" width="17" height="8" rx="2" fill="var(--tx-primary)"/><path d="M22.5 4v4a2 2 0 0 0 0-4z" fill="var(--tx-primary)" opacity="0.4"/></svg>
+          </div>
+        </div>
+
+        <!-- Callout badges -->
+        <div class="callout c1" style="top:108px; left:20px;">1</div>
+        <div class="callout c2" style="top:162px; right:20px;">2</div>
+        <div class="callout c3" style="top:244px; left:20px;">3</div>
+        <div class="callout c4" style="top:360px; left:20px;">4</div>
+
+        <div class="phone-screen">
+
+          <!-- Header -->
+          <div style="padding: 6px 20px 0; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:24px; font-weight:800; letter-spacing:-0.5px; color:var(--tx-primary);">My Pantry</div>
+            <div style="display:flex;gap:8px;">
+              <button style="width:40px;height:40px;background:var(--surface-raised);border:1px solid var(--border);border-radius:13px;display:flex;align-items:center;justify-content:center;">
+                <svg width="18" height="18" fill="none" stroke="var(--tx-secondary)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"/></svg>
+              </button>
+              <button style="height:40px;padding:0 16px;background:var(--accent-warm);color:#fff;border-radius:13px;font-size:13px;font-weight:800;font-family:inherit;">+ Add</button>
+            </div>
+          </div>
+
+          <!-- Search bar -->
+          <div style="padding:12px 20px 0;">
+            <div class="search-wrap">
+              <svg width="16" height="16" fill="none" stroke="var(--tx-muted)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 0z"/></svg>
+              <span style="font-size:13px;color:var(--tx-muted);">Search pantry...</span>
+            </div>
+          </div>
+
+          <!-- Filter chips -->
+          <div style="display:flex;gap:6px;padding:10px 20px 12px;overflow-x:auto;scrollbar-width:none;">
+            <div class="chip chip-on">All 24</div>
+            <div class="chip chip-off">🔴 Attention 5</div>
+            <div class="chip chip-off">⏰ Expiring 3</div>
+            <div class="chip chip-off">🥦 Produce</div>
+            <div class="chip chip-off">🧀 Dairy</div>
+          </div>
+
+          <!-- Alert bar -->
+          <div style="margin:0 20px 12px;background:color-mix(in srgb, var(--surface-raised) 80%, rgba(251,191,36,0.08));border:1px solid rgba(251,191,36,0.18);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+            <svg width="16" height="16" fill="none" stroke="var(--warn)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <div style="flex:1;font-size:12px;font-weight:600;color:var(--warn);">3 items expiring in ≤ 3 days</div>
+            <button style="font-size:11px;font-weight:800;color:var(--accent-link);font-family:inherit;">Show →</button>
+          </div>
+
+          <!-- List -->
+          <div style="background:var(--surface-raised);border-radius:18px;margin:0 20px;overflow:hidden;border:1px solid var(--border);">
+
+            <!-- divider label: needs attention -->
+            <div style="padding:8px 16px 6px;display:flex;align-items:center;gap:8px;background:var(--surface);">
+              <div style="flex:1;height:1px;background:var(--border-lo);"></div>
+              <span style="font-size:10px;font-weight:800;color:var(--danger);text-transform:uppercase;letter-spacing:0.1em;">Needs attention</span>
+              <div style="flex:1;height:1px;background:var(--border-lo);"></div>
+            </div>
+
+            <!-- Row: expires today -->
+            <div class="p-row">
+              <div class="stripe stripe-danger"></div>
+              <div style="flex:1;min-width:0;margin-left:4px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="row-name">Fresh Cream</span>
+                  <span class="tag tag-danger">Today</span>
+                </div>
+                <div class="row-meta">200 ml · dairy</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:12px;font-weight:800;color:var(--ok);">82%</div>
+                <button style="font-size:11px;font-weight:700;color:var(--accent-warm);font-family:inherit;margin-top:2px;">Confirm</button>
+              </div>
+            </div>
+
+            <!-- Row: 2 days -->
+            <div class="p-row">
+              <div class="stripe stripe-warn"></div>
+              <div style="flex:1;min-width:0;margin-left:4px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="row-name">Spinach</span>
+                  <span class="tag tag-warn">2 days</span>
+                </div>
+                <div class="row-meta">120 g · produce</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:12px;font-weight:800;color:var(--ok);">73%</div>
+                <button style="font-size:11px;font-weight:700;color:var(--accent-warm);font-family:inherit;margin-top:2px;">Confirm</button>
+              </div>
+            </div>
+
+            <!-- Row: low confidence -->
+            <div class="p-row">
+              <div class="stripe stripe-danger"></div>
+              <div style="flex:1;min-width:0;margin-left:4px;">
+                <div class="row-name">Olive Oil</div>
+                <div class="row-meta">500 ml · pantry</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:12px;font-weight:800;color:var(--danger);">28%</div>
+                <button style="font-size:11px;font-weight:700;color:var(--accent-warm);font-family:inherit;margin-top:2px;">Confirm</button>
+              </div>
+            </div>
+
+            <!-- divider: well stocked -->
+            <div style="padding:8px 16px 6px;display:flex;align-items:center;gap:8px;background:var(--surface);">
+              <div style="flex:1;height:1px;background:var(--border-lo);"></div>
+              <span style="font-size:10px;font-weight:800;color:var(--ok);text-transform:uppercase;letter-spacing:0.1em;">Well stocked</span>
+              <div style="flex:1;height:1px;background:var(--border-lo);"></div>
+            </div>
+
+            <!-- Good rows -->
+            <div class="p-row">
+              <div class="stripe stripe-ok"></div>
+              <div style="flex:1;min-width:0;margin-left:4px;">
+                <div class="row-name">Carrots</div>
+                <div class="row-meta">4 units · produce</div>
+              </div>
+              <div style="font-size:12px;font-weight:800;color:var(--ok);">91%</div>
+            </div>
+
+            <div class="p-row">
+              <div class="stripe stripe-ok"></div>
+              <div style="flex:1;min-width:0;margin-left:4px;">
+                <div class="row-name">Chicken Breast</div>
+                <div class="row-meta">350 g · meat · <span style="color:var(--warn);font-weight:700;">3d left</span></div>
+              </div>
+              <div style="font-size:12px;font-weight:800;color:var(--ok);">90%</div>
+            </div>
+
+            <div class="p-row">
+              <div class="stripe stripe-ok"></div>
+              <div style="flex:1;min-width:0;margin-left:4px;">
+                <div class="row-name">Garlic</div>
+                <div class="row-meta">1 bulb · produce</div>
+              </div>
+              <div style="font-size:12px;font-weight:800;color:var(--ok);">88%</div>
+            </div>
+
+            <!-- Swipe hint -->
+            <div style="padding:10px 16px;display:flex;align-items:center;gap:8px;background:var(--surface);">
+              <svg width="14" height="14" fill="none" stroke="var(--tx-muted)" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+              <span style="font-size:11px;color:var(--tx-muted);">Swipe left to edit quantity or remove</span>
+              <div style="flex:1;text-align:right;font-size:11px;font-weight:700;color:var(--accent-link);">+16 more</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Nav bar -->
+        <div class="nav-bar">
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span class="nav-label">Home</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg><span class="nav-label">Recipes</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><span class="nav-label active">Pantry</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg><span class="nav-label">Plan</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg><span class="nav-label">Shop</span></div>
+        </div>
+      </div>
+
+      <!-- Annotations B -->
+      <div class="annot-grid">
+        <div class="annot-card">
+          <div class="annot-badge c1">1</div>
+          <div>
+            <div class="annot-title">Live search bar</div>
+            <div class="annot-desc">Filters inline without a page transition. Same pattern as Recipes — familiar to existing users.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c2">2</div>
+          <div>
+            <div class="annot-title">Filter chips</div>
+            <div class="annot-desc">One-tap filter by status or category. Chips use the warm accent on active state.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c3" style="color:#000;">3</div>
+          <div>
+            <div class="annot-title">Accent stripe</div>
+            <div class="annot-desc">4px glowing stripe — red / amber / green. Status scannable at a glance without reading numbers.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c4" style="color:#000;">4</div>
+          <div>
+            <div class="annot-title">Auto-sorted sections</div>
+            <div class="annot-desc">"Needs attention" floats to top always. Divider labels act as visual anchors, not just separators.</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /phone B column -->
+
+
+    <!-- ══════════════════════════════════════════
+         PHONE C — Add Item Bottom Sheet
+    ══════════════════════════════════════════ -->
+    <div>
+      <div class="concept-label">C — Add Item Sheet</div>
+      <div class="concept-sub">Bottom sheet · search/scan toggle · expiry preview</div>
+
+      <div class="phone" style="position:relative;">
+        <div class="dynamic-island"></div>
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <svg width="17" height="12" viewBox="0 0 17 12" fill="var(--tx-primary)"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="4.5" y="5.5" width="3" height="6.5" rx="1"/><rect x="9" y="3" width="3" height="9" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1" opacity="0.3"/></svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" fill="var(--tx-primary)"/><path d="M4.5 7C5.6 5.9 6.7 5.3 8 5.3s2.4.6 3.5 1.7" stroke="var(--tx-primary)" stroke-width="1.3" stroke-linecap="round" fill="none"/><path d="M2 4.5C3.8 2.7 5.8 1.8 8 1.8s4.2.9 6 2.7" stroke="var(--tx-primary)" stroke-width="1.3" stroke-linecap="round" opacity="0.5" fill="none"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="var(--tx-primary)" stroke-opacity="0.35"/><rect x="2" y="2" width="17" height="8" rx="2" fill="var(--tx-primary)"/><path d="M22.5 4v4a2 2 0 0 0 0-4z" fill="var(--tx-primary)" opacity="0.4"/></svg>
+          </div>
+        </div>
+
+        <!-- Callout badges on sheet elements -->
+        <div class="callout c1" style="bottom:400px; left:20px; z-index:61;">1</div>
+        <div class="callout c2" style="bottom:338px; right:20px; z-index:61;">2</div>
+        <div class="callout c3" style="bottom:254px; right:20px; z-index:61;">3</div>
+        <div class="callout c4" style="bottom:178px; left:20px; z-index:61;">4</div>
+
+        <div class="phone-screen">
+          <!-- Blurred pantry behind -->
+          <div style="padding: 6px 20px 0; display:flex; align-items:center; justify-content:space-between;filter:blur(1.5px);opacity:0.5;">
+            <div style="font-size:24px; font-weight:800; color:var(--tx-primary);">My Pantry</div>
+          </div>
+          <div style="filter:blur(1.5px);opacity:0.4;margin-top:10px;">
+            <div style="background:var(--surface-raised);border-radius:18px;margin:10px 20px;overflow:hidden;border:1px solid var(--border);">
+              <div class="p-row"><div class="conf-dot conf-hi"></div><div style="flex:1;"><div class="row-name">Carrots</div><div class="row-meta">4 units · 91%</div></div></div>
+              <div class="p-row"><div class="conf-dot conf-mid"></div><div style="flex:1;"><div class="row-name">Cherry Tomatoes</div><div class="row-meta">200 g · 62%</div></div></div>
+              <div class="p-row"><div class="conf-dot conf-hi"></div><div style="flex:1;"><div class="row-name">Garlic</div><div class="row-meta">1 bulb · 88%</div></div></div>
+              <div class="p-row"><div class="conf-dot conf-lo"></div><div style="flex:1;"><div class="row-name">Olive Oil</div><div class="row-meta">500 ml · 28%</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sheet backdrop -->
+        <div class="sheet-backdrop"></div>
+
+        <!-- Bottom sheet -->
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+
+          <div style="font-size:18px;font-weight:800;letter-spacing:-0.3px;color:var(--tx-primary);margin-bottom:16px;">Add to Pantry</div>
+
+          <!-- Search / Scan toggle -->
+          <div class="mode-toggle">
+            <button class="mode-btn active" style="font-family:inherit;">
+              🔍 Search ingredient
+            </button>
+            <button class="mode-btn inactive" style="font-family:inherit;">
+              📷 Scan barcode
+            </button>
+          </div>
+
+          <!-- Ingredient field -->
+          <div class="field-lbl">Ingredient</div>
+          <div style="position:relative;margin-bottom:4px;">
+            <input class="sheet-input matched" readonly value="Chicken Breast" style="padding-right:40px;" />
+            <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:20px;height:20px;background:var(--ok);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+              <svg width="10" height="10" fill="none" stroke="#000" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+            </div>
+          </div>
+          <div style="font-size:11px;font-weight:600;color:var(--ok);margin-bottom:14px;">✓ Matched as Chicken Breast (meat)</div>
+
+          <!-- Qty + Unit -->
+          <div style="display:flex;gap:10px;margin-bottom:14px;">
+            <div style="flex:1;">
+              <div class="field-lbl">Quantity</div>
+              <div class="sheet-input" style="color:var(--tx-primary);">350</div>
+            </div>
+            <div style="flex:1;">
+              <div class="field-lbl">Unit</div>
+              <div class="sheet-input" style="color:var(--tx-primary);">g</div>
+            </div>
+          </div>
+
+          <!-- Best before + preview -->
+          <div class="field-lbl">Best before <span style="color:var(--tx-muted);">(optional)</span></div>
+          <div class="sheet-input" style="color:var(--tx-primary);margin-bottom:6px;">30 Apr 2026</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">
+            <svg width="13" height="13" fill="none" stroke="var(--warn)" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <span style="font-size:11px;color:var(--warn);font-weight:600;">4 days — will appear in Use It Up</span>
+          </div>
+
+          <!-- Confidence note -->
+          <div style="background:var(--surface-hi);border:1px solid var(--border);border-radius:12px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;">
+            <svg width="14" height="14" fill="none" stroke="var(--tx-secondary)" stroke-width="1.8" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px;"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+            <span style="font-size:11px;color:var(--tx-secondary);line-height:1.55;">Confirming sets confidence to 100%. It decays daily until you confirm again — this is how WhatsForTea knows what's still fresh.</span>
+          </div>
+
+          <button class="btn-primary" style="font-family:inherit;">Add to Pantry</button>
+        </div>
+
+        <!-- Nav bar (visible above sheet) -->
+        <div class="nav-bar" style="z-index:45;">
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg><span class="nav-label">Home</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg><span class="nav-label">Recipes</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><span class="nav-label active">Pantry</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg><span class="nav-label">Plan</span></div>
+          <div class="nav-item"><svg width="20" height="20" fill="none" stroke="var(--tx-muted)" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg><span class="nav-label">Shop</span></div>
+        </div>
+      </div>
+
+      <!-- Annotations C -->
+      <div class="annot-grid">
+        <div class="annot-card">
+          <div class="annot-badge c1">1</div>
+          <div>
+            <div class="annot-title">Bottom sheet</div>
+            <div class="annot-desc">Slides up over blurred pantry. No page-push or layout shift. Draggable handle to dismiss.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c2">2</div>
+          <div>
+            <div class="annot-title">Search / Scan toggle</div>
+            <div class="annot-desc">Two entry modes in one place — no separate header button needed. Warm segmented control.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c3" style="color:#000;">3</div>
+          <div>
+            <div class="annot-title">Expiry preview</div>
+            <div class="annot-desc">Tells user before adding whether this item will land in "Use It Up". Sets expectations up front.</div>
+          </div>
+        </div>
+        <div class="annot-card">
+          <div class="annot-badge c4" style="color:#000;">4</div>
+          <div>
+            <div class="annot-title">Confidence explained</div>
+            <div class="annot-desc">Inline tooltip explains the decay model in plain English — users no longer need to guess what % means.</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /phone C column -->
+
+  </div><!-- /three phones row -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       RECOMMENDATION BLOCK
+  ═══════════════════════════════════════════════════════════════ -->
+  <div style="margin-top: 64px;">
+    <div class="rec-card">
+      <div class="rec-title">💡 Recommendation — ship A + C together, add B's search as a follow-up</div>
+      <div class="rec-body">
+        <strong style="color:var(--tx-primary);">Concept A</strong> fixes the core problem: a flat list with no hierarchy.
+        The "Use It Up" swimlane surfaces the most urgent items without the user hunting, "Needs Confirming" makes the confidence mechanic legible to non-technical users, and the collapsible category sections scale gracefully from 5 to 50 items.
+        <br><br>
+        <strong style="color:var(--tx-primary);">Concept C's bottom sheet</strong> applies to both A and B and is the single highest-ROI change — replacing the in-page form that currently pushes the entire list out of view.
+        <br><br>
+        <strong style="color:var(--tx-primary);">Concept B's search + chips</strong> are worth adding once the list grows beyond ~30 items. They're additive and don't require restructuring A.
+        <br><br>
+        <strong style="color:var(--tx-primary);">One open question:</strong> should "Confirm" remain per-item, or should there be a post-shopping bulk flow ("I just restocked — confirm everything low")? A bulk confirm in the sheet would replace dozens of individual taps and map to the real-world use case.
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
