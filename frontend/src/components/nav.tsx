@@ -60,7 +60,7 @@ export function Nav() {
         <TeaBotTrigger />
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-zinc-800 pb-safe">
         <div className="flex items-stretch h-16">
           {tabs.map((tab) => {
             const active = isActive(tab.href);
@@ -70,10 +70,10 @@ export function Nav() {
                 href={tab.href}
                 aria-label={tab.label}
                 className={`flex flex-col items-center justify-center flex-1 gap-0.5 text-xs font-medium transition-colors ${
-                  active ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                  active ? 'text-indigo-600' : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-100'
                 }`}
               >
-                <span className={active ? 'text-indigo-600' : 'text-gray-400 dark:text-gray-500'}>{tab.icon}</span>
+                <span className={active ? 'text-indigo-600' : 'text-gray-400 dark:text-zinc-500'}>{tab.icon}</span>
                 {tab.label}
               </Link>
             );
@@ -82,10 +82,10 @@ export function Nav() {
           {/* Profile link */}
           <Link
             href="/profile"
-            className={`w-12 flex flex-col items-center justify-center gap-0.5 border-l border-gray-100 dark:border-gray-700 text-xs font-medium transition-colors flex-shrink-0 ${
+            className={`w-12 flex flex-col items-center justify-center gap-0.5 border-l border-gray-100 dark:border-zinc-800 text-xs font-medium transition-colors flex-shrink-0 ${
               pathname.startsWith('/profile')
                 ? 'text-indigo-600'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-100'
             }`}
             title={currentUser ? currentUser.display_name : 'Profile'}
           >
@@ -102,7 +102,7 @@ export function Nav() {
           <button
             onClick={toggle}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="w-12 flex items-center justify-center border-l border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0"
+            className="w-12 flex items-center justify-center border-l border-gray-100 dark:border-zinc-800 text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-400 transition-colors flex-shrink-0"
           >
             {theme === 'dark' ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">

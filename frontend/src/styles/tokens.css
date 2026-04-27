@@ -33,11 +33,13 @@
 }
 
 .dark {
-  --bg-app: #030712;
-  --bg-card: #111827;
-  --text-main: #f9fafb;
-  --text-muted: #9ca3af;
-  --border-subtle: #1f2937;
+  --bg-app: #09090b;
+  --bg-card: #18181b;
+  --bg-card-raised: #27272a;
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --border-subtle: #3f3f46;
+  --border-lo: #27272a;
 }
 
 /* Base Styles using Tokens */

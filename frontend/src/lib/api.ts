@@ -557,6 +557,18 @@ export function adminResetPassword(userId: string): Promise<{ temp_password: str
   });
 }
 
+export function removeHouseholdMember(userId: string): Promise<void> {
+  return request<void>(`/api/v1/household/members/${userId}`, { method: 'DELETE' });
+}
+
+export function updateIngredient(ingredientId: string, data: { category?: string }): Promise<import('./types').Ingredient> {
+  return request(`/api/v1/ingredients/${ingredientId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
 export function joinHousehold(data: {
   invite_code: string;
   username: string;

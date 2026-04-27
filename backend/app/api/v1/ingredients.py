@@ -15,6 +15,7 @@ from app.errors import AppError, ErrorCode
 from app.schemas.ingredient import (
     Ingredient as IngredientSchema,
     IngredientCreate,
+    IngredientUpdate,
     OverrideRequest,
     ResolveRequest,
     ResolveResponse,
@@ -128,6 +129,29 @@ async def list_ingredients(
         stmt = stmt.where(Ingredient.canonical_name.ilike(f"%{q}%"))
     result = await db.execute(stmt)
     return [IngredientSchema.model_validate(i) for i in result.scalars().all()]
+
+
+@router.patch("/{ingredient_id}", response_model=IngredientSchema)
+async def update_ingredient(
+    ingredient_id: uuid.UUID,
+    body: IngredientUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> IngredientSchema:
+    """Update mutable fields on a canonical ingredient (e.g. category)."""
+    from app.models.ingredient import Ingredient
+
+    ingredient = await db.get(Ingredient, ingredient_id)
+    if ingredient is None:
+        raise AppError(
+            code=ErrorCode.INGREDIENT_NOT_FOUND,
+            message=f"Ingredient {ingredient_id} not found",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(ingredient, field, value)
+    await db.commit()
+    await db.refresh(ingredient)
+    return IngredientSchema.model_validate(ingredient)
 
 
 @router.get("/{ingredient_id}", response_model=IngredientSchema)

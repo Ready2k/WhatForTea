@@ -6,6 +6,7 @@ POST   /api/v1/users/me/password                 — change password (clears for
 GET    /api/v1/household                         — household info + invite code (admin only)
 POST   /api/v1/household/invite                  — rotate invite code (admin only)
 GET    /api/v1/household/members                 — list all household members
+DELETE /api/v1/household/members/{user_id}       — admin: remove a member from the household
 POST   /api/v1/household/join                    — join a household with invite code (creates new user)
 POST   /api/v1/admin/users/{user_id}/reset-password — admin: set temp password, force change on next login
 """
@@ -169,6 +170,41 @@ async def list_members(request: Request, db: AsyncSession = Depends(get_db)):
     )
     users = result.scalars().all()
     return [UserProfile.model_validate(u) for u in users]
+
+
+@router.delete("/household/members/{user_id}", status_code=204)
+async def remove_member(user_id: _uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    from app.models.user import User
+
+    caller_id = _require_user_id(request)
+    caller_hid = _require_household_id(request)
+
+    caller = await db.get(User, caller_id)
+    if caller is None or not caller.is_admin:
+        raise AppError(ErrorCode.UNAUTHORIZED, "Admin access required", status_code=403)
+
+    if user_id == caller_id:
+        raise AppError(ErrorCode.VALIDATION_ERROR, "Cannot remove yourself from the household", status_code=400)
+
+    target = await db.get(User, user_id)
+    if target is None or target.household_id != caller_hid:
+        raise AppError(ErrorCode.NOT_FOUND, "User not found", status_code=404)
+
+    # Prevent removing the last admin
+    if target.is_admin:
+        result = await db.execute(
+            select(User).where(User.household_id == caller_hid, User.is_admin == True)
+        )
+        admin_count = len(result.scalars().all())
+        if admin_count <= 1:
+            raise AppError(ErrorCode.VALIDATION_ERROR, "Cannot remove the last admin from the household", status_code=400)
+
+    await db.delete(target)
+    await db.commit()
+    logger.warning(
+        "auth.member_removed",
+        extra={"admin_id": str(caller_id), "removed_user_id": str(user_id), "removed_username": target.username},
+    )
 
 
 @router.post("/household/join", response_model=UserProfile, status_code=201)

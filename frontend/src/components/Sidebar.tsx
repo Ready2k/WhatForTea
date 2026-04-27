@@ -30,7 +30,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-[220px] fixed top-0 left-0 h-full border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0f1117] z-40 py-6">
+    <aside className="hidden md:flex flex-col w-[220px] fixed top-0 left-0 h-full border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 z-40 py-6">
       
       {/* App Branding */}
       <div className="px-6 mb-8 relative">
@@ -46,16 +46,16 @@ export function Sidebar() {
           </div>
         </button>
         {showVersion && (
-          <div className="absolute left-4 right-4 top-full mt-2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-3">
+          <div className="absolute left-4 right-4 top-full mt-2 z-50 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-200">App Info</span>
-              <button onClick={() => setShowVersion(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <span className="text-xs font-bold text-gray-700 dark:text-zinc-100">App Info</span>
+              <button onClick={() => setShowVersion(false)} className="text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-100">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="space-y-1 font-mono text-[11px] text-gray-500 dark:text-gray-400">
-              <div><span className="text-gray-400 dark:text-gray-500">version </span>{VERSION}</div>
-              <div><span className="text-gray-400 dark:text-gray-500">stack </span>Next.js · FastAPI · Postgres</div>
+            <div className="space-y-1 font-mono text-[11px] text-gray-500 dark:text-zinc-400">
+              <div><span className="text-gray-400 dark:text-zinc-500">version </span>{VERSION}</div>
+              <div><span className="text-gray-400 dark:text-zinc-500">stack </span>Next.js · FastAPI · Postgres</div>
             </div>
           </div>
         )}
@@ -71,12 +71,12 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                active 
-                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100'
+                active
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100'
               }`}
             >
-              <Icon className={`w-5 h-5 ${active ? 'text-emerald-600 dark:text-emerald-500' : 'text-gray-400 dark:text-gray-500'}`} />
+              <Icon className={`w-5 h-5 ${active ? 'text-emerald-600 dark:text-emerald-500' : 'text-gray-400 dark:text-zinc-500'}`} />
               {item.label}
             </Link>
           );
@@ -98,20 +98,20 @@ export function Sidebar() {
         </button>
 
         {/* User Profile & Theme */}
-        <div className="flex items-center gap-3 px-2 pt-4 border-t border-gray-100 dark:border-gray-800/60">
+        <div className="flex items-center gap-3 px-2 pt-4 border-t border-gray-100 dark:border-zinc-800">
           <Link href="/profile" className="flex items-center gap-2 flex-1 min-w-0 group">
             <div className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0 group-hover:ring-2 ring-emerald-500 transition-all">
               <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                 {currentUser ? currentUser.display_name.charAt(0).toUpperCase() : 'U'}
               </span>
             </div>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+            <span className="text-sm font-medium text-gray-700 dark:text-zinc-400 truncate group-hover:text-gray-900 dark:group-hover:text-[#f4ede4] transition-colors">
               {currentUser ? currentUser.display_name : 'Profile'}
             </span>
           </Link>
           <button
             onClick={toggle}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-400 dark:hover:bg-zinc-800 bg-gray-50 hover:bg-gray-100 transition-colors"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

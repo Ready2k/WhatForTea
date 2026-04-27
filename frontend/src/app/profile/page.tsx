@@ -11,6 +11,7 @@ import {
   useHousehold,
   useRotateInviteCode,
   useHouseholdMembers,
+  useRemoveHouseholdMember,
 } from '@/lib/hooks';
 
 const VOICE_KEY = 'wft_tts_voice';
@@ -121,6 +122,7 @@ export default function ProfilePage() {
   const updateProfile = useUpdateUserProfile();
   const changePw = useChangePassword();
   const rotateInvite = useRotateInviteCode();
+  const removeMember = useRemoveHouseholdMember();
 
   const [displayName, setDisplayName] = useState('');
   const [nameEditing, setNameEditing] = useState(false);
@@ -131,6 +133,9 @@ export default function ProfilePage() {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [removeTargetId, setRemoveTargetId] = useState<string | null>(null);
+  const [removeTargetName, setRemoveTargetName] = useState('');
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -404,12 +409,20 @@ export default function ProfilePage() {
                       {m.is_admin && <span className="text-xs text-emerald-600 dark:text-emerald-400">admin</span>}
                       {m.id === user.id && <span className="text-xs text-gray-400 dark:text-zinc-500">(you)</span>}
                       {user.is_admin && m.id !== user.id && (
-                        <button
-                          onClick={() => { setResetTargetId(m.id); setResetTargetName(m.display_name); setTempPassword(null); setResetError(null); }}
-                          className="ml-auto text-xs px-2 py-0.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-zinc-300 rounded"
-                        >
-                          Reset password
-                        </button>
+                        <div className="ml-auto flex gap-1">
+                          <button
+                            onClick={() => { setResetTargetId(m.id); setResetTargetName(m.display_name); setTempPassword(null); setResetError(null); }}
+                            className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-zinc-300 rounded"
+                          >
+                            Reset password
+                          </button>
+                          <button
+                            onClick={() => { setRemoveTargetId(m.id); setRemoveTargetName(m.display_name); setRemoveError(null); }}
+                            className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-400 rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       )}
                     </li>
                   ))}
@@ -419,6 +432,42 @@ export default function ProfilePage() {
           </section>
         )}
       </div>
+
+      {/* Remove member confirmation modal */}
+      {removeTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Remove member</h3>
+            <p className="text-sm text-gray-500 dark:text-zinc-400">
+              Are you sure you want to remove <span className="text-gray-800 dark:text-zinc-200 font-medium">{removeTargetName}</span> from the household? Their account will be deleted and they will need a new invite to rejoin.
+            </p>
+            {removeError && <p className="text-sm text-red-500 dark:text-red-400">{removeError}</p>}
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={async () => {
+                  setRemoveError(null);
+                  try {
+                    await removeMember.mutateAsync(removeTargetId);
+                    setRemoveTargetId(null);
+                  } catch (err: any) {
+                    setRemoveError(err.message ?? 'Failed to remove member');
+                  }
+                }}
+                disabled={removeMember.isPending}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded-xl text-sm font-medium text-white"
+              >
+                {removeMember.isPending ? 'Removing…' : 'Remove member'}
+              </button>
+              <button
+                onClick={() => setRemoveTargetId(null)}
+                className="flex-1 py-2 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-700 dark:text-white rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin reset password modal */}
       {resetTargetId && (

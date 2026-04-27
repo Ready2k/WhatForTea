@@ -31,6 +31,8 @@ import {
   getHousehold,
   rotateInviteCode,
   getHouseholdMembers,
+  removeHouseholdMember,
+  updateIngredient,
   getPendingIngestJobs,
   dismissIngestJob,
 } from './api';
@@ -328,5 +330,28 @@ export function useHouseholdMembers() {
     queryFn: getHouseholdMembers,
     staleTime: 2 * 60 * 1000,
     retry: false,
+  });
+}
+
+export function useUpdateIngredientCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ingredientId, category }: { ingredientId: string; category: string }) =>
+      updateIngredient(ingredientId, { category }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['available'] });
+      qc.invalidateQueries({ queryKey: ['matches'] });
+    },
+  });
+}
+
+export function useRemoveHouseholdMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => removeHouseholdMember(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['household-members'] });
+      qc.invalidateQueries({ queryKey: ['household'] });
+    },
   });
 }
