@@ -10,10 +10,10 @@ export function WeekPlan({ week_start, entries = [], className = '' }: any) {
   };
 
   return (
-    <div className={`p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm ${className}`}>
-      <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
-        <Calendar size={18} className="text-indigo-500" />
-        <h3 className="font-bold text-gray-900 dark:text-white leading-tight">
+    <div className={`p-4 rounded-xl border border-brand-linen dark:border-brand-primary-hover/50 bg-brand-card dark:bg-brand-primary shadow-sm ${className}`}>
+      <div className="flex items-center gap-2 mb-4 border-b border-brand-linen/50 dark:border-brand-primary-hover/30 pb-3">
+        <Calendar size={18} className="text-brand-primary" />
+        <h3 className="font-bold text-brand-ink dark:text-brand-background leading-tight">
           Plan for week of {week_start}
         </h3>
       </div>
@@ -22,15 +22,15 @@ export function WeekPlan({ week_start, entries = [], className = '' }: any) {
         {DAYS.map((dayName, idx) => {
           const entry = getEntryForDay(idx);
           return (
-            <div key={idx} className="flex items-stretch min-h-[44px] bg-gray-50 dark:bg-gray-900/50 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800">
-              <div className="w-12 flex items-center justify-center bg-gray-100 dark:bg-gray-800 font-medium text-xs text-gray-500 shrink-0">
+            <div key={idx} className="flex items-stretch min-h-[44px] bg-brand-linen/10 dark:bg-brand-primary-hover/20 rounded-lg overflow-hidden border border-brand-linen/50 dark:border-brand-primary-hover/30">
+              <div className="w-12 flex items-center justify-center bg-brand-linen/20 dark:bg-brand-primary-hover/50 font-medium text-xs text-brand-muted shrink-0">
                 {dayName}
               </div>
               <div className="flex-1 p-2 flex items-center">
                 {entry ? (
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1">{entry.title}</span>
-                    <span className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-1.5 py-0.5 rounded ml-2 shrink-0">
+                    <span className="text-sm font-medium text-brand-ink dark:text-brand-background line-clamp-1">{entry.title}</span>
+                    <span className="text-[10px] bg-brand-primary/10 text-brand-primary dark:bg-brand-primary/20 dark:text-brand-secondary px-1.5 py-0.5 rounded ml-2 shrink-0">
                       {entry.servings}p
                     </span>
                   </div>

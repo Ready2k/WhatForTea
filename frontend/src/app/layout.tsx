@@ -34,8 +34,8 @@ export const viewport: Viewport = {
   // Prevent zoom on input focus (important for cooking mode UX)
   maximumScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#111827" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F1E6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1F18" },
   ],
 };
 
@@ -54,7 +54,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 antialiased font-sans">
+      <body className="bg-brand-background dark:bg-[#0B1F18] text-brand-ink dark:text-brand-background antialiased font-sans">
         <Providers>
           <div className="min-h-screen pb-16 md:pb-0 md:pl-[220px]">
             {children}

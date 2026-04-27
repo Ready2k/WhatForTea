@@ -114,19 +114,19 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
   const isLoading = state.phase === 'loading';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-start sm:items-center justify-center px-4 pt-12 pb-4">
-      <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-brand-primary/80 flex items-start sm:items-center justify-center px-4 pt-12 pb-4 backdrop-blur-sm">
+      <div className="bg-brand-card dark:bg-brand-primary rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-brand-linen dark:border-brand-primary/60">
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
-          <h2 className="font-bold text-gray-900 dark:text-white">Scan Barcode</h2>
-          <button
-            onClick={() => { stopCamera(); onClose(); }}
-            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <h2 className="font-bold text-brand-ink dark:text-brand-background">Scan Barcode</h2>
+            <button
+              onClick={() => { stopCamera(); onClose(); }}
+              className="w-8 h-8 rounded-full bg-brand-linen/30 dark:bg-brand-primary-hover flex items-center justify-center text-brand-muted hover:bg-brand-linen/50 dark:hover:bg-brand-accent transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
         </div>
 
         <div className="px-5 pb-6 space-y-4">
@@ -142,11 +142,11 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
               {state.phase === 'scanning' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   {/* Targeting overlay */}
-                  <div className="w-48 h-32 border-2 border-white/70 rounded-lg relative">
-                    <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-emerald-400 rounded-tl-sm" />
-                    <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-emerald-400 rounded-tr-sm" />
-                    <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-emerald-400 rounded-bl-sm" />
-                    <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-emerald-400 rounded-br-sm" />
+                  <div className="w-48 h-32 border-2 border-white/50 rounded-lg relative">
+                    <div className="absolute top-0 left-0 w-5 h-5 border-t-4 border-l-4 border-brand-accent rounded-tl-sm" />
+                    <div className="absolute top-0 right-0 w-5 h-5 border-t-4 border-r-4 border-brand-accent rounded-tr-sm" />
+                    <div className="absolute bottom-0 left-0 w-5 h-5 border-b-4 border-l-4 border-brand-accent rounded-bl-sm" />
+                    <div className="absolute bottom-0 right-0 w-5 h-5 border-b-4 border-r-4 border-brand-accent rounded-br-sm" />
                   </div>
                   <p className="text-white text-xs mt-3 text-shadow">Point at a barcode</p>
                 </div>
@@ -162,9 +162,9 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
           {/* Loading state */}
           {isLoading && (
             <div className="flex flex-col items-center py-4 gap-3">
-              <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Looking up barcode <span className="font-mono text-gray-800 dark:text-gray-200">{(state as any).barcode}</span>…
+              <div className="w-8 h-8 border-3 border-brand-herb border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-brand-muted dark:text-brand-secondary">
+                Looking up barcode <span className="font-mono text-brand-ink dark:text-brand-background">{(state as any).barcode}</span>…
               </p>
             </div>
           )}
@@ -173,28 +173,28 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
           {result && (
             <div className="space-y-3">
               {result.source === 'not_found' || result.source === 'error' ? (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/60 rounded-xl">
-                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                <div className="p-3 bg-brand-tomato/10 border border-brand-tomato/30 rounded-xl">
+                  <p className="text-sm font-semibold text-brand-tomato">
                     {result.source === 'not_found' ? 'Product not found' : 'Lookup failed'}
                   </p>
-                  <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">
+                  <p className="text-xs text-brand-tomato/80 mt-0.5">
                     {result.source === 'error' ? result.error : 'Barcode not in Open Food Facts database.'}
                   </p>
                 </div>
               ) : (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/60 rounded-xl space-y-1">
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">
+                <div className="p-3 bg-brand-herb/10 border border-brand-herb/30 rounded-xl space-y-1">
+                  <p className="text-xs text-brand-herb font-medium uppercase tracking-wide">
                     {result.source === 'cache' ? 'Cached' : 'Open Food Facts'}
                   </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{result.product_name}</p>
+                  <p className="text-sm font-semibold text-brand-ink dark:text-brand-background">{result.product_name}</p>
                   {result.canonical_name && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Matched: <span className="font-medium text-gray-700 dark:text-gray-300">{result.canonical_name}</span>
-                      <span className="ml-1 text-gray-400">({Math.round(result.confidence * 100)}%)</span>
+                    <p className="text-xs text-brand-muted">
+                      Matched: <span className="font-medium text-brand-primary dark:text-brand-accent-soft">{result.canonical_name}</span>
+                      <span className="ml-1 opacity-60">({Math.round(result.confidence * 100)}%)</span>
                     </p>
                   )}
                   {!result.ingredient_id && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    <p className="text-xs text-brand-accent mt-1 italic">
                       Could not match to a known ingredient — you can still add it manually.
                     </p>
                   )}
@@ -202,28 +202,28 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
               )}
 
               <div className="flex gap-2">
-                <button
-                  onClick={() => onResolved(result)}
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
-                >
-                  Add to Pantry
-                </button>
-                <button
-                  onClick={() => {
-                    setManualInput('');
-                    setState({ phase: hasBarcodeDetector ? 'idle' : 'idle' });
-                  }}
-                  className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Scan again
-                </button>
+                  <button
+                    onClick={() => onResolved(result)}
+                    className="flex-1 py-2.5 bg-brand-primary text-brand-background text-sm font-semibold rounded-xl hover:bg-brand-primary-hover transition-colors shadow-sm"
+                  >
+                    Add to Pantry
+                  </button>
+                  <button
+                    onClick={() => {
+                      setManualInput('');
+                      setState({ phase: hasBarcodeDetector ? 'idle' : 'idle' });
+                    }}
+                    className="px-4 py-2.5 bg-brand-linen/30 dark:bg-brand-primary-hover text-brand-primary dark:text-brand-secondary text-sm font-semibold rounded-xl hover:bg-brand-linen/50 dark:hover:bg-brand-accent transition-colors"
+                  >
+                    Scan again
+                  </button>
+                </div>
               </div>
-            </div>
           )}
 
           {/* Error banner */}
           {state.phase === 'error' && (
-            <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/60 rounded-xl px-3 py-2">
+            <p className="text-sm text-brand-tomato bg-brand-tomato/10 border border-brand-tomato/30 rounded-xl px-3 py-2">
               {state.message}
             </p>
           )}
@@ -237,12 +237,12 @@ export function BarcodeScanner({ onResolved, onClose }: Props) {
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 placeholder={hasBarcodeDetector ? 'Or enter barcode manually' : 'Enter barcode number'}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
+                className="flex-1 px-3 py-2 text-sm border border-brand-linen dark:border-brand-primary/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-accent dark:bg-brand-primary-hover dark:text-brand-background dark:placeholder-brand-muted"
               />
               <button
                 type="submit"
                 disabled={!manualInput.trim()}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                className="px-4 py-2 bg-brand-primary text-brand-background text-sm font-medium rounded-xl hover:bg-brand-primary-hover disabled:opacity-40 transition-colors shadow-sm"
               >
                 Go
               </button>

@@ -99,11 +99,11 @@ export function PushNotifications() {
 
   if (permission === 'denied') {
     return (
-      <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
-        <BellOff className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 p-3 bg-brand-accent/10 dark:bg-brand-accent/20 border border-brand-accent/20 dark:border-brand-accent/30 rounded-xl">
+        <BellOff className="w-5 h-5 text-brand-accent flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Notifications blocked</p>
-          <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+          <p className="text-sm font-medium text-brand-primary dark:text-brand-accent">Notifications blocked</p>
+          <p className="text-xs text-brand-primary/70 dark:text-brand-accent/70 mt-0.5">
             Allow notifications in your browser settings to receive expiry and planning alerts.
           </p>
         </div>
@@ -112,18 +112,18 @@ export function PushNotifications() {
   }
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+    <div className="flex items-center justify-between p-3 bg-brand-linen/10 dark:bg-brand-primary-hover/50 rounded-xl">
       <div className="flex items-center gap-3">
         {subscribed ? (
-          <Bell className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+          <Bell className="w-5 h-5 text-brand-primary dark:text-brand-accent flex-shrink-0" />
         ) : (
-          <BellOff className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+          <BellOff className="w-5 h-5 text-brand-muted dark:text-brand-secondary flex-shrink-0" />
         )}
         <div>
-          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+          <p className="text-sm font-medium text-brand-ink dark:text-brand-background">
             {subscribed ? 'Notifications on' : 'Push notifications'}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-brand-muted dark:text-brand-secondary mt-0.5">
             {subscribed
               ? 'Expiry alerts and weekly planning reminders enabled.'
               : 'Get alerts when items expire and your weekly plan is empty.'}
@@ -134,7 +134,7 @@ export function PushNotifications() {
         onClick={handleToggle}
         disabled={loading}
         className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 disabled:opacity-50 ${
-          subscribed ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'
+          subscribed ? 'bg-brand-primary dark:bg-brand-accent' : 'bg-brand-linen dark:bg-brand-primary-hover'
         }`}
         aria-label={subscribed ? 'Disable notifications' : 'Enable notifications'}
       >

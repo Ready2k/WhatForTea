@@ -24,17 +24,17 @@ const CATEGORY_EMOJI: Record<string, string> = {
 const CATEGORY_ORDER = ['produce', 'dairy', 'meat', 'fish', 'seafood', 'pantry', 'spice', 'bakery', 'other'];
 
 const W = {
-  bg:        'dark:bg-zinc-950',
-  surface:   'dark:bg-zinc-900',
-  raised:    'dark:bg-zinc-800',
-  hi:        'dark:bg-zinc-700',
-  border:    'dark:border-zinc-700',
-  borderLo:  'dark:border-zinc-800',
-  txPrimary: 'dark:text-zinc-100',
-  txSecond:  'dark:text-zinc-400',
-  txMuted:   'dark:text-zinc-500',
-  hoverHi:   'dark:hover:bg-zinc-700',
-  hoverRaised: 'dark:hover:bg-zinc-800',
+  bg:        'dark:bg-brand-primary',
+  surface:   'dark:bg-brand-primary-hover/30',
+  raised:    'dark:bg-brand-primary-hover/50',
+  hi:        'dark:bg-brand-primary-hover',
+  border:    'dark:border-brand-primary-hover/60',
+  borderLo:  'dark:border-brand-primary-hover/40',
+  txPrimary: 'dark:text-brand-background',
+  txSecond:  'dark:text-brand-secondary',
+  txMuted:   'dark:text-brand-primary/50',
+  hoverHi:   'dark:hover:bg-brand-accent',
+  hoverRaised: 'dark:hover:bg-brand-primary-hover',
 };
 
 function catEmoji(cat: string) { return CATEGORY_EMOJI[cat] ?? '📦'; }
@@ -51,10 +51,10 @@ function daysUntil(dateStr: string): number {
 
 function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
   const days = daysUntil(expiresAt);
-  if (days < 0)  return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400">Expired</span>;
-  if (days === 0) return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400">Today</span>;
-  if (days <= 3)  return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400">{days}d left</span>;
-  return <span className="text-[10px] text-gray-400 dark:text-zinc-500">{new Date(expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>;
+  if (days < 0)  return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-tomato/10 text-brand-tomato">Expired</span>;
+  if (days === 0) return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-tomato/10 text-brand-tomato">Today</span>;
+  if (days <= 3)  return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-accent/10 text-brand-primary"> {days}d left</span>;
+  return <span className="text-[10px] text-brand-muted">{new Date(expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>;
 }
 
 function ConfidenceDot({ confidence }: { confidence: number }) {
@@ -98,10 +98,10 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
   return (
     <div className={`w-44 flex-shrink-0 rounded-2xl border p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl ${
       isUrgent
-        ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800/30'
+        ? 'bg-brand-tomato/10 border-brand-tomato/30'
         : isWarn
-          ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-700/25'
-          : `bg-white border-gray-200 ${W.raised} ${W.border}`
+          ? 'bg-brand-accent/10 border-brand-accent/30'
+          : `bg-brand-card border-brand-linen ${W.raised} ${W.border}`
     }`}>
       <div className="flex items-start justify-between mb-2">
         <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
@@ -110,14 +110,14 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
         <span className="text-lg leading-none">{catEmoji(item.ingredient.category)}</span>
       </div>
 
-      <p className={`text-sm font-bold leading-snug mb-0.5 line-clamp-2 text-gray-900 ${W.txPrimary}`}>
+      <p className={`text-sm font-bold leading-snug mb-0.5 line-clamp-2 text-brand-ink ${W.txPrimary}`}>
         {item.ingredient.canonical_name}
       </p>
-      <p className={`text-[11px] mb-3 text-gray-500 ${W.txSecond}`}>
+      <p className={`text-[11px] mb-3 text-brand-muted ${W.txSecond}`}>
         {item.available_quantity.toFixed(1)} {item.unit}
       </p>
 
-      <div className="h-[3px] bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden mb-3">
+      <div className="h-[3px] bg-brand-linen/30 dark:bg-brand-primary-hover/50 rounded-full overflow-hidden mb-3">
         <div
           className={`h-full rounded-full ${confPct >= 70 ? 'bg-green-500' : confPct >= 40 ? 'bg-yellow-400' : 'bg-red-500'}`}
           style={{ width: `${confPct}%` }}
@@ -129,7 +129,7 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
           <>
             <button
               onClick={del.cancel}
-              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-700 transition-colors"
+              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-bold bg-brand-linen/20 text-brand-muted hover:bg-brand-linen/40 dark:bg-brand-primary-hover dark:text-brand-secondary transition-colors"
             >
               Cancel
             </button>
@@ -146,14 +146,14 @@ function UseItUpCard({ item, onConfirm, onRemove, confirmPending, deletePending 
             <button
               onClick={del.request}
               disabled={deletePending}
-              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-bold bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:border dark:border-red-500/20 disabled:opacity-40 transition-colors"
+              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-bold bg-brand-tomato/10 text-brand-tomato hover:bg-brand-tomato/20 dark:bg-brand-tomato/20 dark:border dark:border-brand-tomato/30 disabled:opacity-40 transition-colors"
             >
               Remove
             </button>
             <button
               onClick={onConfirm}
               disabled={confirmPending}
-              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-all active:scale-95"
+              className="flex-1 py-1.5 rounded-[10px] text-[11px] font-bold bg-brand-primary text-brand-background hover:bg-brand-primary-hover disabled:opacity-50 transition-all active:scale-95 shadow-sm"
             >
               {confirmPending ? '…' : 'Confirm'}
             </button>
@@ -299,7 +299,7 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
           <>
             <button
               onClick={() => { snapClose(); setEditingId(item.pantry_item_id); setEditQty(item.total_quantity.toString()); }}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold transition-colors"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 bg-brand-primary hover:bg-brand-primary-hover text-brand-background text-[10px] font-bold transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/>
@@ -322,7 +322,7 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
 
       {/* Row content — slides left on swipe */}
       <div
-        className={`flex items-center gap-2.5 px-4 py-3 transition-colors bg-white dark:bg-zinc-900 hover:bg-gray-50 ${W.hoverRaised} group`}
+        className={`flex items-center gap-2.5 px-4 py-3 transition-colors bg-brand-card dark:bg-brand-primary hover:bg-brand-linen/10 ${W.hoverRaised} group`}
         style={{ transform: translate, transition, willChange: 'transform' }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -334,7 +334,7 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-sm font-semibold text-gray-900 ${W.txPrimary} truncate`}>
+            <span className={`text-sm font-semibold text-brand-ink ${W.txPrimary} truncate`}>
               {item.ingredient.canonical_name}
             </span>
             {item.expires_at && <ExpiryBadge expiresAt={item.expires_at} />}
@@ -348,27 +348,27 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
                 onChange={e => setEditQty(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingId(null); }}
                 autoFocus
-                className="w-20 px-2 py-1 text-sm border border-indigo-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-zinc-800 dark:text-zinc-100 dark:border-indigo-400/60"
+                 className="w-20 px-2 py-1 text-sm border border-brand-accent rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent dark:bg-brand-primary-hover dark:text-brand-background dark:border-brand-accent/60"
               />
               <span className={`text-xs text-gray-500 ${W.txSecond}`}>{item.unit}</span>
               <select
                 value={editCategory}
                 onChange={e => setEditCategory(e.target.value)}
-                className="text-xs border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 dark:text-zinc-100 px-2 py-1 focus:outline-none focus:border-indigo-400"
+                 className="text-xs border border-brand-linen dark:border-brand-primary/60 rounded-lg bg-brand-card dark:bg-brand-primary-hover dark:text-brand-background px-2 py-1 focus:outline-none focus:border-brand-accent"
               >
                 {CATEGORY_ORDER.map(c => <option key={c} value={c}>{catEmoji(c)} {c}</option>)}
               </select>
-              <button onClick={handleSave} className="text-xs px-2 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save</button>
+               <button onClick={handleSave} className="text-xs px-2 py-1 bg-brand-primary text-brand-background rounded-lg hover:bg-brand-primary-hover">Save</button>
               <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-zinc-100">×</button>
             </div>
           ) : (
             <button
               onClick={() => { if (!snapped) { setEditingId(item.pantry_item_id); setEditQty(item.total_quantity.toString()); } }}
-              className={`text-[11px] text-gray-500 ${W.txSecond} mt-0.5 hover:text-indigo-600 dark:hover:text-indigo-400 text-left`}
+              className={`text-[11px] text-brand-muted ${W.txSecond} mt-0.5 hover:text-brand-primary dark:hover:text-brand-accent text-left`}
             >
               {item.available_quantity.toFixed(1)} {item.unit}
-              {item.reserved_quantity > 0 && <span className="text-yellow-600 dark:text-yellow-400"> · {item.reserved_quantity.toFixed(1)} reserved</span>}
-              <span className={`ml-1 font-bold ${confPct >= 70 ? 'text-green-600 dark:text-green-400' : confPct >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}> {confPct}%</span>
+               {item.reserved_quantity > 0 && <span className="text-brand-accent"> · {item.reserved_quantity.toFixed(1)} reserved</span>}
+              <span className={`ml-1 font-bold ${confPct >= 70 ? 'text-brand-herb' : confPct >= 40 ? 'text-brand-accent' : 'text-brand-tomato'}`}> {confPct}%</span>
               <span className="ml-1 opacity-0 group-hover:opacity-50 transition-opacity">✎</span>
             </button>
           )}
@@ -376,13 +376,13 @@ function PantryRow({ item, editingId, editQty, setEditQty, setEditingId, onSaveQ
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {isLow && (
-            <button
-              onClick={e => { e.stopPropagation(); onConfirm(); }}
-              disabled={confirmPending}
-              className="text-[11px] font-bold px-2.5 py-1.5 rounded-[8px] bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {confirmPending ? '…' : 'Confirm'}
-            </button>
+              <button
+                onClick={e => { e.stopPropagation(); onConfirm(); }}
+                disabled={confirmPending}
+                className="text-[11px] font-bold px-2.5 py-1.5 rounded-[8px] bg-brand-primary text-brand-background hover:bg-brand-primary-hover disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {confirmPending ? '…' : 'Confirm'}
+              </button>
           )}
           {/* Desktop-only delete — hidden on touch (swipe handles it) */}
           {del.pending ? (
@@ -531,7 +531,7 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
         onClick={handleClose}
       />
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-zinc-900 rounded-t-[28px] border-t border-gray-200 ${W.border} shadow-2xl transition-transform duration-300 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-brand-card dark:bg-brand-primary rounded-t-[28px] border-t border-brand-linen ${W.border} shadow-2xl transition-transform duration-300 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}
       >
         {/* Handle */}
@@ -541,10 +541,10 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
 
         <div className="px-5 pb-4 overflow-y-auto max-h-[85vh]">
           <div className="flex items-center justify-between mb-5">
-            <h2 className={`text-lg font-extrabold text-gray-900 ${W.txPrimary} tracking-tight`}>Add to Pantry</h2>
+            <h2 className={`text-lg font-extrabold text-brand-ink ${W.txPrimary} tracking-tight`}>Add to Pantry</h2>
             <button
               onClick={handleClose}
-              className={`w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 hover:bg-gray-200 ${W.hoverHi} transition-colors`}
+               className={`w-8 h-8 flex items-center justify-center rounded-full bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 ${W.hoverHi} transition-colors`}
             >
               ✕
             </button>
@@ -553,9 +553,9 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Ingredient search */}
             <div className="relative">
-              <label className={`block text-xs font-semibold text-gray-500 ${W.txSecond} mb-1.5`}>Ingredient</label>
+               <label className={`block text-xs font-semibold text-brand-muted ${W.txSecond} mb-1.5`}>Ingredient</label>
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-zinc-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted dark:text-brand-secondary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803a7.5 7.5 0 0010.607 0z"/>
                 </svg>
                 <input
@@ -572,9 +572,9 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
                   autoComplete="off"
                   className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border focus:outline-none transition-colors ${W.txPrimary} ${
                     form.ingredient
-                      ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
-                      : `border-gray-200 ${W.border} bg-white dark:bg-zinc-800 dark:placeholder-zinc-500`
-                  } focus:border-indigo-400 dark:focus:border-indigo-400`}
+                       ? 'border-brand-herb/50 bg-brand-herb/5 dark:bg-brand-herb/10'
+                      : `border-brand-linen ${W.border} bg-brand-card dark:bg-brand-primary-hover dark:placeholder-brand-muted`
+                  } focus:border-brand-accent dark:focus:border-brand-accent`}
                 />
                 {form.ingredient && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
@@ -584,13 +584,13 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
               </div>
 
               {(suggestions.length > 0 || noMatch) && (
-                <ul className={`absolute z-10 w-full mt-1 bg-white dark:bg-zinc-800 border border-gray-200 ${W.border} rounded-xl shadow-xl max-h-48 overflow-y-auto`}>
+                 <ul className={`absolute z-10 w-full mt-1 bg-brand-card dark:bg-brand-primary border border-brand-linen ${W.border} rounded-xl shadow-xl max-h-48 overflow-y-auto`}>
                   {suggestions.map(ing => (
                     <li key={ing.id}>
                       <button
                         type="button"
                         onMouseDown={e => { e.preventDefault(); selectIngredient(ing); }}
-                        className={`w-full text-left px-3 py-2.5 text-sm hover:bg-indigo-50 dark:hover:bg-zinc-700 flex items-center justify-between text-gray-800 ${W.txPrimary}`}
+                         className={`w-full text-left px-3 py-2.5 text-sm hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover flex items-center justify-between text-brand-ink ${W.txPrimary}`}
                       >
                         <span>{ing.canonical_name}</span>
                         <span className={`text-xs text-gray-400 ${W.txMuted} ml-2 capitalize`}>{ing.category}</span>
@@ -598,12 +598,12 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
                     </li>
                   ))}
                   {noMatch && (
-                    <li className={`px-3 py-2.5 text-sm text-gray-500 ${W.txSecond} flex items-center gap-2`}>
+                     <li className={`px-3 py-2.5 text-sm text-brand-muted ${W.txSecond} flex items-center gap-2`}>
                       <span className="italic">No match for &ldquo;{form.search.trim()}&rdquo;</span>
                       <button
                         type="button"
                         onMouseDown={e => { e.preventDefault(); setInputFocused(false); setNewIngForm({ category: 'other', dimension: 'count', unit: '' }); }}
-                        className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline whitespace-nowrap"
+                         className="text-brand-primary dark:text-brand-accent font-semibold hover:underline whitespace-nowrap"
                       >
                         + Create it
                       </button>
@@ -614,18 +614,18 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
             </div>
 
             {newIngForm && (
-              <div className={`p-3 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-700/30 rounded-xl space-y-2`}>
-                <p className="text-xs font-semibold text-indigo-800 dark:text-indigo-300">
+               <div className={`p-3 bg-brand-primary/5 dark:bg-brand-primary/10 border border-brand-primary/20 rounded-xl space-y-2`}>
+                <p className="text-xs font-semibold text-brand-primary dark:text-brand-accent">
                   Creating &ldquo;{form.search.trim()}&rdquo; as new ingredient
                 </p>
                 <div className="flex gap-2">
                   {['category', 'dimension'].map(field => (
                     <div key={field} className="flex-1">
-                      <label className={`block text-xs text-gray-500 ${W.txSecond} mb-1 capitalize`}>{field}</label>
+                       <label className={`block text-xs text-brand-muted ${W.txSecond} mb-1 capitalize`}>{field}</label>
                       <select
                         value={(newIngForm as any)[field]}
                         onChange={e => setNewIngForm(f => f && ({ ...f, [field]: e.target.value }))}
-                        className={`w-full px-2 py-1.5 text-sm border border-gray-300 ${W.border} rounded-lg focus:outline-none dark:bg-zinc-800 ${W.txPrimary}`}
+                         className={`w-full px-2 py-1.5 text-sm border border-brand-linen ${W.border} rounded-lg focus:outline-none dark:bg-brand-primary-hover ${W.txPrimary}`}
                       >
                         {field === 'category'
                           ? ['produce','dairy','meat','fish','pantry','spice','bakery','other'].map(c => <option key={c} value={c}>{c}</option>)
@@ -635,13 +635,13 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
                     </div>
                   ))}
                   <div className="flex-1">
-                    <label className={`block text-xs text-gray-500 ${W.txSecond} mb-1`}>Unit</label>
+                     <label className={`block text-xs text-brand-muted ${W.txSecond} mb-1`}>Unit</label>
                     <input
                       type="text"
                       value={newIngForm.unit}
                       onChange={e => setNewIngForm(f => f && ({ ...f, unit: e.target.value }))}
                       placeholder="g / ml / unit"
-                      className={`w-full px-2 py-1.5 text-sm border border-gray-300 ${W.border} rounded-lg focus:outline-none dark:bg-zinc-800 ${W.txPrimary} dark:placeholder-zinc-500`}
+                       className={`w-full px-2 py-1.5 text-sm border border-brand-linen ${W.border} rounded-lg focus:outline-none dark:bg-brand-primary-hover ${W.txPrimary} dark:placeholder-brand-muted`}
                     />
                   </div>
                 </div>
@@ -662,11 +662,11 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
                       } catch (err: any) { setFormError(err.message ?? 'Failed to create ingredient'); }
                     }}
                     disabled={createIngredientMutation.isPending}
-                    className="flex-1 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                     className="flex-1 py-1.5 bg-brand-primary text-brand-background text-xs font-semibold rounded-lg hover:bg-brand-primary-hover disabled:opacity-50"
                   >
                     {createIngredientMutation.isPending ? 'Creating…' : 'Create & Select'}
                   </button>
-                  <button type="button" onClick={() => setNewIngForm(null)} className={`px-3 py-1.5 text-xs text-gray-500 ${W.txSecond} hover:text-gray-700 dark:hover:text-zinc-100`}>Cancel</button>
+                   <button type="button" onClick={() => setNewIngForm(null)} className={`px-3 py-1.5 text-xs text-brand-muted ${W.txSecond} hover:text-brand-ink dark:hover:text-brand-background`}>Cancel</button>
                 </div>
               </div>
             )}
@@ -675,14 +675,14 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
             <div className="flex gap-3">
               {(['Quantity', 'Unit'] as const).map((label) => (
                 <div key={label} className="flex-1">
-                  <label className={`block text-xs font-semibold text-gray-500 ${W.txSecond} mb-1.5`}>{label}</label>
+                   <label className={`block text-xs font-semibold text-brand-muted ${W.txSecond} mb-1.5`}>{label}</label>
                   {label === 'Quantity' ? (
                     <input
                       type="number" min="0" step="any"
                       value={form.quantity}
                       onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
                       placeholder="1"
-                      className={`w-full px-3 py-2.5 text-sm border border-gray-200 ${W.border} rounded-xl focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-400 dark:bg-zinc-800 ${W.txPrimary} dark:placeholder-zinc-500`}
+                        className={`w-full px-3 py-2.5 text-sm border border-brand-linen ${W.border} rounded-xl focus:outline-none focus:border-brand-accent dark:focus:border-brand-accent dark:bg-brand-primary-hover ${W.txPrimary} dark:placeholder-brand-muted`}
                     />
                   ) : (
                     <input
@@ -690,7 +690,7 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
                       value={form.unit}
                       onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
                       placeholder="g / ml / unit"
-                      className={`w-full px-3 py-2.5 text-sm border border-gray-200 ${W.border} rounded-xl focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-400 dark:bg-zinc-800 ${W.txPrimary} dark:placeholder-zinc-500`}
+                        className={`w-full px-3 py-2.5 text-sm border border-brand-linen ${W.border} rounded-xl focus:outline-none focus:border-brand-accent dark:focus:border-brand-accent dark:bg-brand-primary-hover ${W.txPrimary} dark:placeholder-brand-muted`}
                     />
                   )}
                 </div>
@@ -699,18 +699,18 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
 
             {/* Expiry date */}
             <div>
-              <label className={`block text-xs font-semibold text-gray-500 ${W.txSecond} mb-1.5`}>
-                Best-before date <span className={`font-normal text-gray-400 ${W.txMuted}`}>(optional)</span>
+               <label className={`block text-xs font-semibold text-brand-muted ${W.txSecond} mb-1.5`}>
+                Best-before date <span className={`font-normal opacity-50 ${W.txMuted}`}>(optional)</span>
               </label>
               <input
                 type="date"
                 value={form.expires_at}
                 onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))}
                 min={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2.5 text-sm border border-gray-200 ${W.border} rounded-xl focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-400 dark:bg-zinc-800 ${W.txPrimary}`}
+                 className={`w-full px-3 py-2.5 text-sm border border-brand-linen ${W.border} rounded-xl focus:outline-none focus:border-brand-accent dark:focus:border-brand-accent dark:bg-brand-primary-hover ${W.txPrimary}`}
               />
               {expiryPreview && (
-                <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${expiryPreview.warn ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-zinc-500'}`}>
+                 <p className={`text-xs mt-1.5 flex items-center gap-1.5 ${expiryPreview.warn ? 'text-brand-accent' : 'text-brand-muted opacity-60'}`}>
                   {expiryPreview.warn && (
                     <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
@@ -722,11 +722,11 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
             </div>
 
             {/* Confidence info */}
-            <div className={`flex items-start gap-2.5 p-3 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-100 ${W.borderLo}`}>
-              <svg className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-gray-400 ${W.txMuted}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+             <div className={`flex items-start gap-2.5 p-3 bg-brand-linen/10 dark:bg-brand-primary-hover/50 rounded-xl border border-brand-linen/30 ${W.borderLo}`}>
+               <svg className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-brand-muted ${W.txMuted}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
               </svg>
-              <p className={`text-[11px] text-gray-500 ${W.txSecond} leading-relaxed`}>
+               <p className={`text-[11px] text-brand-muted ${W.txSecond} leading-relaxed`}>
                 Confirming sets confidence to 100%. It decays daily until you confirm again — this is how WhatsForTea knows what&apos;s still in your cupboard.
               </p>
             </div>
@@ -736,7 +736,7 @@ function AddItemSheet({ open, onClose, ingredients, upsertMutation, createIngred
             <button
               type="submit"
               disabled={upsertMutation.isPending}
-              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm rounded-2xl disabled:opacity-50 transition-all active:scale-[0.98] shadow-lg shadow-indigo-600/25"
+              className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-hover text-brand-background font-extrabold text-sm rounded-2xl disabled:opacity-50 transition-all active:scale-[0.98] shadow-lg shadow-brand-primary/25"
             >
               {upsertMutation.isPending ? 'Adding…' : 'Add to Pantry'}
             </button>

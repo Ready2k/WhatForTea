@@ -8,13 +8,13 @@ export function MatchBadge({ score, category }: MatchBadgeProps) {
   let label: string;
 
   if (category === 'cook_now' || score >= 90) {
-    colorClass = 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700';
+    colorClass = 'bg-brand-herb/10 text-brand-herb border-brand-herb/20 dark:bg-brand-herb/20 dark:text-brand-background dark:border-brand-herb/30';
     label = 'Cook Now';
   } else if (category === 'almost_there' || (score >= 50 && score < 90)) {
-    colorClass = 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-700';
+    colorClass = 'bg-brand-accent/10 text-brand-primary border-brand-accent/20 dark:bg-brand-accent/20 dark:text-brand-accent-soft dark:border-brand-accent/30';
     label = 'Almost There';
   } else {
-    colorClass = 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700';
+    colorClass = 'bg-brand-tomato/10 text-brand-tomato border-brand-tomato/20 dark:bg-brand-tomato/20 dark:text-brand-tomato dark:border-brand-tomato/30';
     label = 'Planner';
   }
 

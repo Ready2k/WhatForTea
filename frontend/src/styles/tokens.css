@@ -1,16 +1,19 @@
 :root {
   /* Colors */
-  --color-primary: #4f46e5; /* indigo-600 */
-  --color-primary-hover: #4338ca;
-  --color-secondary: #0d9488; /* teal-600 */
-  --color-accent: #f59e0b; /* amber-500 */
+  --color-primary: #12382B; /* Forest Green */
+  --color-primary-hover: #1E5A43;
+  --color-secondary: #6F9F7B; /* Sage Green */
+  --color-accent: #D8A63A; /* Warm Gold */
+  --color-accent-soft: #F3D98B;
+  --color-success: #3F8F5D; /* Herb */
+  --color-danger: #C6533A; /* Tomato */
   
   /* Semantic Colors */
-  --bg-app: #f9fafb;
-  --bg-card: #ffffff;
-  --text-main: #111827;
-  --text-muted: #6b7280;
-  --border-subtle: #e5e7eb;
+  --bg-app: #F7F1E6; /* Oat Cream */
+  --bg-card: #FFFDF7; /* Warm White */
+  --text-main: #18231D; /* Deep Ink */
+  --text-muted: #6F766F;
+  --border-subtle: #E6DCCB; /* Soft Linen */
 
   /* Spacing */
   --space-xs: 0.25rem;
@@ -27,19 +30,19 @@
   --radius-2xl: 1.5rem;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(24 35 29 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(24 35 29 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(24 35 29 / 0.1);
 }
 
 .dark {
-  --bg-app: #09090b;
-  --bg-card: #18181b;
-  --bg-card-raised: #27272a;
-  --text-main: #f4f4f5;
-  --text-muted: #a1a1aa;
-  --border-subtle: #3f3f46;
-  --border-lo: #27272a;
+  --bg-app: #0B1F18; /* Dark Forest */
+  --bg-card: #12382B; /* Forest Green */
+  --bg-card-raised: #1E5A43;
+  --text-main: #F7F1E6;
+  --text-muted: #6F9F7B;
+  --border-subtle: #1E5A43;
+  --border-lo: #12382B;
 }
 
 /* Base Styles using Tokens */

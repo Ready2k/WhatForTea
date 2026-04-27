@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'AI-powered recipe manager and kitchen assistant',
     start_url: '/',
     display: 'standalone',
-    background_color: '#111827',
-    theme_color: '#6366f1',
+    background_color: '#0B1F18',
+    theme_color: '#12382B',
     orientation: 'portrait-primary',
     categories: ['food', 'lifestyle'],
     icons: [

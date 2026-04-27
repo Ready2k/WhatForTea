@@ -117,10 +117,10 @@ function DaySlot({
         isDragging
           ? 'opacity-30'
           : highlightDrop
-          ? 'ring-2 ring-indigo-400 ring-offset-1 border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+          ? 'ring-2 ring-brand-accent ring-offset-1 border-brand-accent/50 dark:border-brand-accent/60 bg-brand-accent/10 dark:bg-brand-accent/20'
           : isToday
-          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
-          : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+          ? 'bg-brand-herb/10 dark:bg-brand-herb/20 border-brand-herb/30 dark:border-brand-herb/50'
+          : 'bg-brand-card dark:bg-brand-primary border-brand-linen dark:border-brand-primary-hover/50'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -143,16 +143,16 @@ function DaySlot({
           <span
             className={`text-sm font-medium ${
               isToday
-                ? 'text-emerald-700 dark:text-emerald-400'
+                ? 'text-brand-herb'
                 : isPast
-                ? 'text-gray-400 dark:text-gray-500'
-                : 'text-gray-500 dark:text-gray-400'
+                ? 'text-brand-muted/40 dark:text-brand-secondary/40'
+                : 'text-brand-muted dark:text-brand-secondary'
             }`}
           >
             {formatDayLabel(dayDate)}
           </span>
           {isToday && (
-            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-wide">
+            <span className="text-[10px] font-semibold text-brand-herb uppercase tracking-wide">
               Today
             </span>
           )}
@@ -162,7 +162,7 @@ function DaySlot({
         {recipeSummary ? (
           <div className="flex-1 flex items-center justify-between min-w-0">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{recipeSummary.title}</p>
+              <p className="text-sm font-semibold text-brand-ink dark:text-brand-background truncate">{recipeSummary.title}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {recipeSummary.cooking_time_mins && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-0.5">
@@ -173,7 +173,7 @@ function DaySlot({
                 <span className="text-gray-300 dark:text-gray-600">•</span>
                 <button
                   onClick={() => onShowServingPicker(showServingPickerFor === dayIdx ? null : dayIdx)}
-                  className="text-xs font-medium text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-1"
+                  className="text-xs font-medium text-brand-herb hover:text-brand-herb/80 bg-brand-herb/10 dark:bg-brand-herb/20 px-1.5 py-0.5 rounded flex items-center gap-1"
                 >
                   <Users className="w-3 h-3 inline mr-0.5" />
                   {servings || 'Default'}
@@ -183,14 +183,12 @@ function DaySlot({
             <div className="flex gap-3 ml-2">
               <button
                 onClick={() => onShowPicker(dayIdx)}
-                className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 transition-colors"
+                className="text-xs text-brand-muted dark:text-brand-secondary hover:text-brand-primary transition-colors"
               >
                 Change
               </button>
-              <button
                 onClick={() => { onSetDay(null); onSetServings(null); }}
-                className="text-xs text-red-300 hover:text-red-500 transition-colors"
-              >
+                className="text-xs text-brand-tomato/60 hover:text-brand-tomato transition-colors"
                 Clear
               </button>
             </div>
@@ -198,7 +196,7 @@ function DaySlot({
         ) : (
           <button
             onClick={() => onShowPicker(dayIdx)}
-            className="flex-1 py-2 border-2 border-dashed border-gray-200 dark:border-gray-600 text-sm text-gray-400 dark:text-gray-500 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 transition-colors text-center"
+            className="flex-1 py-2 border-2 border-dashed border-brand-linen dark:border-brand-primary-hover/50 text-sm text-brand-muted dark:text-brand-secondary rounded-xl hover:border-brand-accent/50 dark:hover:border-brand-accent/70 hover:text-brand-primary transition-colors text-center"
           >
             + Add recipe
           </button>
@@ -215,8 +213,8 @@ function DaySlot({
               onClick={() => { onSetServings(n); onShowServingPicker(null); }}
               className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
                 servings === n
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-brand-primary text-brand-background shadow-sm'
+                  : 'bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 dark:hover:bg-brand-primary'
               }`}
             >
               {n}
@@ -239,7 +237,7 @@ function DaySlot({
               <button
                 key={r.id}
                 onClick={() => { onSetDay(r.id); onSetServings(2); onShowPicker(null); }}
-                className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-brand-ink dark:text-brand-background hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30 rounded-lg transition-colors"
               >
                 {r.title}
                 {r.cooking_time_mins && (
@@ -472,8 +470,8 @@ export default function PlannerPage() {
     <main className="max-w-lg mx-auto px-4 pt-6 pb-4">
       {/* Header */}
       <div className="flex items-baseline justify-between mb-4">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Planner</h1>
-        <span className="text-xs text-gray-400 dark:text-gray-500">{todayFormatted}</span>
+        <h1 className="text-xl font-bold text-brand-ink dark:text-brand-background">Planner</h1>
+        <span className="text-xs text-brand-muted dark:text-brand-secondary">{todayFormatted}</span>
       </div>
 
       {/* Week switcher */}
@@ -488,27 +486,27 @@ export default function PlannerPage() {
               onClick={() => { setWeekOffset(i); setShowPickerFor(null); setShowServingPickerFor(null); }}
               className={`flex-1 py-2.5 px-3 rounded-xl border text-left transition-colors ${
                 active
-                  ? 'bg-indigo-600 border-indigo-600 text-white'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700'
+                  ? 'bg-brand-primary border-brand-primary text-brand-background'
+                  : 'border-brand-linen dark:border-brand-primary-hover/50 text-brand-muted dark:text-brand-secondary hover:border-brand-accent/50 dark:hover:border-brand-accent/70'
               }`}
             >
-              <div className={`text-xs font-semibold ${active ? 'text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}>{label}</div>
-              <div className={`text-sm font-medium leading-tight ${active ? 'text-white' : 'text-gray-800 dark:text-gray-200'}`}>{range}</div>
+              <div className={`text-xs font-semibold ${active ? 'text-brand-background/60' : 'text-brand-muted/60'}`}>{label}</div>
+              <div className={`text-sm font-medium leading-tight ${active ? 'text-brand-background' : 'text-brand-ink dark:text-brand-background'}`}>{range}</div>
             </button>
           );
         })}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+      <div className="flex gap-1 mb-5 bg-brand-linen/20 dark:bg-brand-primary-hover/50 p-1 rounded-xl">
         {(['week', 'shopping'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
               activeTab === tab
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-brand-card dark:bg-brand-primary text-brand-ink dark:text-brand-background shadow-sm'
+                : 'text-brand-muted dark:text-brand-secondary hover:text-brand-ink dark:hover:text-brand-background'
             }`}
           >
             {tab === 'week' ? 'Meal Plan' : 'Shopping List'}
@@ -522,7 +520,7 @@ export default function PlannerPage() {
           {!planLoading && (
             <button
               onClick={() => { setShowAutoFill(true); setAutoFillError(null); }}
-              className="w-full py-2.5 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 text-sm font-medium rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 border border-brand-primary/20 dark:border-brand-primary-hover text-brand-primary dark:text-brand-secondary text-sm font-medium rounded-xl hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30 transition-colors flex items-center justify-center gap-2"
             >
               <Wand2 className="w-4 h-4" /> Auto-fill week
             </button>
@@ -572,8 +570,8 @@ export default function PlannerPage() {
                 {activeDragDay !== null && (() => {
                   const r = getRecipeSummary(resolvedPlan[activeDragDay] ?? null);
                   return r ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-indigo-400 shadow-2xl px-4 py-3 opacity-95 pointer-events-none">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.title}</p>
+                    <div className="bg-brand-card dark:bg-brand-primary-hover rounded-2xl border-2 border-brand-accent shadow-2xl px-4 py-3 opacity-95 pointer-events-none">
+                      <p className="text-sm font-semibold text-brand-ink dark:text-brand-background">{r.title}</p>
                       {r.cooking_time_mins && (
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
                           <Clock className="w-3 h-3" />{r.cooking_time_mins} min
@@ -591,12 +589,12 @@ export default function PlannerPage() {
               <button
                 onClick={handleSavePlan}
                 disabled={setWeekPlanMutation.isPending}
-                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-2xl transition-colors disabled:opacity-50"
+                className="w-full py-3.5 bg-brand-primary hover:bg-brand-primary-hover text-brand-background font-semibold rounded-2xl transition-colors disabled:opacity-50"
               >
                 {setWeekPlanMutation.isPending ? 'Saving...' : 'Save Plan'}
               </button>
               {setWeekPlanMutation.isSuccess && (
-                <p className="text-center text-sm text-emerald-600 mt-2">Plan saved!</p>
+                <p className="text-center text-sm text-brand-herb mt-2">Plan saved!</p>
               )}
               {setWeekPlanMutation.isError && (
                 <p className="text-center text-sm text-red-500 mt-2">Failed to save plan</p>
@@ -619,8 +617,8 @@ export default function PlannerPage() {
 
           {shopError && (
             <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load shopping list</p>
-              <button onClick={() => refetchShopping()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
+              <p className="text-brand-muted dark:text-brand-secondary mb-3">Failed to load shopping list</p>
+              <button onClick={() => refetchShopping()} className="px-4 py-2 bg-brand-primary text-brand-background rounded-xl text-sm font-medium">
                 Retry
               </button>
             </div>
@@ -629,9 +627,9 @@ export default function PlannerPage() {
           {!shopLoading && (
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">My list</h3>
+                <h3 className="text-sm font-semibold text-brand-ink dark:text-brand-background">My list</h3>
                 {doneManual.length > 0 && (
-                  <button onClick={() => clearDoneMutation.mutate()} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                  <button onClick={() => clearDoneMutation.mutate()} className="text-xs text-brand-muted hover:text-brand-tomato transition-colors">
                     Clear done ({doneManual.length})
                   </button>
                 )}
@@ -644,20 +642,20 @@ export default function PlannerPage() {
                   value={manualInput}
                   onChange={e => setManualInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleAddManual()}
-                  className="flex-1 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-3 py-2 text-sm"
+                   className="flex-1 bg-brand-linen/20 dark:bg-brand-primary-hover/50 border-transparent focus:border-brand-accent rounded-xl px-3 py-2 text-sm"
                 />
                 <input
                   type="number"
                   value={manualQty}
                   onChange={e => setManualQty(e.target.value)}
-                  className="w-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-2 py-2 text-sm text-center"
+                   className="w-14 bg-brand-linen/20 dark:bg-brand-primary-hover/50 border-transparent focus:border-brand-accent rounded-xl px-2 py-2 text-sm text-center"
                   min="0.1"
                   step="0.5"
                 />
                 <button
                   onClick={handleAddManual}
                   disabled={!manualInput.trim() || addManualMutation.isPending}
-                  className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
+                   className="px-3 py-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-40 text-brand-background rounded-xl text-sm font-semibold transition-colors"
                 >
                   +
                 </button>
@@ -666,11 +664,11 @@ export default function PlannerPage() {
               {pendingManual.length > 0 && (
                 <ul className="space-y-1 mb-1">
                   {pendingManual.map(item => (
-                    <li key={item.id} className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2.5 shadow-sm">
-                      <input type="checkbox" checked={false} onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })} className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer" />
-                      <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">
+                    <li key={item.id} className="flex items-center gap-3 bg-brand-card dark:bg-brand-primary rounded-xl border border-brand-linen dark:border-brand-primary-hover/50 px-3 py-2.5 shadow-sm">
+                      <input type="checkbox" checked={false} onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })} className="w-4 h-4 accent-brand-herb flex-shrink-0 cursor-pointer" />
+                      <span className="flex-1 text-sm text-brand-ink dark:text-brand-background">
                         {item.raw_name}
-                        <span className="text-gray-400 dark:text-gray-500 ml-2 text-xs">
+                        <span className="text-brand-muted/60 dark:text-brand-secondary/60 ml-2 text-xs">
                           {item.quantity !== 1 || item.unit !== 'count' ? `${item.quantity} ${item.unit}` : ''}
                         </span>
                       </span>
@@ -683,10 +681,10 @@ export default function PlannerPage() {
               {doneManual.length > 0 && (
                 <ul className="space-y-1 opacity-50">
                   {doneManual.map(item => (
-                    <li key={item.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-3 py-2">
-                      <input type="checkbox" checked={true} onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })} className="w-4 h-4 accent-emerald-600 flex-shrink-0 cursor-pointer" />
-                      <span className="flex-1 text-sm text-gray-400 line-through">{item.raw_name}</span>
-                      <button onClick={() => deleteManualMutation.mutate(item.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                    <li key={item.id} className="flex items-center gap-3 bg-brand-linen/10 dark:bg-brand-primary-hover/30 rounded-xl px-3 py-2">
+                      <input type="checkbox" checked={true} onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })} className="w-4 h-4 accent-brand-herb flex-shrink-0 cursor-pointer" />
+                      <span className="flex-1 text-sm text-brand-muted/50 dark:text-brand-secondary/50 line-through">{item.raw_name}</span>
+                      <button onClick={() => deleteManualMutation.mutate(item.id)} className="text-brand-muted/40 hover:text-brand-tomato transition-colors text-lg leading-none">×</button>
                     </li>
                   ))}
                 </ul>
@@ -696,23 +694,23 @@ export default function PlannerPage() {
                 <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Nothing on your list yet — add items above or ask TeaBot.</p>
               )}
 
-              <div className="border-t border-gray-100 dark:border-gray-700 mt-4 mb-4" />
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">From meal plan</h3>
+               <div className="border-t border-brand-linen dark:border-brand-primary-hover/50 mt-4 mb-4" />
+              <h3 className="text-sm font-semibold text-brand-ink dark:text-brand-background mb-3">From meal plan</h3>
             </div>
           )}
 
           {!shopLoading && !shopError && shoppingList && (
             <>
               <div className="flex gap-2 mb-4">
-                <button
+                 <button
                   onClick={() => { navigator.clipboard?.writeText(shoppingList.text_export).catch(() => {}); }}
-                  className="flex-1 py-2.5 border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="flex-1 py-2.5 border border-brand-linen dark:border-brand-primary-hover/50 text-sm font-medium text-brand-ink dark:text-brand-background rounded-xl hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30 transition-colors"
                 >
                   Copy
                 </button>
-                <button
+                 <button
                   onClick={() => window.open(shoppingList.whatsapp_url, '_blank')}
-                  className="flex-1 py-2.5 bg-green-500 text-white text-sm font-medium rounded-xl hover:bg-green-600 transition-colors"
+                  className="flex-1 py-2.5 bg-brand-herb text-brand-background text-sm font-medium rounded-xl hover:bg-brand-herb/90 transition-colors"
                 >
                   WhatsApp
                 </button>
@@ -720,11 +718,11 @@ export default function PlannerPage() {
 
               <div className="space-y-4 pb-24">
                 {Object.entries(shoppingList.zones).map(([zone, items]) => (
-                  <details key={zone} open className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 select-none capitalize">
+                   <details key={zone} open className="bg-brand-card dark:bg-brand-primary rounded-2xl border border-brand-linen dark:border-brand-primary-hover/50 shadow-sm overflow-hidden">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-brand-ink dark:text-brand-background hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30 select-none capitalize">
                       ▾ {zone} ({items.length})
                     </summary>
-                    <ul className="divide-y divide-gray-50 dark:divide-gray-700">
+                     <ul className="divide-y divide-brand-linen dark:divide-brand-primary-hover/50">
                       {items.map((item, itemIdx) => {
                         const key = item.ingredient_id ?? `${zone}-${item.canonical_name}-${itemIdx}`;
                         const ck = itemKey(item);
@@ -732,15 +730,15 @@ export default function PlannerPage() {
                         return (
                           <li
                             key={key}
-                            onClick={() => toggleItem(ck)}
-                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
+                             onClick={() => toggleItem(ck)}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? 'bg-brand-linen/10 dark:bg-brand-primary-hover/20' : 'hover:bg-brand-linen/5 dark:hover:bg-brand-primary-hover/10'}`}
                           >
-                            <input type="checkbox" checked={isChecked} onChange={() => {}} className="w-4 h-4 accent-emerald-600 flex-shrink-0 pointer-events-none" />
+                            <input type="checkbox" checked={isChecked} onChange={() => {}} className="w-4 h-4 accent-brand-herb flex-shrink-0 pointer-events-none" />
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                              <span className={`text-sm font-medium ${isChecked ? 'line-through text-brand-muted/50' : 'text-brand-ink dark:text-brand-background'}`}>
                                 {item.canonical_name}
                               </span>
-                              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                              <span className="text-sm text-brand-muted/70 dark:text-brand-secondary/70 ml-2">
                                 {item.rounded_unit === 'pack'
                                   ? `x ${item.rounded_quantity} pack`
                                   : `${item.rounded_quantity} ${item.rounded_unit}`}
@@ -764,14 +762,14 @@ export default function PlannerPage() {
               </div>
 
               {allItems.length > 0 && (
-                <div className="fixed bottom-16 left-0 right-0 flex justify-center pointer-events-none">
-                  <div className="pointer-events-auto mx-4 max-w-lg w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg px-4 py-3 flex gap-2">
+                 <div className="fixed bottom-16 left-0 right-0 flex justify-center pointer-events-none">
+                  <div className="pointer-events-auto mx-4 max-w-lg w-full bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover shadow-lg px-4 py-3 flex gap-2">
                     {checkedItems.size > 0 ? (
                       <>
-                        <button
+                         <button
                           onClick={handleMarkCheckedAsBought}
                           disabled={bulkConfirmMutation.isPending}
-                          className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                          className="flex-1 py-2.5 bg-brand-primary text-brand-background text-sm font-semibold rounded-xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors"
                         >
                           {bulkConfirmMutation.isPending ? 'Saving...' : `Mark ${checkedItems.size} as bought`}
                         </button>
@@ -780,10 +778,10 @@ export default function PlannerPage() {
                         </button>
                       </>
                     ) : (
-                      <button
+                       <button
                         onClick={handleMarkAllAsBought}
                         disabled={bulkConfirmMutation.isPending}
-                        className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                        className="flex-1 py-2.5 bg-brand-primary text-brand-background text-sm font-semibold rounded-xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors"
                       >
                         I bought everything
                       </button>

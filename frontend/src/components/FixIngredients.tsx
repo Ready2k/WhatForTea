@@ -115,27 +115,27 @@ function IngredientFixRow({
   if (done) {
     return (
       <div className="flex items-center gap-2 px-4 py-3">
-        <span className="text-emerald-500 text-base">✓</span>
-        <span className="text-sm text-gray-500 dark:text-gray-400 line-through">{ri.raw_name}</span>
-        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium ml-1">Matched!</span>
+        <span className="text-brand-herb text-base">✓</span>
+        <span className="text-sm text-brand-muted line-through">{ri.raw_name}</span>
+        <span className="text-xs text-brand-herb font-medium ml-1">Matched!</span>
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-3 space-y-2 border-b border-orange-100 dark:border-orange-900/30 last:border-0">
+    <div className="px-4 py-3 space-y-2 border-b border-brand-accent/10 dark:border-brand-accent/20 last:border-0">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{ri.raw_name}</span>
+        <span className="text-sm font-medium text-brand-ink dark:text-brand-background">{ri.raw_name}</span>
         <div className="flex gap-1.5">
           <button
             onClick={() => setMode('search')}
-            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${mode === 'search' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${mode === 'search' ? 'bg-brand-accent text-brand-ink' : 'text-brand-muted hover:text-brand-ink'}`}
           >
             Match existing
           </button>
           <button
             onClick={() => setMode('create')}
-            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${mode === 'create' ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${mode === 'create' ? 'bg-brand-accent text-brand-ink' : 'text-brand-muted hover:text-brand-ink'}`}
           >
             Add as new
           </button>
@@ -151,7 +151,7 @@ function IngredientFixRow({
             onChange={(e) => { setSearchQ(e.target.value); setDropdownOpen(true); }}
             onFocus={() => setDropdownOpen(true)}
             placeholder="Search ingredient library…"
-            className="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+            className="w-full pl-3 pr-8 py-1.5 text-sm rounded-lg bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-brand-ink dark:text-brand-background placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent"
           />
           {searchQ && (
             <button onClick={() => { setSearchQ(''); setDropdownOpen(false); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
@@ -163,10 +163,10 @@ function IngredientFixRow({
                   <button
                     onClick={() => handleSelect(ig)}
                     disabled={resolveMutation.isPending}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/20 text-gray-800 dark:text-gray-200 flex items-center justify-between gap-2 disabled:opacity-50"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-brand-accent/10 text-brand-ink dark:text-brand-background flex items-center justify-between gap-2 disabled:opacity-50"
                   >
                     <span>{ig.canonical_name}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{ig.category} · {ig.typical_unit}</span>
+                    <span className="text-xs text-brand-muted shrink-0">{ig.category} · {ig.typical_unit}</span>
                   </button>
                 </li>
               ))}
@@ -187,7 +187,7 @@ function IngredientFixRow({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Canonical name"
-            className="w-full px-3 py-1.5 text-sm rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full px-3 py-1.5 text-sm rounded-lg bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-brand-ink dark:text-brand-background focus:outline-none focus:ring-2 focus:ring-brand-accent"
           />
           <div className="grid grid-cols-3 gap-2">
             <select
@@ -215,7 +215,7 @@ function IngredientFixRow({
           <button
             onClick={handleCreate}
             disabled={creating || !newName.trim()}
-            className="w-full py-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-lg transition-colors"
+            className="w-full py-1.5 text-sm font-medium bg-brand-accent hover:opacity-90 disabled:opacity-50 text-brand-ink rounded-lg transition-colors shadow-sm"
           >
             {creating ? 'Creating…' : 'Create & Link'}
           </button>
@@ -244,21 +244,21 @@ export function FixIngredients({
   const remaining = unresolved.length - resolvedCount;
 
   return (
-    <div className="rounded-2xl border border-orange-200 dark:border-orange-800/60 bg-orange-50/60 dark:bg-orange-900/10 overflow-hidden">
+    <div className="rounded-2xl border border-brand-accent/20 dark:border-brand-accent/30 bg-brand-accent/5 dark:bg-brand-accent/10 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-3 px-4 py-3 text-left"
       >
-        <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+        <AlertTriangle className="w-5 h-5 text-brand-accent flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+          <p className="text-sm font-semibold text-brand-primary dark:text-brand-accent">
             {remaining} ingredient{remaining !== 1 ? 's' : ''} not matched to library
           </p>
-          <p className="text-xs text-orange-600/70 dark:text-orange-400/70 mt-0.5">
+          <p className="text-xs text-brand-muted mt-0.5">
             Tap to fix — this improves pantry tracking, shopping list zones, and future scans
           </p>
         </div>
-        <span className={`text-orange-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+        <span className={`text-brand-accent transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           ▼
         </span>
       </button>

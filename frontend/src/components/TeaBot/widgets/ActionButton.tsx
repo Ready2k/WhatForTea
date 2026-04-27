@@ -6,8 +6,8 @@ export function ActionButton({ label, action, style = 'primary', className = '' 
       onClick={() => console.log(`Triggering action ${action}`)}
       className={`px-4 py-2 mt-2 rounded-lg font-medium text-sm transition-colors shadow-sm active:scale-95 ${
         style === 'primary' 
-          ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-          : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+          ? 'bg-brand-primary hover:bg-brand-primary-hover text-brand-background' 
+          : 'bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover/50 text-brand-ink dark:text-brand-background hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30'
       } ${className}`}
     >
       {label}

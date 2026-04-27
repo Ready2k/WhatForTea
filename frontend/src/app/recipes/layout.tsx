@@ -16,11 +16,11 @@ export default function RecipesLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] md:h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 md:bg-white md:dark:bg-[#0f1117]">
+    <div className="flex h-[calc(100vh-64px)] md:h-screen overflow-hidden bg-brand-background dark:bg-brand-primary md:bg-brand-card md:dark:bg-brand-primary">
       {/* Master pane (sidebar on desktop, full on mobile if not detail) */}
       <div 
         className={`w-full md:w-[400px] lg:w-[480px] flex-shrink-0 h-full overflow-y-auto no-scrollbar 
-          bg-gray-50 dark:bg-gray-900 border-r-0 md:border-r border-gray-200 dark:border-gray-800
+          bg-brand-background dark:bg-brand-primary border-r-0 md:border-r border-brand-linen dark:border-brand-primary/50
           ${isDetail ? 'hidden md:block' : 'block'}
         `}
       >
@@ -30,7 +30,7 @@ export default function RecipesLayout({ children }: { children: React.ReactNode 
       {/* Detail pane (hidden on mobile if not detail, takes remaining width on desktop) */}
       <div 
         className={`flex-1 min-w-0 h-full overflow-y-auto relative
-          bg-white dark:bg-[#0f1117]
+          bg-brand-card dark:bg-brand-primary
           ${!isDetail ? 'hidden md:flex flex-col items-center justify-center' : 'block'}
         `}
       >

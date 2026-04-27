@@ -29,7 +29,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
       href={`/recipes/${match.recipe.id}`}
       className="card-premium group overflow-hidden animate-in"
     >
-      <div className="w-full aspect-video bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 flex items-center justify-center overflow-hidden">
+      <div className="w-full aspect-video bg-gradient-to-br from-brand-linen/20 to-brand-linen/40 dark:from-brand-primary-hover/30 dark:to-brand-primary-hover/50 flex items-center justify-center overflow-hidden">
         {match.recipe.hero_image_path ? (
           <img
             src={`/api/v1/recipes/${match.recipe.id}/image`}
@@ -46,7 +46,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
           {idx >= 0 ? (
             <>
               {title.slice(0, idx)}
-              <mark className="bg-emerald-100 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-200 rounded-sm px-0.5">
+              <mark className="bg-brand-accent/20 dark:bg-brand-accent/40 text-brand-ink dark:text-brand-background rounded-sm px-0.5">
                 {title.slice(idx, idx + lq.length)}
               </mark>
               {title.slice(idx + lq.length)}
@@ -56,14 +56,14 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
 
         <div className="flex items-center gap-2 flex-wrap">
           {match.recipe.cooking_time_mins && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-brand-muted dark:text-brand-secondary">
               <Clock className="w-3 h-3 inline mr-0.5" />{match.recipe.cooking_time_mins} min
             </span>
           )}
           {match.recipe.last_cooked_at && (() => {
             const days = Math.floor((Date.now() - new Date(match.recipe.last_cooked_at!).getTime()) / 86400000);
             return (
-              <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-xs text-brand-muted/60 dark:text-brand-secondary/60">
                 Cooked {days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`}
               </span>
             );
@@ -73,7 +73,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
         {match.recipe.mood_tags?.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {match.recipe.mood_tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-full">
+              <span key={tag} className="text-xs bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary px-1.5 py-0.5 rounded-full">
                 {tag}
               </span>
             ))}
@@ -81,7 +81,7 @@ function RecipeGridCard({ match, query, showUrgency }: { match: RecipeMatchResul
         )}
 
         {showUrgency && match.at_risk_ingredients && match.at_risk_ingredients.length > 0 ? (
-          <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
+          <div className="flex items-center gap-1 text-xs text-brand-accent font-medium">
             <span>⚠</span>
             <span>Uses {match.at_risk_ingredients.length} expiring item{match.at_risk_ingredients.length > 1 ? 's' : ''}</span>
           </div>
@@ -160,9 +160,9 @@ function RecipesContent() {
   return (
     <main className="max-w-2xl mx-auto px-4 pt-6 pb-20">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Recipe Library</h1>
+        <h1 className="text-xl font-bold text-brand-ink dark:text-brand-background">Recipe Library</h1>
         {!isLoading && matches && (
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-medium text-brand-muted dark:text-brand-secondary bg-brand-linen/20 dark:bg-brand-primary-hover px-2.5 py-1 rounded-full">
             {filtered.length} {filtered.length === 1 ? 'recipe' : 'recipes'}
           </span>
         )}
@@ -181,7 +181,7 @@ function RecipesContent() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search recipes by name…"
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-sm text-brand-ink dark:text-brand-background placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition"
         />
         {query && (
           <button
@@ -204,8 +204,8 @@ function RecipesContent() {
             onClick={() => setSelectedCategory(tab.value)}
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === tab.value
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
-                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                ? 'bg-brand-primary text-brand-background shadow-sm shadow-brand-primary/30'
+                : 'bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/10 dark:hover:bg-brand-primary'
             }`}
           >
             {tab.label}
@@ -215,14 +215,14 @@ function RecipesContent() {
 
       {/* ── Use it up toggle ────────────────────────────────────────────────── */}
       <div className="mb-3">
-        <button
-          onClick={() => setUseItUp((v) => !v)}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-            useItUp
-              ? 'bg-orange-500 text-white shadow-sm shadow-orange-400/30'
-              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-          }`}
-        >
+          <button
+            onClick={() => setUseItUp((v) => !v)}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              useItUp
+                ? 'bg-brand-accent text-brand-ink shadow-sm shadow-brand-accent/30'
+                : 'bg-brand-card dark:bg-brand-primary-hover border border-brand-linen dark:border-brand-primary/60 text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/10 dark:hover:bg-brand-primary'
+            }`}
+          >
           <span>⚠</span>
           Use it up
         </button>
@@ -238,18 +238,15 @@ function RecipesContent() {
                 onClick={() => setSelectedMoodTag(selectedMoodTag === tag ? null : tag)}
                 className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   selectedMoodTag === tag
-                    ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400 dark:ring-emerald-600'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-brand-herb/20 dark:bg-brand-herb/40 text-brand-herb ring-1 ring-brand-herb/50'
+                    : 'bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 dark:hover:bg-brand-primary'
                 }`}
               >
                 {tag}
               </button>
             ))}
             {allMoodTags.length > TAG_VISIBLE_COUNT && (
-              <button
-                onClick={() => setTagsExpanded((v) => !v)}
-                className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
-              >
+                className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-brand-linen/20 dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/40 dark:hover:bg-brand-primary transition-all"
                 {tagsExpanded ? 'Show less' : `+${allMoodTags.length - TAG_VISIBLE_COUNT} more`}
               </button>
             )}
@@ -266,9 +263,8 @@ function RecipesContent() {
               key={col.id}
               onClick={() => setSelectedCollectionId(selectedCollectionId === col.id ? null : col.id)}
               className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all border ${
-                selectedCollectionId === col.id
-                  ? 'text-white shadow-sm'
-                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600'
+                  ? 'text-brand-background shadow-sm'
+                  : 'bg-brand-card dark:bg-brand-primary-hover text-brand-muted dark:text-brand-secondary hover:bg-brand-linen/10 dark:hover:bg-brand-primary border-brand-linen dark:border-brand-primary/60'
               }`}
               style={selectedCollectionId === col.id
                 ? { backgroundColor: col.colour, borderColor: col.colour }
@@ -293,12 +289,12 @@ function RecipesContent() {
           <span>
             Showing {filtered.length} of {matches?.length ?? 0} recipes
           </span>
-          <button
-            onClick={clearFilters}
-            className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
-          >
-            Clear all filters
-          </button>
+            <button
+              onClick={clearFilters}
+              className="text-brand-herb hover:underline font-medium"
+            >
+              Clear all filters
+            </button>
         </div>
       )}
 
@@ -308,7 +304,7 @@ function RecipesContent() {
           <p className="text-gray-500 dark:text-gray-400 mb-3">Failed to load recipes</p>
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
+            className="px-4 py-2 bg-brand-primary text-brand-background rounded-xl text-sm font-medium hover:bg-brand-primary-hover"
           >
             Retry
           </button>
@@ -352,7 +348,7 @@ function RecipesContent() {
               </div>
               <Link
                 href="/ingest"
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm transition-colors"
+                className="px-6 py-3 bg-brand-primary text-brand-background rounded-xl text-sm font-semibold hover:bg-brand-primary-hover shadow-sm transition-colors"
               >
                 Scan a Recipe Card
               </Link>

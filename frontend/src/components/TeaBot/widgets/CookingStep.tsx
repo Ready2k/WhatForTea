@@ -3,15 +3,15 @@ import { ChefHat, CheckCircle2, Circle } from 'lucide-react';
 
 export function CookingStep({ session_id, step_number, total_steps, text, timers = {}, className = '' }: any) {
   return (
-    <div className={`p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/10 shadow-sm ${className}`}>
-      <div className="flex items-center gap-2 mb-4 border-b border-emerald-100 dark:border-emerald-800/50 pb-3">
-        <ChefHat size={20} className="text-emerald-500" />
-        <h3 className="font-bold text-gray-900 dark:text-white leading-tight">
+    <div className={`p-4 rounded-xl border border-brand-linen dark:border-brand-primary-hover/50 bg-brand-herb/10 dark:bg-brand-herb/20 shadow-sm ${className}`}>
+      <div className="flex items-center gap-2 mb-4 border-b border-brand-herb/20 dark:border-brand-herb/30 pb-3">
+        <ChefHat size={20} className="text-brand-herb" />
+        <h3 className="font-bold text-brand-ink dark:text-brand-background leading-tight">
           Step {step_number} of {total_steps}
         </h3>
       </div>
       
-      <div className="text-lg leading-relaxed text-gray-800 dark:text-gray-100 font-medium mb-6">
+      <div className="text-lg leading-relaxed text-brand-ink dark:text-brand-background font-medium mb-6">
         {text}
       </div>
 

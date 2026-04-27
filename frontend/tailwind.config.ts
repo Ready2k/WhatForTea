@@ -9,6 +9,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      colors: {
+        brand: {
+          primary: '#12382B',   // Forest Green
+          secondary: '#6F9F7B', // Sage Green
+          accent: '#D8A63A',    // Warm Gold
+          'accent-soft': '#F3D98B',
+          background: '#F7F1E6', // Oat Cream
+          card: '#FFFDF7',      // Warm White
+          ink: '#18231D',       // Deep Ink
+          muted: '#6F766F',     // Muted Green-Gray
+          linen: '#E6DCCB',     // Soft Linen
+          tomato: '#C6533A',    // Danger
+          herb: '#3F8F5D',      // Success
+        }
+      },
       fontFamily: {
         sans: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
       },

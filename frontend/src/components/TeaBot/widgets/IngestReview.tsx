@@ -8,19 +8,19 @@ export function IngestReview({ job_id, parsed_recipe, className = '' }: any) {
 
   return (
     <div className={`p-4 rounded-xl border ${
-      status === 'reviewing' ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/10' :
-      status === 'confirmed' ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10 opacity-70' :
-      'border-gray-200 bg-gray-50 dark:bg-gray-800 opacity-50 grayscale'
+      status === 'reviewing' ? 'border-brand-accent bg-brand-accent/10 dark:bg-brand-accent/20' :
+      status === 'confirmed' ? 'border-brand-herb/50 bg-brand-herb/10 dark:bg-brand-herb/20 opacity-70' :
+      'border-brand-linen bg-brand-linen/10 dark:bg-brand-primary opacity-50 grayscale'
     } shadow-sm transition-all relative ${className}`}>
       
       {/* Visual State Indicators */}
-      {status === 'reviewing' && <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-ping" />}
-      {status === 'confirmed' && <Check className="absolute top-2 right-2 text-emerald-500" size={20} />}
-      {status === 'rejected' && <X className="absolute top-2 right-2 text-gray-400" size={20} />}
+      {status === 'reviewing' && <span className="absolute -top-1 -right-1 w-3 h-3 bg-brand-accent rounded-full animate-ping" />}
+      {status === 'confirmed' && <Check className="absolute top-2 right-2 text-brand-herb" size={20} />}
+      {status === 'rejected' && <X className="absolute top-2 right-2 text-brand-muted/40" size={20} />}
 
-      <div className="flex items-center gap-2 mb-4 border-b border-amber-200 dark:border-amber-800/30 pb-3">
-        <DownloadCloud size={20} className="text-amber-500" />
-        <h3 className="font-bold text-gray-900 dark:text-white leading-tight">
+      <div className="flex items-center gap-2 mb-4 border-b border-brand-accent/30 dark:border-brand-accent/20 pb-3">
+        <DownloadCloud size={20} className="text-brand-accent" />
+        <h3 className="font-bold text-brand-ink dark:text-brand-background leading-tight">
           Review Recipe Import
         </h3>
       </div>

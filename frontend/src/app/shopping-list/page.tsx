@@ -138,16 +138,16 @@ export default function ShoppingListPage() {
 
   return (
     <main className="max-w-lg mx-auto px-4 pt-6 pb-28">
-      <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-5">Shopping List</h1>
+      <h1 className="text-xl font-bold text-brand-ink dark:text-brand-background mb-5">Shopping List</h1>
 
       {/* ── Manually added ─────────────────────────────────────────────────── */}
       <section className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Manually added</h2>
+          <h2 className="text-sm font-semibold text-brand-ink dark:text-brand-background">Manually added</h2>
           {doneManual.length > 0 && (
             <button
               onClick={() => clearDoneMutation.mutate()}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              className="text-xs text-brand-muted hover:text-brand-tomato transition-colors"
             >
               Clear done ({doneManual.length})
             </button>
@@ -170,7 +170,7 @@ export default function ShoppingListPage() {
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setTimeout(() => setInputFocused(false), 150)}
                 onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                className={`w-full bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-3 py-2 text-sm pr-7 ${selectedIngredient ? 'text-indigo-600 dark:text-indigo-400 font-medium' : ''}`}
+                className={`w-full bg-brand-linen/20 dark:bg-brand-primary-hover/50 border-transparent focus:border-brand-accent rounded-xl px-3 py-2 text-sm pr-7 ${selectedIngredient ? 'text-brand-primary dark:text-brand-secondary font-medium' : ''}`}
               />
               {selectedIngredient && (
                 <button
@@ -185,14 +185,14 @@ export default function ShoppingListPage() {
               type="number"
               value={qty}
               onChange={e => setQty(e.target.value)}
-              className="w-14 bg-gray-100 dark:bg-gray-800 border-transparent focus:border-indigo-500 rounded-xl px-2 py-2 text-sm text-center"
+              className="w-14 bg-brand-linen/20 dark:bg-brand-primary-hover/50 border-transparent focus:border-brand-accent rounded-xl px-2 py-2 text-sm text-center"
               min="0.1"
               step="0.5"
             />
             <button
               onClick={handleAdd}
               disabled={!input.trim() || addMutation.isPending}
-              className="px-3 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-xl text-sm font-semibold transition-colors"
+              className="px-3 py-2 bg-brand-primary hover:bg-brand-primary-hover disabled:opacity-40 text-brand-background rounded-xl text-sm font-semibold transition-colors"
             >
               +
             </button>
@@ -205,10 +205,10 @@ export default function ShoppingListPage() {
                 <li key={ing.id}>
                   <button
                     onMouseDown={() => handleSelectIngredient(ing)}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors flex items-center justify-between"
+                    className="w-full text-left px-3 py-2 text-sm text-brand-ink dark:text-brand-background hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30 hover:text-brand-primary transition-colors flex items-center justify-between"
                   >
                     <span>{ing.canonical_name}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{ing.typical_unit || 'count'}</span>
+                    <span className="text-xs text-brand-muted/60 dark:text-brand-secondary/60">{ing.typical_unit || 'count'}</span>
                   </button>
                 </li>
               ))}
@@ -220,17 +220,17 @@ export default function ShoppingListPage() {
         {pendingManual.length > 0 && (
           <ul className="space-y-1 mb-1">
             {pendingManual.map(item => (
-              <li key={item.id} className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2.5 shadow-sm">
+              <li key={item.id} className="flex items-center gap-3 bg-brand-card dark:bg-brand-primary rounded-xl border border-brand-linen dark:border-brand-primary-hover/50 px-3 py-2.5 shadow-sm">
                 <input
                   type="checkbox"
                   checked={false}
                   onChange={() => toggleDoneMutation.mutate({ id: item.id, done: true })}
-                  className="w-4 h-4 accent-indigo-500 flex-shrink-0 cursor-pointer"
+                  className="w-4 h-4 accent-brand-herb flex-shrink-0 cursor-pointer"
                 />
-                <span className="flex-1 text-sm text-gray-800 dark:text-gray-200">
+                <span className="flex-1 text-sm text-brand-ink dark:text-brand-background">
                   {item.raw_name}
                   {(item.quantity !== 1 || item.unit !== 'count') && (
-                    <span className="text-gray-400 dark:text-gray-500 ml-2 text-xs">{item.quantity} {item.unit}</span>
+                    <span className="text-brand-muted/60 dark:text-brand-secondary/60 ml-2 text-xs">{item.quantity} {item.unit}</span>
                   )}
                 </span>
                 <button
@@ -249,17 +249,17 @@ export default function ShoppingListPage() {
         {doneManual.length > 0 && (
           <ul className="space-y-1 opacity-50">
             {doneManual.map(item => (
-              <li key={item.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl px-3 py-2">
+              <li key={item.id} className="flex items-center gap-3 bg-brand-linen/10 dark:bg-brand-primary-hover/30 rounded-xl px-3 py-2">
                 <input
                   type="checkbox"
                   checked={true}
                   onChange={() => toggleDoneMutation.mutate({ id: item.id, done: false })}
-                  className="w-4 h-4 accent-indigo-500 flex-shrink-0 cursor-pointer"
+                  className="w-4 h-4 accent-brand-herb flex-shrink-0 cursor-pointer"
                 />
-                <span className="flex-1 text-sm text-gray-400 line-through">{item.raw_name}</span>
+                <span className="flex-1 text-sm text-brand-muted line-through">{item.raw_name}</span>
                 <button
                   onClick={() => deleteMutation.mutate(item.id)}
-                  className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none"
+                  className="text-brand-muted/40 hover:text-brand-tomato transition-colors text-lg leading-none"
                   aria-label="Remove"
                 >
                   ×
@@ -281,18 +281,18 @@ export default function ShoppingListPage() {
       {/* ── From meal plan ──────────────────────────────────────────────────── */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">From meal plan</h2>
+          <h2 className="text-sm font-semibold text-brand-ink dark:text-brand-background">From meal plan</h2>
           {shoppingList && (
             <div className="flex gap-2">
               <button
                 onClick={() => navigator.clipboard?.writeText(shoppingList.text_export).catch(() => {})}
-                className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                className="text-xs text-brand-muted hover:text-brand-primary transition-colors"
               >
                 Copy
               </button>
               <button
                 onClick={() => window.open(shoppingList.whatsapp_url, '_blank')}
-                className="text-xs text-green-600 hover:text-green-700 dark:hover:text-green-400 transition-colors"
+                className="text-xs text-brand-herb hover:text-brand-herb/80 transition-colors"
               >
                 WhatsApp
               </button>
@@ -310,8 +310,8 @@ export default function ShoppingListPage() {
 
         {planError && (
           <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">Failed to load meal plan list</p>
-            <button onClick={() => refetch()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
+            <p className="text-brand-muted dark:text-brand-secondary mb-3 text-sm">Failed to load meal plan list</p>
+            <button onClick={() => refetch()} className="px-4 py-2 bg-brand-primary text-brand-background rounded-xl text-sm font-medium">
               Retry
             </button>
           </div>
@@ -327,11 +327,11 @@ export default function ShoppingListPage() {
             ) : (
               <div className="space-y-4">
                 {Object.entries(shoppingList.zones).map(([zone, items]) => (
-                  <details key={zone} open className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 select-none capitalize">
+                  <details key={zone} open className="bg-brand-card dark:bg-brand-primary rounded-2xl border border-brand-linen dark:border-brand-primary-hover/50 shadow-sm overflow-hidden">
+                    <summary className="px-4 py-3 cursor-pointer font-semibold text-sm text-brand-ink dark:text-brand-background hover:bg-brand-linen/10 dark:hover:bg-brand-primary-hover/30 select-none capitalize">
                       {zone} ({items.length})
                     </summary>
-                    <ul className="divide-y divide-gray-50 dark:divide-gray-700">
+                    <ul className="divide-y divide-brand-linen dark:divide-brand-primary-hover/50">
                       {items.map((item, idx) => {
                         const key = item.ingredient_id ?? `${zone}-${item.canonical_name}-${idx}`;
                         const ck = itemKey(item);
@@ -340,19 +340,19 @@ export default function ShoppingListPage() {
                           <li
                             key={key}
                             onClick={() => toggleItem(ck)}
-                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? 'bg-gray-50 dark:bg-gray-700/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${isChecked ? 'bg-brand-linen/10 dark:bg-brand-primary-hover/20' : 'hover:bg-brand-linen/5 dark:hover:bg-brand-primary-hover/10'}`}
                           >
                             <input
                               type="checkbox"
                               checked={isChecked}
                               onChange={() => {}}
-                              className="w-4 h-4 accent-indigo-500 flex-shrink-0 pointer-events-none"
+                              className="w-4 h-4 accent-brand-herb flex-shrink-0 pointer-events-none"
                             />
                             <div className="flex-1 min-w-0">
-                              <span className={`text-sm font-medium ${isChecked ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                              <span className={`text-sm font-medium ${isChecked ? 'line-through text-brand-muted/50' : 'text-brand-ink dark:text-brand-background'}`}>
                                 {item.canonical_name}
                               </span>
-                              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                              <span className="text-sm text-brand-muted/60 dark:text-brand-secondary/60 ml-2">
                                 {item.rounded_unit === 'pack'
                                   ? `x ${item.rounded_quantity} pack`
                                   : `${item.rounded_quantity} ${item.rounded_unit}`}
@@ -373,19 +373,19 @@ export default function ShoppingListPage() {
       {/* ── Floating buy bar (meal plan items) ─────────────────────────────── */}
       {allPlanItems.length > 0 && (
         <div className="fixed bottom-16 left-0 right-0 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto mx-4 max-w-lg w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg px-4 py-3 flex gap-2">
+          <div className="pointer-events-auto mx-4 max-w-lg w-full bg-brand-card dark:bg-brand-primary border border-brand-linen dark:border-brand-primary-hover shadow-lg px-4 py-3 flex gap-2">
             {checkedItems.size > 0 ? (
               <>
                 <button
                   onClick={handleMarkChecked}
                   disabled={bulkConfirmMutation.isPending}
-                  className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 py-2.5 bg-brand-primary text-brand-background text-sm font-semibold rounded-xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors"
                 >
                   {bulkConfirmMutation.isPending ? 'Saving…' : `Mark ${checkedItems.size} as bought`}
                 </button>
                 <button
                   onClick={() => setCheckedItems(new Set())}
-                  className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                  className="px-3 py-2.5 text-sm text-brand-muted hover:text-brand-ink dark:hover:text-brand-background transition-colors"
                 >
                   Clear
                 </button>
@@ -394,7 +394,7 @@ export default function ShoppingListPage() {
               <button
                 onClick={handleMarkAll}
                 disabled={bulkConfirmMutation.isPending}
-                className="flex-1 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2.5 bg-brand-primary text-brand-background text-sm font-semibold rounded-xl hover:bg-brand-primary-hover disabled:opacity-50 transition-colors"
               >
                 I bought everything
               </button>
