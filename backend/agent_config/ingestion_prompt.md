@@ -58,7 +58,7 @@ You are a recipe data extraction assistant. You will be shown {{ num_images }} i
 - Each returned step should correspond to one printed step panel on the card, not split into smaller sub-steps.
 - For `timer_seconds`, only use an explicit timer if one is printed in the step text or clearly shown in the step. Convert minutes to seconds. Do NOT infer timers.
 - For `image_description`, write one short objective sentence describing what is visibly shown in the step photo. Set to null if no step photo exists.
-- For `image_bbox`, provide the bounding box of the step's photo panel as [x1, y1, x2, y2] normalised coordinates (0.0–1.0 relative to the full image). Set to null if no distinct photo panel exists for the step.
+- For `image_bbox`, provide the bounding box of **only the photograph portion** of the step panel — do NOT include the step number, bold title, or text description that appear below the photo. Coordinates are [x1, y1, x2, y2] normalised (0.0–1.0 relative to the full image). Set to null if no distinct photo panel exists for the step.
 - Infer `card_style` from the card design:
   - `1` = plain white / minimal
   - `2` = coloured header or branded colour band

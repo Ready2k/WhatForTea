@@ -44,12 +44,14 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     thread_id: Optional[str] = None
+    session_id: Optional[str] = None
 
 
 class ResumeRequest(BaseModel):
     thread_id: str
     decision: Literal["confirm", "reject"]
     quantity: Optional[float] = None
+    session_id: Optional[str] = None
 
 
 class FeedbackRequest(BaseModel):
@@ -120,7 +122,7 @@ async def chat(body: ChatRequest, request: Request):
 
     async def generate():
         try:
-            handler = get_langfuse_handler(user_id=str(user_id) if user_id else None, session_id=thread_id)
+            handler = get_langfuse_handler(user_id=str(user_id) if user_id else None, session_id=body.session_id or thread_id)
             config = {
                 "configurable": {"thread_id": thread_id, "household_id": household_id},
                 "callbacks": [h for h in [handler] if h],
@@ -179,7 +181,7 @@ async def chat_resume(body: ResumeRequest, request: Request):
         try:
             handler = get_langfuse_handler(
                 user_id=str(user_id) if user_id else None,
-                session_id=body.thread_id,
+                session_id=body.session_id or body.thread_id,
             )
             config = {
                 "configurable": {"thread_id": body.thread_id, "household_id": household_id},

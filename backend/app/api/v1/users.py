@@ -193,7 +193,7 @@ async def remove_member(user_id: _uuid.UUID, request: Request, db: AsyncSession 
     # Prevent removing the last admin
     if target.is_admin:
         result = await db.execute(
-            select(User).where(User.household_id == caller_hid, User.is_admin == True)
+            select(User).where(User.household_id == caller_hid, User.is_admin)
         )
         admin_count = len(result.scalars().all())
         if admin_count <= 1:

@@ -697,11 +697,11 @@ export default function CookingModePage() {
 
         {/* Step crop image */}
         {currentStep?.image_crop_path && (
-          <div className="mb-3 rounded-2xl overflow-hidden max-h-48">
+          <div className="mb-3 rounded-2xl overflow-hidden h-44">
             <img
               src={`/api/v1/recipes/${recipe.id}/steps/${currentStep.order}/image`}
               alt={currentStep.image_description ?? `Step ${currentIndex + 1}`}
-              className="w-full h-full object-contain bg-gray-100 dark:bg-gray-800"
+              className="w-full h-full object-cover object-top"
             />
           </div>
         )}
@@ -711,11 +711,17 @@ export default function CookingModePage() {
             const isImportant = sub.type === 'important';
             const isTip = sub.type === 'tip';
             return (
-              <div key={si} className={`flex gap-3 p-4 rounded-2xl border ${
-                isImportant ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/60'
-                  : isTip   ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60'
-                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-              }`}>
+              <div
+                key={si}
+                onClick={hasSpeechSynth ? () => speakText(sub.text) : undefined}
+                className={`group flex gap-3 p-4 rounded-2xl border transition-colors ${
+                  hasSpeechSynth ? 'cursor-pointer active:scale-[0.99]' : ''
+                } ${
+                  isImportant ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/60 hover:bg-red-100/80 dark:hover:bg-red-900/30'
+                    : isTip   ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60 hover:bg-amber-100/80 dark:hover:bg-amber-900/30'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/80'
+                }`}
+              >
                 {sub.label && (
                   <span className={`flex-shrink-0 w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center mt-0.5 ${
                     isImportant ? 'bg-red-100 dark:bg-red-800/50 text-red-700 dark:text-red-300'
@@ -725,15 +731,22 @@ export default function CookingModePage() {
                     {sub.label.replace(')', '')}
                   </span>
                 )}
-                <p className={`text-base md:text-[22px] md:leading-normal font-medium leading-relaxed ${
-                  isImportant ? 'text-red-800 dark:text-red-200'
-                    : isTip   ? 'text-amber-800 dark:text-amber-200'
-                    : 'text-gray-800 dark:text-gray-100'
-                }`}>
-                  {isImportant && <span className="font-bold">Important: </span>}
-                  {isTip       && <span className="font-bold">Tip: </span>}
-                  {sub.text}
-                </p>
+                <div className="flex-1 flex items-start justify-between gap-2">
+                  <p className={`text-base md:text-[22px] md:leading-normal font-medium leading-relaxed ${
+                    isImportant ? 'text-red-800 dark:text-red-200'
+                      : isTip   ? 'text-amber-800 dark:text-amber-200'
+                      : 'text-gray-800 dark:text-gray-100'
+                  }`}>
+                    {isImportant && <span className="font-bold">Important: </span>}
+                    {isTip       && <span className="font-bold">Tip: </span>}
+                    {sub.text}
+                  </p>
+                  {hasSpeechSynth && (
+                    <svg className="w-4 h-4 flex-shrink-0 mt-1 opacity-25 group-hover:opacity-60 transition-opacity text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />
+                    </svg>
+                  )}
+                </div>
               </div>
             );
           })}

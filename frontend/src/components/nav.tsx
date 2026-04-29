@@ -55,8 +55,8 @@ export function Nav() {
 
   return (
     <>
-      {/* TeaBot Assistant Trigger (Floating FAB) */}
-      <div className="fixed right-4 bottom-20 z-50 animate-bounce-slow">
+      {/* TeaBot Assistant Trigger (Floating FAB) — hidden on desktop cooking view */}
+      <div className={`fixed right-4 bottom-20 z-50 animate-bounce-slow${/^\/recipes\/[^/]+\/cook(\/|$)/.test(pathname) ? ' md:hidden' : ''}`}>
         <TeaBotTrigger />
       </div>
 

@@ -43,6 +43,30 @@ const ALLOWED_NAV_PATHS = new Set(['/pantry', '/recipes', '/planner', '/shopping
 /** Loose UUID v4 check — rejects obviously bad LLM-hallucinated IDs */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Langfuse session rotation: 4 h idle or 25 h absolute age → new session
+const LANGFUSE_IDLE_MS = 4 * 60 * 60 * 1000;
+const LANGFUSE_MAX_AGE_MS = 25 * 60 * 60 * 1000;
+
+function getOrRotateLangfuseSession(): string {
+  const now = Date.now();
+  const stored = localStorage.getItem('teabot_langfuse_session_id');
+  const startedAt = Number(localStorage.getItem('teabot_langfuse_session_started_at') ?? 0);
+  const lastActive = Number(localStorage.getItem('teabot_langfuse_session_last_active') ?? 0);
+
+  const needsRotation =
+    !stored ||
+    now - lastActive > LANGFUSE_IDLE_MS ||
+    now - startedAt > LANGFUSE_MAX_AGE_MS;
+
+  const sessionId = needsRotation ? crypto.randomUUID() : stored;
+  if (needsRotation) {
+    localStorage.setItem('teabot_langfuse_session_started_at', String(now));
+  }
+  localStorage.setItem('teabot_langfuse_session_id', sessionId);
+  localStorage.setItem('teabot_langfuse_session_last_active', String(now));
+  return sessionId;
+}
+
 export function TeaBotPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
@@ -158,7 +182,7 @@ export function TeaBotPanel() {
     streamAbortRef.current = abort;
 
     try {
-      const resumeBody = JSON.stringify({ thread_id: tid, decision, quantity });
+      const resumeBody = JSON.stringify({ thread_id: tid, decision, quantity, session_id: getOrRotateLangfuseSession() });
       let res = await fetch('/api/v1/chat/resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -350,6 +374,7 @@ export function TeaBotPanel() {
       const body = JSON.stringify({
         messages: [{ role: 'user', content: userContent }],
         thread_id: threadIdRef.current ?? undefined,
+        session_id: getOrRotateLangfuseSession(),
       });
 
       let res = await fetch('/api/v1/chat', {
@@ -549,6 +574,9 @@ export function TeaBotPanel() {
                   onClick={() => {
                     threadIdRef.current = null;
                     localStorage.removeItem('teabot_thread_id');
+                    localStorage.removeItem('teabot_langfuse_session_id');
+                    localStorage.removeItem('teabot_langfuse_session_started_at');
+                    localStorage.removeItem('teabot_langfuse_session_last_active');
                     setMessages([]);
                   }}
                   className="p-2 hover:bg-brand-linen/20 dark:hover:bg-brand-primary-hover rounded-full transition-colors text-brand-muted hover:text-brand-ink dark:hover:text-brand-background"
