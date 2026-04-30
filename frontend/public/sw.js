@@ -1,8 +1,7 @@
 /* Service worker — handles Web Push notifications and offline recipe caching */
 
-const CACHE_NAME = 'wft-cache-v1';
-const OFFLINE_URLS = [
-  '/',
+const CACHE_NAME = 'wft-cache-v2';
+const STATIC_URLS = [
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -10,7 +9,7 @@ const OFFLINE_URLS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_URLS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_URLS))
   );
   self.skipWaiting();
 });
@@ -28,6 +27,15 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Navigation requests (HTML pages) always use network-first so new deployments
+  // are never blocked by a cached copy of the old HTML shell.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('/manifest.json').then(() => fetch('/')))
+    );
+    return;
+  }
+
   // Strategy: Network-first for API, but fallback to cache for specific recipes
   if (url.pathname.startsWith('/api/v1/recipes/')) {
     event.respondWith(
@@ -42,7 +50,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy: Cache-first for static assets
+  // Strategy: Cache-first for static assets (icons, manifests — not JS/CSS which
+  // Next.js serves with long-lived Cache-Control headers and content hashes).
   event.respondWith(
     caches.match(request).then(response => response || fetch(request))
   );

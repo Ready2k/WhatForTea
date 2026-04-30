@@ -74,7 +74,7 @@ export function TeaBotPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const threadIdRef = useRef<string | null>(
-    typeof window !== 'undefined' ? localStorage.getItem('teabot_thread_id') : null
+    typeof window !== 'undefined' ? (() => { try { return localStorage.getItem('teabot_thread_id'); } catch { return null; } })() : null
   );
   const pendingHitlWidget = useRef<(A2UIDescriptor & { thread_id: string }) | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);

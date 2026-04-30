@@ -105,16 +105,21 @@ export default function CookingModePage() {
   const touchStartX = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const commandRecognitionRef = useRef<any>(null);
-  const hasSpeechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const [hasSpeechSynth, setHasSpeechSynth] = useState(false);
+  const [canPause, setCanPause] = useState(false);
+  const [hasSpeechRecognition, setHasSpeechRecognition] = useState(false);
   const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const [isPaused, setIsPaused] = useState(false);
-  // iOS WKWebView: speechSynthesis.pause() is silently broken — speech continues unpaused
-  const canPause = typeof navigator !== 'undefined' &&
-    !/iPad|iPhone|iPod/.test(navigator.userAgent) &&
-    !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const hasSpeechRecognition = typeof window !== 'undefined' && !!(
-    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-  );
+
+  useEffect(() => {
+    setHasSpeechSynth('speechSynthesis' in window);
+    // iOS WKWebView: speechSynthesis.pause() is silently broken — speech continues unpaused
+    setCanPause(!/iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+    setHasSpeechRecognition(!!(
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    ));
+  }, []);
 
   // KEY FIX: keep a ref so the setInterval closure always reads fresh timer state
   // without needing setState's functional-updater pattern (which can't produce side effects)
